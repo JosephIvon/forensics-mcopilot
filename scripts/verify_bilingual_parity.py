@@ -19,6 +19,15 @@ Standard library only; does not import mcopilot.
 import re
 import sys
 from pathlib import Path
+# 本脚本要往 stdout 打中文。控制台编码不是 UTF-8 时，`print` 会抛
+# UnicodeEncodeError —— 脚本于是**崩在打印上**，而不是给出判定。
+# 2026-10-24 在 GitHub Actions runner 上实测：那边控制台是 cp1252，
+# 本机是 UTF-8 —— 于是本机绿、runner 红。处置与本仓其他脚本一致
+# （见 scripts/verify_doc_refs.py、scripts/fault_farm.py）。
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:  # pragma: no cover - 环境相关
+    pass
 
 ROOT = Path(__file__).resolve().parent.parent
 ZH_PATH = ROOT / "README.md"

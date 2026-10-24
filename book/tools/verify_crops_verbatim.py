@@ -21,6 +21,16 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from build_crops import CROP_NAME, OUT, SRC, CHAPTERS, extract_claim, extract_teacher  # noqa: E402
 
+# 本脚本要往 stdout 打中文。控制台编码不是 UTF-8 时，`print` 会抛
+# UnicodeEncodeError —— 脚本于是**崩在打印上**，而不是给出判定。
+# 2026-10-24 在 GitHub Actions runner 上实测：那边控制台是 cp1252，
+# 本机是 UTF-8 —— 于是本机绿、runner 红。处置与本仓其他脚本一致
+# （见 scripts/verify_doc_refs.py、scripts/fault_farm.py）。
+try:
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+except Exception:  # pragma: no cover - 环境相关
+    pass
+
 crop_path = OUT / CROP_NAME
 if not crop_path.exists():
     print(f"[FAIL] 裁剪件不存在：{crop_path}")
@@ -51,7 +61,6 @@ for fn in sorted(x for x in os.listdir(SRC) if x.endswith(".md") and x != "00-�
 # 「为什么只有一版」那一节**点名被删掉的东西**是允许的——那是判据，不是用法；
 # 所以先把它摘掉，再查剩下的部分。
 import re as _re
-
 _body = _re.split(r"^## 为什么只有一版\s*$", crops, flags=_re.M)
 _body = _body[0] + (_body[2] if len(_body) > 2 else "")
 JOB_HUNTING = ["简历版", "简历句", "按岗位", "投递", "面试官", "勿全贴", "求职", "挑选建议"]

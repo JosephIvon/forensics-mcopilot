@@ -71,6 +71,9 @@ jobs:
         shell: pwsh
         run: ./scripts/gate_corpus.ps1
 
+      # 这一步**故意不设** PYTHONIOENCODING：runner 的控制台是 cp1252，
+      # 让脚本自己面对这件事（脚本里已按本仓惯例 reconfigure stdout 为 UTF-8）。
+      # 设上环境变量反而会把"脚本扛不住非 UTF-8 控制台"这类问题**藏起来**。
       - name: 外部真值锚点门禁（sha256 + 再提取抽查；仓外原件不在位记 SKIP）
         run: python scripts/gate_anchors.py
 
