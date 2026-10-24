@@ -5,7 +5,11 @@
 
 ## 一、耐久工件
 
-### mcopilot 仓库（引用锚定 commit `b53ac62`，2026-10-22 实测 0 未提交）
+### 本仓（引用锚定 commit `285da78`）
+
+> 锚点从旧工作副本 `mcopilot@b53ac62` 切到**本仓** `285da78`（2026-10-24）：
+> 旧仓是发布前的工作副本，**读者手里没有**——坐标锚在读者拿不到的仓里，
+> 等于「只对作者可核」。锚点必须落在读者 clone 下来就有的那个仓。
 
 | 工件 | 供章 |
 |---|---|
@@ -17,7 +21,8 @@
 | `docs/协议提取SOP.md` + `knowledge/contracts/comm_log_contract.json` + `scripts/validate_comm_log.py` | 第4章 |
 | `scripts/fault_farm.py` + `scripts/lemay_corpus.py` + `docs/kb3_判据抽取.md` + issues_corpus | 第5章 |
 | `src/mcopilot/agents/forensics_comm.py`（7 规则）+ `knowledge/protocols/failure_signatures.json` + `scripts/onboard_loop.py` + `scripts/eval_forensics.py` | 第6章 |
-| `mcopilot-pending-20261022/MANIFEST.txt`（134 分流+损失实录） | 第7章 |
+| `evidence/MANIFEST.txt`（134 分流+损失实录）——**仓外原件的入库副本**，逐行不变，
+  见 `evidence/README.md` | 第7章 |
 | `docs/事故_G6幽灵功能_20261022.md`（立照 `58d685f`）+ 修复 `5563b51`/`0cfc358` | 第3章 案三 |
 
 ### 记忆与台账（`%USERPROFILE%\self-improving\`）
@@ -99,6 +104,24 @@
   - 《前言》改写为读者导览（新增"写给读者的建议"与"全书路线"两节，原七节保留）；
     《尾声》新增"写给读者"开场。
   - 由此产生的行数变化（物理行，章与导读分列）：9 章 2078 + 导读 64 = 2142。
+
+- [2026-10-24 改锚] **坐标锚点从旧工作副本切到本仓**（`b53ac62` → `285da78`）：
+  - **为什么切**：旧仓 `mcopilot` 是发布前的工作副本，**不随本仓公开**。
+    坐标锚在读者拿不到的仓里，「当场可核」就只剩作者能做——而这正是本书要证伪的那件事。
+    故锚点改指**读者 clone 下来就有的那个仓**（本仓 `285da78`）。
+  - **切锚不是改一行字符串**：审计器的锚点读取是 `git show <rev>:<path>`，
+    切过去以后要重验全部坐标（引用 271 / 可解析 271 / 失败 0）。
+    另修一处**会静默出假绿的坑**：锚点根切到本仓之后，`book/` 恰好落在锚点根下面——
+    若不排除，书里对 `decision-lists/*.md` 的引用会被拿**上一次提交的文字**去核，
+    核的是旧行号、报的是假结果。故 `anchored_read()` 显式排除本书仓：
+    **书是活物，读工作树；只有代码读锚点。**
+  - **仓外原件的处置**：`MANIFEST.txt`（134 条快照实录）原件在仓外的快照仓，读者拿不到。
+    故把原件**逐行不变**地收进 `book/evidence/`（只脱敏本机绝对路径），
+    并附 `evidence/README.md` 说明来龙去脉——**被引用的仓外原件要留证**，
+    否则那条主张就只剩作者能核。
+  - **历史陈述不动**：停机点 `b53ac62`、决策清单文件名 `mcopilot-b53ac62.md`、
+    「0 未提交 @ b53ac62」这些是**当时的事实**，改它们就是篡改历史。
+    改锚只动**锚点陈述**（坐标指向哪个 commit），不动**记录性陈述**。
 
 - [2026-10-24 并仓] **书随 mcopilot 仓开源**（`forensics-mcopilot/book/`）：
   - **只留与本仓代码对得上的一册**：另两册（axiscope / 代码工厂）的正文、导读、

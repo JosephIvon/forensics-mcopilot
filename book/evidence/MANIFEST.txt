@@ -1,0 +1,37 @@
+保留快照：mcopilot 工作区未提交变更（2026-10-22 拆出）
+
+总条数: 134（M 83 / A 4 / MM 1 / ?? 46）
+性质: 绝大多数为 servo/SDK 线（另一 AI 流）的开发中状态：
+  - servo/adapter/jd/chart/twincat 代码与 darus/klipper 修数脚本+测试
+  - knowledge/sdks/ 厂商 SDK 知识 27 件、docs 厂商手册索引等
+  - 另一流在已提交门禁脚本(gate_*.ps1)上叠加的改动 + 自建 run_gates.py/gate_negative.py/test_gates.py
+  - README.md 含两流混合编辑（含协议线一条未提交编辑，已在此快照中保留）
+
+恢复方法: 相对路径拷回 %WORKSPACE%\mcopilot 即可；或对照 git HEAD 逐件取舍。
+协议/门禁/知识库主线已全部提交于 b53ac62，不在本快照内。
+【2026-10-22 补充：对象库抢救件 recovered/】
+- run_gates.draft1-3*.py：另一流统一门禁入口三稿
+- test_alarm_code_template.py / vendor_alarm_codes.schema.json：曾 add 的新文件
+- README.staged.MM版.md：暂存版 README（73KB），第 39 行含协议线的 BOSS直聘统计校
+  正编辑（HEAD 版无此行）——该编辑已保住，需要时可拷回仓库 README
+- 竞品调研/责任边界 staged 版
+- 未可恢复：约 13 件中文路径 tracked 文档的 unstaged 增量（jd_证据/kb3/交叉验证/
+  厂商手册等，另一流未 add 过，checkout 还原时覆盖）；HEAD 提交版均在仓库中，
+  丢失的只是未暂存增量草稿。
+
+【2026-10-22 评估结论：run_gates 三稿 不收编】
+- 本质：另一流的统一 CLI 外壳，18 个子命令与已提交 src/mcopilot/cli.py 1:1 重复，
+  无门禁、无独有能力；三稿间仅 24 行差异。
+- 依赖核验：draft3 全部 import 在 HEAD 在场，可独立运行，但收编=双 CLI 并存，否决。
+- 留种：draft3 的 --axis axis.json 参数（转矩纹波谱线归因：6×电频率=逆变器/死区
+  特征，每转整数阶=机械周期误差）是好思路，servo 线复活时可将该参数移植进
+  cli.py servo diagnose，约十行量级。
+- 其余 recovered/ 件维持归档，待 servo/SDK 线去留决策时统一处置。
+
+【2026-10-22 清理记录（去重令执行）】
+- 删：run_gates.draft1/2（draft3 留存）、竞品调研/责任边界 staged 版（正本在 docs/）、
+  README.staged 73KB（第 39 行编辑已提取为 README.第39行编辑.md）、同名 zip（单拷贝原则）、
+  mc_all\out（空）、C:\ session 缓存壳。
+- 迁：mc_all\out_v 45 件中 29 件独有（含工厂 6 品牌统一工程 mc_all 全套适配器源码、
+  factory_bad.html 不合格批次报告）抢救至 %WORKSPACE%\trae_factory\out_v_unique\，
+  原位删除——工厂产物自此单点收归于 trae_factory。

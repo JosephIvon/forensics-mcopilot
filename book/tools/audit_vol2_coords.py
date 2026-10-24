@@ -41,8 +41,14 @@ def _first_existing(*cands):
     return str(cands[0])
 
 
-# 源仓根：本仓（forensics-mcopilot）与旧仓（mcopilot）都在，同级目录按名字探测
-MCO_REPO = _first_existing(WS / "mcopilot", WS / "forensics-mcopilot")
+# 源仓根：**本仓**（forensics-mcopilot）。
+#
+# 为什么锚在本仓而不是旧仓 `mcopilot`：
+#   旧仓是**发布前的工作副本**，公开后读者手里只有本仓——坐标锚在读者拿不到的
+#   地方，等于"只对作者可核"。锚点必须落在**读者 clone 下来就有**的那个仓。
+#   旧仓仍在本地时，它只作历史对照，不再作锚点。
+REPO_ROOT = BOOK_DIR.parent
+MCO_REPO = str(REPO_ROOT)
 ROOTS = [
     _first_existing(WS / "axiscope"),
     _first_existing(WS / "trae_factory"),
@@ -54,16 +60,16 @@ ROOTS = [
 ]
 BOOK_REPO = str(BOOK_DIR)
 BOOKS = [
-    ("卷一(mcopilot)", str(BOOK_DIR / "chapters")),
+    ("卷一(本仓)", str(BOOK_DIR / "chapters")),
     ("书级(前言/尾声)", [str(BOOK_DIR / "前言.md"),
                           str(BOOK_DIR / "尾声.md")]),
 ]
 
-# 源仓锚点：内容从这些 commit 取（工作树移动不改坐标的含义）
+# 源仓锚点：内容从这些 commit 取（工作树移动、改名、合并都不改坐标的含义）
 ANCHORS = {
     expand(r"%WORKSPACE%\axiscope"): "b95ffb2",
     expand(r"%WORKSPACE%\trae_factory"): "954c210",
-    expand(r"%WORKSPACE%\mcopilot"): "b53ac62",
+    MCO_REPO: "285da78",
 }
 
 # 短名 → 相对路径候选（KB2:804 这类简写）
@@ -100,7 +106,16 @@ acache = {}
 
 
 def anchored_read(abs_path):
-    """源仓文件按锚点 commit 读内容；非源仓（本书仓）返回 None。"""
+    """源仓文件按锚点 commit 读内容。
+
+    **本书仓（book/）不读锚点**：书是**正在写的活物**，锚点是**代码的快照**。
+    锚点切到本仓之后，`book/` 恰好落在锚点根下面——若不排除，
+    书里对 `decision-lists/*.md` 的引用会被拿**上一次提交的文字**去核，
+    核的是旧行号、报的是假结果（"0 失败"反而成了假话）。
+    书的内容一律读**工作树**；只有**代码**读锚点。
+    """
+    if os.path.abspath(abs_path).lower().startswith(os.path.abspath(BOOK_REPO).lower() + os.sep):
+        return None
     for root, rev in ANCHORS.items():
         if abs_path.lower().startswith(root.lower() + os.sep):
             rel = os.path.relpath(abs_path, root).replace(os.sep, "/")

@@ -551,6 +551,7 @@ mcopilot/
    ├─ chapters/          Nine chapters + the reading guide (the volume anchored to *this* repo's code)
    ├─ crops/裁剪版.md    Per-chapter "verifiable claim" + "90-minute teaching split" (one file)
    ├─ decision-lists/    Decision lists (all three repos' closing snapshots live here)
+   ├─ evidence/          In-repo copies of out-of-repo originals (line-for-line, with provenance)
    ├─ tools/             The book's own self-checks (incl. the anchor gate check_doc_refs_heads.py)
    └─ ASSETS.md          Full asset inventory and reference anchors
 ```
@@ -564,6 +565,14 @@ The book was originally written as three volumes, one per repo; when it ships he
 the criterion is "**which volume's citations can be re-verified against this codebase**", not "which one reads better".
 The other two volumes travel with their own repos: `axiscope` and `forensics-code-factory` each have their own book, each anchored to its own repo.
 Shipping them together means one clone gets you "the book + one runnable case repo".
+
+**The book's coordinates are anchored to this repo itself**: `forensics-mcopilot@285da78`.
+They used to be anchored to the pre-release working copy `mcopilot@b53ac62` — a repo that
+**does not ship with this one**. A reader would have had no copy of it, so the coordinates
+could only ever be checked by the author, which is precisely the thing this book argues against.
+The old anchor was not erased, it was **demoted to history**: the stop point `b53ac62` is
+still the true fact of that day; only the coordinate blocks now point at the code a reader
+can actually obtain.
 
 Every technical claim in the book is anchored to "repository@commit + path + line", and **a citation goes stale — and a stale citation is worse than no citation**,
 because the reader assumes the source is still trustworthy. So there is a machine gate for it:

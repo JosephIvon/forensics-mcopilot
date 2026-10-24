@@ -153,7 +153,7 @@ for d in ("out", "out_v_unique"):
         print(f"  {d}/: {n} 件")
 print(f"  trae_factory HEAD: {git(TRAE, 'rev-parse', '--short', 'HEAD')}")
 
-print("\n【四】mcopilot（书中锚点 @b53ac62）")
+print("\n【四】本仓（书中锚点 @285da78）")
 print(f"  mcopilot HEAD: {git(MCO, 'rev-parse', '--short', 'HEAD')} ｜ "
       f"未提交 {len(git(MCO, 'status', '--porcelain').splitlines())} 项")
 official = os.path.join(MCO, "knowledge", "sdks", "official_api")
