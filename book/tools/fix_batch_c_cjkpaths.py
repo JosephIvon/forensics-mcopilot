@@ -62,7 +62,7 @@ MC_FIXES = [
      '> 评审对象：`%USERPROFILE%\\Documents\\Trae-CN\\temp_20261019_01`',
      '> 评审对象：`<Trae-CN 会话工作区>\\temp_20261019_01`'),
     ("docs/评审_Trae修复.md",
-     'cd <用户>/Documents/Trae-CN/temp_20261019_01',
+     'cd <家目录>/Documents/Trae-CN/temp_20261019_01',
      'cd <Trae-CN 会话工作区>/temp_20261019_01'),
     ("docs/评审_Trae修复验证.md",
      '> 复核对象：`%USERPROFILE%\\Documents\\Trae-CN\\temp_20261019_01`',
