@@ -115,8 +115,10 @@
 
 | 账 | 归属 | 现状 |
 |---|---|---|
-| GitHub 三个独立仓 + 索引仓的**实际推送** | 批 D | **已推送并复验** ✓：`JosephIvon/mcopilot` ✓ / `JosephIvon/axiscope` ✓ / `JosephIvon/forensics-code-factory` ✓ / `JosephIvon/forensics-learning-index` ✓，全部**公开** ✓、分支 `main` ✓；四仓本地 HEAD 与远端逐个一致 ✓；并从 GitHub **干净克隆**复验通过 ✓（读者实际拿到的东西 ✓） |
+| GitHub 三个独立仓 + 索引仓的**实际推送** | 批 D | **已推送** ✓：`JosephIvon/mcopilot`（现名 `forensics-mcopilot`）✓ / `JosephIvon/axiscope` ✓ / `JosephIvon/forensics-code-factory` ✓ / `JosephIvon/forensics-learning-index` ✓，全部**公开** ✓、分支 `main` ✓。~~四仓本地 HEAD 与远端逐个一致 ✓~~ **2026-10-24 复核：此句不成立** ✗ —— 见下方两条新账 |
 | **接缝 3（共享行为评测集）闭合** | 批 D 续 | **已闭合** ✓：评测集（`knowledge/shared_eval.json`，19 条 + 3 条合法差异 ✓）与对照脚本（`scripts/joint_eval.py`，真跑两边 ✓）均已入库 ✓，两侧都打上 BEH 编号 ✓，门禁 G13 逐条对齐 ✓（干净克隆里真跑通过 ✓）|| 三个仓的历史里 mcopilot-bot 署名 | 永久（不改历史） | 记在 C11 ✓ |
 | `out_v_unique/` 5 件历史残留 | 永久（保留） | 记在 C9 ✓ |
 | 册二第 4 章可验证主张形态 | 体例（编排） | 该册已于 2026-10-24 随并仓移出本书（其大纲随册同移），本条随之只作历史记录 ✓ |
 | 编排改造③重档（正文坐标全下沉 + 长句拆分） | 体例（编排） | 待作者读过②一轮后再定 ✓ |
+| **`axiscope` 公开仓是未脱敏版本** | 批 D 欠账 | **2026-10-24 实查** ✗：`origin/main`（`f9140d0`，默认分支）仍含 `<厂区>\…` 主机路径（`data/redact_pii_20261022.py` 3 处）与墙钟时刻 `13:57:49.726`、`11:27:40.879`（`data/VERIFICATION-2026-10-20.md`、两份 `Export10_244531.csv.source.txt` 侧车）——**违反本仓自己的 KB2 §6.3 发布门** ✗。本地 `main` 是已脱敏版 ✓，补丁已备在隔离 worktree `_axiscope-redact`（基于 `origin/main` 只改那 4 个文件，补完后与本地 `main` 树**零差异** ✓），**尚未推送、待作者批准** ✓ |
+| **`axiscope` 本地与远端是两套历史** | 批 D 欠账 | **2026-10-24 实查** ✗：本地 `main`=`e398a67`、`origin/main`=`f9140d0`，`git merge-base` 失败（**无共同祖先** ✓）→ 既不能快进也不能快退；⚠ **严禁从本地这份 `main` 强推**：那会把被清掉的「三档值」与未脱敏内容一起推回公开仓。正确处置 = 以 `origin/main` 为基、在其上补脱敏提交（已在 `_axiscope-redact` 备好）✓ |
