@@ -71,7 +71,7 @@ def test_v2计划与账本同步():
     for phase in ("P0", "P1", "P2", "P3", "P4"):
         assert phase in plan["phases"], f"{phase} 阶段账本未登记"
         assert phase in text, f"{phase} 阶段计划文档缺失"
-        assert plan["phases"][phase].split("（")[0].split(":")[0][:6] or True  # 阶段描述非空由下方统一查
+        # 阶段描述非空由下方统一查（这一行原本是 `... or True` 的恒真断言，等于没查）
         assert len(plan["phases"][phase]) > 10, f"{phase} 阶段描述过简"
     # 重排定位四件套齐全，且统计判据在文档里可查
     for key in ("adapter", "forensics", "servo", "spc"):

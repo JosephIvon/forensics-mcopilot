@@ -135,6 +135,35 @@ for name, repo in REPOS.items():
             s.add(os.path.relpath(os.path.join(dp, fn), repo).replace("\\", "/"))
     WORKTREE[name] = s
 
+def _historical_paths(repo, name):
+    """该仓 git 历史里**出现过**的所有路径（改名/删除前的也算）。
+
+    嵌套仓要特别处理 ✓：book/ 在 mcopilot 仓内，`git -C book log --name-only`
+    给出的是**外层仓根**的相对路径（`book/xxx.md` ✓），
+    而本仓的坐标是**仓根**相对（`xxx.md` ✓）→ 不处理就会口径错位 ✓，
+    把书里引用的 `src/mcopilot/...` 误判成「历史残留」（实测 182 条假断链 ✓）。
+    """
+    out = git(repo, "log", "--all", "--name-only", "--format=")
+    paths = {ln.strip().replace("\\", "/") for ln in out.splitlines() if ln.strip()}
+    if name == "book":
+        prefix = "book/"
+        paths = {p[len(prefix):] for p in paths if p.startswith(prefix)}
+    return paths
+
+
+# 只对**在位仓**取历史：缺的那个仓连目录都没有，历史无从取起。
+HISTORY = {name: (_historical_paths(repo, name) if PRESENT.get(name) else set())
+           for name, repo in REPOS.items()}
+
+
+def _in_history(ref):
+    """这条路径是不是「在位仓的历史里有、现在 HEAD 与工作树都没有」的残留？
+
+    这正是「本仓改名/删除文件后残留的引用」✓ —— 兄弟仓在不在位与它无关 ✓。
+    """
+    return any(ref in paths for paths in HISTORY.values())
+
+
 def ignored_prefixes(repo, extra_gitignore=None):
     """从 .gitignore 解析"声明不入库"的顶层目录（如 out/*）——这些路径不是断链，是生成物位置。
 
@@ -235,6 +264,15 @@ for name, repo in REPOS.items():
                     # 反例引用：这一行**明说**该路径不存在（教材式举反例），不算断链
                     if COUNTER.search(ctx):
                         COUNTER_EX.append((name, rel, i, ref))
+                    elif _in_history(ref):
+                        # **历史残留**：这条路径在在位仓的 git 历史里存在过
+                        # （改名/删除前它在那儿），现在 HEAD 与工作树都没有 →
+                        # 这就是「本仓改名/删除文件后残留的引用」。
+                        # 它与兄弟仓在不在位**无关**：缺仓不能给本仓的断链开脱。
+                        # （原先所有「找不到」都归「缺仓不可判定」，于是 CI 上
+                        #  TRUE_GAPS 结构性不可达——这道门的检测力只存在于本地，
+                        #  从不存在于 CI。）
+                        TRUE_GAPS.append((name, rel, i, ref))
                     elif MISSING_REPOS:
                         # 有仓不在位 → 这条路径可能在缺的那个仓里，判死是冤枉
                         UNDECIDED.append((name, rel, i, ref))
@@ -247,6 +285,8 @@ print("=" * 92)
 if MISSING_REPOS:
     print(f"  ⚠ **缺仓**：{'、'.join(MISSING_REPOS)} 不在位（独立仓，不随本仓发布）。")
     print("     缺仓期间「所有仓都找不到」的路径一律归【八】不可判定，**不判死链**。")
+    print("     但**历史残留**（在位仓的 git 历史里有、现在 HEAD 与工作树都没有）仍判死链 ——")
+    print("     那是本仓改名/删除文件后残留的引用，与兄弟仓在不在位无关 ✓。")
 for name, rel, i, ref in TRUE_GAPS:
     print(f"  ✗ [{name}] {rel}:{i}  →  {ref}")
 print(f"  小计：{len(TRUE_GAPS)} 处")

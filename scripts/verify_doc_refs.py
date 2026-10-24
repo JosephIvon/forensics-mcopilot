@@ -226,11 +226,17 @@ def check_code_refs(verbose=True):
                                 continue
                     if multi:
                         external = True
-                if path is None and not multi and not external_missing:
+                # 注意：`external_missing` 是**全局列表**，只用于末尾汇总。
+                # 它原先参与这里的单条判定 —— 一旦前面有引用命中「登记过但
+                # 原件不在位」，这个列表就非空，于是**后面每一条**引用的
+                # 「文件不存在」诊断都被跳过，接着崩在 io.open(None)。
+                # 那是**诊断丢失**（不是判定错）：崩溃点之后的引用全部未核，
+                # 而且只吐栈、不报是哪份文档哪一行。
+                if path is None and not multi:
                     print("  !! %s L%d 引用 %s —— 文件不存在" % (label, no, raw))
                     bad += 1
                     continue
-                targets = multi if multi else [path]
+                targets = multi if multi else ([path] if path else [])
                 ok_lines = False
                 hit_line = None
                 for t in targets:
@@ -241,6 +247,13 @@ def check_code_refs(verbose=True):
                         hit_line = tl[start - 1]
                         break
                 if not ok_lines:
+                    if not targets:
+                        # 目标文件本身不在位（且不是「登记过但缺位」那条路）：
+                        # 说清是哪一条，别让调用方拿到一个空壳结论。
+                        print("  !! %s L%d 引用 %s:%d-%d —— 目标文件不在位，行号无法核对"
+                              % (label, no, raw, start, end))
+                        bad += 1
+                        continue
                     n_max = len(tl)
                     print("  !! %s L%d 引用 %s:%d-%d —— 越界（该文件只有 %d 行）"
                           % (label, no, raw, start, end, n_max))
@@ -326,10 +339,15 @@ def main(argv=None):
                         or s in target]
                 claimed = [s for s in set(SYMBOL.findall(text))]
                 if claimed and not syms:
-                    # 这行提到了若干符号，但没有一个在被引行里 —— 可能指错了行
-                    # （不一定是错：符号可能在同一段落的另一行被引；只报告不强判）
-                    print("  -- 文档 L%d 引用 %s L%d，该行未见 %s"
+                    # 这行提到了若干符号，但没有一个在被引行里 —— **指错了行**。
+                    # 原先这里只打印不判：门禁放行，行号漂了也没人知道。
+                    # 本脚本存在的理由就是抓这一条（docstring 一直写着
+                    # 「那一行**必须**真的含有那个符号」），实现却没做到——
+                    # 同一脚本对**代码**行号引用又是硬判失败，两处口径不一致。
+                    # 实测：改成硬判后当前仓库的符号不匹配是 0 条，不误伤现有文档。
+                    print("  !! 文档 L%d 引用 %s L%d，该行未见 %s（行号可能漂了）"
                           % (no, fname, line_no, "/".join(sorted(claimed)[:3])))
+                    bad += 1
                 else:
                     print("  OK  文档 L%-5d -> %s L%-6d  %s"
                           % (no, fname, line_no, target.strip()[:70]))

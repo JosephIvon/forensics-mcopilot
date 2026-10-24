@@ -22,15 +22,20 @@ jobs:
         with:
           python-version: "3.14"
 
+      # 一条命令打印两行：这**不是**为了少打字，而是为了让这条 step 只有
+      # 一个退出码来源。多命令块里除最后一条外的失败会被 Actions 吞掉（见下文 P0-1 的注释）。
       - name: 环境自述（版本与解释器路径）
-        run: |
-          python --version
-          python -c "import sys; print(sys.executable)"
+        run: python -c "import sys; print(sys.version); print('exe:', sys.executable)"
 
       # setup-python 装的是**干净解释器**，里面没有 pytest —— 不装它，
       # 后面那步会直接 "No module named pytest" 退 1（2026-10-24 实测踩过）。
       #
-      # 只装 pytest 与 matplotlib，**不装本包**（`pip install -e .` 也不行）：
+      # pypdf 也要装：它是 scripts/check_modbus_quotes.py（门禁 G5 的引文反查）
+      # 与 scripts/extract_slmp.py 的**硬依赖**。不装的话：有仓外原件的机器上
+      # 会 ModuleNotFoundError 硬失败，CI 上则永远 SKIP——这条「引文是不是编的」
+      # 验证两头都没跑过。（2026-10-25 评审发现：它既不在 pyproject 的任何 extra 里，
+      #  也不在本安装清单里。）
+      # 只装 pytest、matplotlib 与 pypdf，**不装本包**（`pip install -e .` 也不行）：
       # 本仓的布局契约要求"从仓库根直接 import mcopilot 应当不成立"，
       # 而可编辑安装会让它成立 → tests/test_layout_contract.py 立刻变红。
       # 跑测试靠 pytest 配置里的 pythonpath = ["src"]，不靠装包。
@@ -39,7 +44,7 @@ jobs:
       # matplotlib 也要装：它是**可选**依赖（缺它时按设计降级为"不画图但报告照出"），
       # 但 CI 必须真的走一遍画图路径——不然画图坏了没人知道。
       - name: 装测试期依赖（pytest + matplotlib；不装本包）
-        run: python -m pip install --disable-pip-version-check --upgrade "pytest>=7" "matplotlib>=3.5"
+        run: python -m pip install --disable-pip-version-check --upgrade "pytest>=7" "matplotlib>=3.5" "pypdf>=4"
 
       - name: pytest 全量
         env:
@@ -51,12 +56,34 @@ jobs:
         env:
           PYTHONIOENCODING: utf-8
         run: |
-          python scripts/verify_bilingual_parity.py
-          python scripts/verify_doc_refs.py
-          python book/tools/check_doc_refs_heads.py
-          python book/tools/verify_crops_verbatim.py
-          python book/tools/check_vol2s_structure.py
-          python book/tools/verify_book_numbers.py
+          # 这六条是**各自独立**的门禁，每条都必须自己判退出码。
+          #
+          # （2026-10-25 实测踩过的坑：把它们串在一个 pwsh 块里，GitHub Actions
+          #  只把**最后一条**命令的 $LASTEXITCODE 带出 step——
+          #  第 1 条 exit 3、第 4 条 exit 7，step 照样 exit 0。
+          #  也就是说这条 step 曾经吞掉 6 条门禁里 5 条的失败信号：
+          #  README 中英不同步、文档行号引用失效、书锚点断链、裁剪件被改、
+          #  书结构违规、书里的数字对不上——任意一类发生，CI 全绿。
+          #  $ErrorActionPreference 管不了 native command，$PSNativeCommandUseErrorActionPreference
+          #  默认 $false，所以只能自己逐条判。）
+          $failed = @()
+          foreach ($s in @(
+            "scripts/verify_bilingual_parity.py",
+            "scripts/verify_doc_refs.py",
+            "book/tools/check_doc_refs_heads.py",
+            "book/tools/verify_crops_verbatim.py",
+            "book/tools/check_vol2s_structure.py",
+            "book/tools/verify_book_numbers.py")) {
+            Write-Output "--- $s"
+            python $s
+            if ($LASTEXITCODE -ne 0) { $failed += "$s (exit $LASTEXITCODE)" }
+          }
+          if ($failed.Count -gt 0) {
+            Write-Output "::error::文档与电子书同步门禁有 $($failed.Count) 条失败："
+            $failed | ForEach-Object { Write-Output "::error::  $_" }
+            exit 1
+          }
+          Write-Output "文档与电子书同步门禁 6 条全过 ✓"
 
       - name: 公开前脱敏门禁（家目录/用户名与本机工作区路径必须是 0）
         env:

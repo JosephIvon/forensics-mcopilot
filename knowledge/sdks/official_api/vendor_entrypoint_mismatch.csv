@@ -1,0 +1,2 @@
+品牌,DLL,C#方法名,EntryPoint,两个符号是否都在PE导出表,源文件,行号,静态事实,后果（静态可核）,未核实项（推断，待实机确认）,登记日期
+正运动,zauxdll.dll,ZAux_Direct_GetVectorBuffered2,ZAux_Direct_SetVectorBuffered2,是（zauxdll.dll 同时导出 Get/Set VectorBuffered2）,正运动_ZMotion/SDK_头文件/Zmcaux.cs,4518,P/Invoke 实际绑定的导出符号 = EntryPoint = ZAux_Direct_SetVectorBuffered2，与 C# 方法名不一致；厂商自己的 XML 注释（L4512）写的是「读取当前矢量位置」，方法名与注释一致、只有 EntryPoint 指向 Set —— 静态可判为笔误,照抄这段声明，调用到的是 Set 导出而不是 Get 导出；DLL 若不导出该符号则抛 EntryPointNotFoundException,实机上是否真的写错值——需装有 zauxdll.dll 的机器对照 Get/Set 语义确认，本仓未做该验证,2026-10-25

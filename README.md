@@ -229,7 +229,7 @@ GEN 是独立产品线（自带用户手册与基本功能手册），它例程�
 
 第四层补上后，「返回类型对不对」不再需要跨语言换算。做法是**新增可复现的抽取器**
 `scripts/extract_binding_returns.py`，直接从厂商原始 C# 绑定源码抽，产出
-`knowledge/sdks/official_api/binding_returns.csv`（**3105 条**）：
+`knowledge/sdks/official_api/binding_returns.csv`（**3106 条**）：
 
 | 源文件 | 变体 | 条数 |
 |---|---|---|
@@ -596,7 +596,7 @@ mcopilot/
 │  │                        固高：gts.csv(473 条官方 C# 绑定) / gts_hdr.csv(535 条 C 原型) / gts_structs.csv(30 个结构体布局)
 │  │                        gts_hdr_macros.csv(200 个官方宏) / gts_io_terminals.csv(121 行端子表) + dll_exports.csv 里的 5 个 gts.dll 变体
 │  │                        另有 gts_prototypes.csv(34 条手册原型+页码) + gts_manual_index.csv(167 条指令索引)
-│  │                        binding_returns.csv ★第四层：厂商官方C#绑定自己的返回类型(3105条,含固高4变体口径)
+│  │                        binding_returns.csv ★第四层：厂商官方C#绑定自己的返回类型(3106条,含固高4变体口径)
 │  └─ templates/*.cs.tmpl C# 模板
 ├─ samples/               样例数据（带真值/植入清单，用于自检与演示）
 │  ├─ logs/               3 种格式的日志 + 植入缺陷清单

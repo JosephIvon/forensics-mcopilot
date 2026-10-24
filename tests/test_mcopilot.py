@@ -1292,7 +1292,9 @@ def test_servo_恒加速度段能被定位():
     i0, i1 = win
     assert t[i0] < 0.2 and t[i1] < 0.21, f"窗口应落在匀加速段，实际 {t[i0]:.3f}~{t[i1]:.3f}s"
     # 匀速段不该被误判成恒加速段
-    assert servo.constant_accel_window(t, vel, 50.0) is None or True
+    # 恒真断言（`X is None or True`）等于没有断言：上一行注释说「匀速段不该被误判成
+    # 恒加速段」，那就要真的判它是 None，而不是写个永远成立的式子。
+    assert servo.constant_accel_window(t, vel, 50.0) is None
 
 
 def test_servo_非恒加速度波形不硬凑窗口():

@@ -125,7 +125,12 @@ def detect(lines: list[Line], rules: dict) -> list[Finding]:
             axis = int(mc["fields"].get("axis", -1))
             if axis in pending and pending[axis][0] is not None and ln.ts is not None:
                 gap = _ms(pending[axis][0], ln.ts)
-                concur_hits.append((ln.no, ln.raw, axis))
+                # 「并发下发」是**时间窗**内的抢占，不是「同轴出现过第二条指令」。
+                # 阈值走真配置（log_rules.json 的 concurrent_command_ms）——
+                # 它原先配了却没人读，是死阈值：现场调它完全无效，
+                # 而检测器对任何「同轴未完成又下新指令」无条件报，现场只见噪声。
+                if gap <= th["concurrent_command_ms"]:
+                    concur_hits.append((ln.no, ln.raw, axis))
             pending[axis] = (ln.ts, float(mc["fields"].get("target", 0.0)), ln)
             continue
         rc = ln.get("REACHED")
@@ -262,7 +267,7 @@ def detect(lines: list[Line], rules: dict) -> list[Finding]:
         slow = sum(1 for c in cts if c > med * 1.15)
         slow_ratio = slow / len(cts)
         if (ratio > th["cycle_jitter_ratio"] or cv > th.get("cycle_jitter_cv", 0.08)
-                or slow_ratio > th.get("cycle_slow_ratio", 0.02)):
+                or slow_ratio > th["cycle_slow_ratio"]):
             add("cycle_jitter",
                 "节拍抖动超阈值",
                 f"中位数 {med:.1f} s，P95 {p95:.1f} s，波动 {(p95 - med) / med:.0%}，"

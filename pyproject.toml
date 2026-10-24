@@ -18,7 +18,7 @@ dependencies = []          # 核心零依赖；matplotlib 仅用于出图
 
 [project.optional-dependencies]
 charts = ["matplotlib>=3.5"]
-dev = ["pytest>=7"]
+dev = ["pytest>=7", "pypdf>=4"]  # pypdf：引文反查（G5）与 SLMP 抽取的硬依赖
 
 [project.scripts]
 mcopilot = "mcopilot.cli:main"

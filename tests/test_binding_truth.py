@@ -167,3 +167,55 @@ def test_extractor_is_reproducible():
         )
         key = lambda rs: sorted((r["DLL"], r["函数名"], r["返回类型"], r["参数表"]) for r in rs)
         assert key(again) == key(old), "重跑内容与入库文件不一致"
+
+
+# --------------------------------- 6. 逐源条数：一条声明都不能丢（评审 P1-1）
+def test_每个源抽出的条数等于该源的声明条数():
+    """每个厂商源文件：抽出的条数 == 该源里 `[DllImport]`+`extern` 的配对数。
+
+    为什么必须**逐源**核 ✓
+    ---------------------
+    P1-1 的病是「**一条**声明被去重吞掉」✓ —— 全表总数变化只有 1 条 ✓，
+    任何放宽到「几千条就够」的断言都看不出来 ✓✓。
+    逐源核死，丢一条就红 ✓。
+
+    厂商原件外置 ✓ → 干净检出上不在位 → SKIP 并写明「当前不可自动复核」✓。
+    """
+    import importlib.util
+    import re
+
+    script = os.path.join(ROOT, "scripts", "extract_binding_returns.py")
+    if not os.path.isfile(script):
+        pytest.skip("抽取器不在，当前不可自动复核")
+    if not os.path.isfile(BINDING_CSV):
+        pytest.skip("binding_returns.csv 不存在，当前不可自动复核")
+    vendor = os.path.join(os.path.dirname(ROOT), "mcopilot-external", "vendor_docs")
+    if not os.path.isdir(vendor):
+        pytest.skip("厂商原件按约定外置到 %s，本机未就位："
+                    "**当前不可自动复核**（不是 PASS）" % vendor)
+
+    spec = importlib.util.spec_from_file_location("_ebe", script)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+
+    rows = _read_rows(BINDING_CSV)
+    by_src = {}
+    for r in rows:
+        by_src.setdefault(r["源文件"], 0)
+        by_src[r["源文件"]] += 1
+
+    problems = []
+    for rel, enc, note, variant in mod.SOURCES:
+        path = os.path.join(vendor, rel)
+        if not os.path.isfile(path):
+            pytest.skip("厂商原件 %s 不在位：**当前不可自动复核**" % rel)
+        text = mod.decode(path)
+        # 源文件里的声明条数 = [DllImport] 出现次数（每条 DllImport 后跟一条 extern）
+        n_decl = len(re.findall(r"\[DllImport\(", text))
+        key = rel.replace("\\", "/")
+        n_got = by_src.get(key, 0)
+        if n_got != n_decl:
+            problems.append("%s：源文件 %d 条声明，表里 %d 条（%+d）%s"
+                            % (key, n_decl, n_got, n_got - n_decl,
+                               " ← 有声明被去重吞掉了" if n_got < n_decl else ""))
+    assert not problems, "逐源条数对不上：\n  " + "\n  ".join(problems)

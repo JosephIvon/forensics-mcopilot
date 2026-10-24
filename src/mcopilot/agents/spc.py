@@ -103,7 +103,8 @@ def i_mr(values: Sequence[float]) -> dict:
     ucl = cl + 3.0 * sigma
     lcl = cl - 3.0 * sigma
     ooc = [(i + 1, v) for i, v in enumerate(values) if v > ucl or v < lcl]
-    # 判异规则：连续 7 点同侧 / 连续 7 点递增或递减
+    # 判异规则：**连续 9 点同侧** / **连续 6 点递增或递减**
+    # （注释原先写「7 点」，实现是 9/6——按注释调机的现场工程师会按 7 点排查。）
     side = _run_rules(values, cl, ucl, lcl)
     return {
         "ok": True,

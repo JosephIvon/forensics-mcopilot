@@ -169,10 +169,6 @@ def point_biserial(binary: Sequence[int], values: Sequence[float]) -> float:
     return pearson([float(b) for b in binary], list(values))
 
 
-def normal_cdf(z: float) -> float:
-    return 0.5 * (1.0 + math.erf(z / math.sqrt(2.0)))
-
-
 def capability_indices(usl: float, lsl: float, xbar: float, sigma: float) -> dict:
     if sigma <= 0:
         return {"cp": float("nan"), "cpk": float("nan"), "verdict": "不可判定"}
@@ -225,10 +221,6 @@ def fmt(x: Any, digits: int = 4) -> str:
             return str(int(x))
         return f"{x:.{digits}f}"
     return str(x)
-
-
-def fmt_ms(sec: float) -> str:
-    return f"{sec * 1000:.1f} ms"
 
 
 def slug(text: str) -> str:

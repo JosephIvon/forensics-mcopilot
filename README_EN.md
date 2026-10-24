@@ -173,7 +173,7 @@ The first three truth layers each cover a part, but **return types could never b
 | `official_api/*_cpp.csv`, `gts_hdr.csv` | C | ✓ | comparable, but the **conventions are offset**: under Windows (LLP64) a C `long` is 32-bit while a C# `long` is Int64 |
 | **the vendor's own official C# binding source** | **C#** | **✓** | **this is the layer a C# declaration must line up with** |
 
-With the fourth layer in place, "is the return type right" no longer needs a cross-language conversion. The approach is a **new reproducible extractor**, `scripts/extract_binding_returns.py`, which pulls straight from the vendor's original C# binding sources and produces `knowledge/sdks/official_api/binding_returns.csv` (**3105 entries**):
+With the fourth layer in place, "is the return type right" no longer needs a cross-language conversion. The approach is a **new reproducible extractor**, `scripts/extract_binding_returns.py`, which pulls straight from the vendor's original C# binding sources and produces `knowledge/sdks/official_api/binding_returns.csv` (**3106 entries**):
 
 | Source file | Variant | Entries |
 |---|---|---|
@@ -503,7 +503,7 @@ mcopilot/
 │  │                        Googol: gts.csv (473 official C# bindings) / gts_hdr.csv (535 C prototypes) / gts_structs.csv (30 struct layouts)
 │  │                        gts_hdr_macros.csv (200 official macros) / gts_io_terminals.csv (121-row terminal table) + the 5 gts.dll variants in dll_exports.csv
 │  │                        plus gts_prototypes.csv (34 manual prototypes with pages) + gts_manual_index.csv (167 instruction indices)
-│  │                        binding_returns.csv ★ fourth layer: the vendor's own C# binding return types (3105 entries, incl. Googol's 4 variants)
+│  │                        binding_returns.csv ★ fourth layer: the vendor's own C# binding return types (3106 entries, incl. Googol's 4 variants)
 │  └─ templates/*.cs.tmpl C# templates
 ├─ samples/               Sample data (with ground truth / injection lists, for self-checks and demos)
 │  ├─ logs/               3 log formats + an injected-defect list

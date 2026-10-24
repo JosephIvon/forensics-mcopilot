@@ -86,13 +86,47 @@ def extract_from(text: str, source_rel: str, variant: str) -> list[dict]:
         symbol = ep.group("ep") if ep else cs_name
         out.append({
             "DLL": dll,
+            # 「函数名」= **实际被调用的导出符号** ✓
+            #   有 EntryPoint 时就是 EntryPoint ✓（哪怕它跟 C# 方法名不一致 ✓）
             "函数名": symbol,
             "C#方法名": cs_name,
+            # EntryPoint 原文单列 ✓：厂商笔误（EntryPoint 写成别的符号）时 ✓，
+            # 这一列与「C#方法名」一比就看得出来 ✓✓
+            # —— 过去它被去重逻辑吞掉了 ✓：两条声明（Get/Set）共用同一个 EntryPoint ✓
+            #   → 只剩一条 → **笔误在表里完全隐形** ✓（2026-10-25 评审 P1-1 ✓）。
+            "EntryPoint": ep.group("ep") if ep else "",
             "返回类型": em.group("ret").strip(),
             "参数表": " ".join(em.group("args").split()),
             "源文件": source_rel,
             "变体": variant,
         })
+    return out
+
+
+def dedupe(rows):
+    """按 `(DLL, **C# 方法名**, 变体)` 去重 ✓ —— 键必须是「**谁声明的**」✓。
+
+    为什么不能用导出符号做键 ✓
+    -------------------------
+    厂商笔误时（正运动 Zmcaux.cs:4518 的 `ZAux_Direct_GetVectorBuffered2`
+    把 EntryPoint 写成了 `ZAux_Direct_SetVectorBuffered2` ✓）→
+    用导出符号做键 → **Get 那条会被 Set 那条吞掉** ✓
+    → 表里少一条 → **笔误完全隐形** ✓（2026-10-25 独立第三方评审 P1-1 ✓✓）。
+
+    改用 C# 方法名做键 → 两条都留下 ✓✓ → 笔误在表里看得见 ✓✓。
+    「函数名」列仍 = 实际被调用的导出符号 ✓（这张表回答的是
+    「这个导出符号返回什么」✓✓，语义不变 ✓✓）。
+    """
+    seen = {}
+    out = []
+    for r in rows:
+        key = (r["DLL"].lower(), r["C#方法名"], r["变体"])
+        if key in seen:
+            seen[key]["重复次数"] += 1
+            continue
+        r["重复次数"] = 1
+        seen[key] = r
+        out.append(r)
     return out
 
 
@@ -111,8 +145,7 @@ def main(argv=None) -> int:
         print(f"找不到 vendor_docs：{vendor}", file=sys.stderr)
         return 2
 
-    rows = []
-    seen = {}
+    all_rows = []
     for rel, enc, note, variant in SOURCES:
         path = os.path.join(vendor, rel)
         if not os.path.isfile(path):
@@ -121,21 +154,17 @@ def main(argv=None) -> int:
         text = decode(path)
         got = extract_from(text, rel.replace("\\", "/"), variant)
         print(f"  {note:28s} {len(got):4d} 条  ({rel})")
-        for r in got:
-            key = (r["DLL"].lower(), r["函数名"], r["变体"])
-            if key in seen:
-                seen[key]["重复次数"] += 1
-                continue
-            r["重复次数"] = 1
-            seen[key] = r
-            rows.append(r)
+        all_rows.extend(got)
+
+    rows = dedupe(all_rows)
 
     rows.sort(key=lambda r: (r["DLL"].lower(), r["函数名"], r["变体"]))
     os.makedirs(os.path.dirname(out_csv), exist_ok=True)
     with io.open(out_csv, "w", encoding="utf-8", newline="") as fh:
         w = csv.DictWriter(
             fh,
-            fieldnames=["DLL", "函数名", "C#方法名", "返回类型", "参数表", "变体", "源文件", "重复次数"],
+            fieldnames=["DLL", "函数名", "C#方法名", "EntryPoint", "返回类型",
+                        "参数表", "变体", "源文件", "重复次数"],
         )
         w.writeheader()
         for r in rows:
@@ -164,6 +193,21 @@ def main(argv=None) -> int:
                 print(f"        - {v}")
     else:
         print("\n  ✓ 各变体参数表一致")
+
+    # EntryPoint 与 C# 方法名不一致 = **厂商笔误** ✓
+    # 静态可核的后果 ✓：P/Invoke 绑定的是 EntryPoint 那个导出符号 ✓，
+    # 不是方法名那个 ✓ → 照抄这段声明，调用的就是**另一个函数** ✓。
+    # 「实机是否真的写错值」需要装了对应 DLL 的机器确认 ——
+    # 那是**推断**，不是这张表能证明的事实 ✓（记档按这个口径写 ✓）。
+    mism = [r for r in rows if r["EntryPoint"] and r["EntryPoint"] != r["C#方法名"]]
+    if mism:
+        print(f"\n  ⚠ **EntryPoint 与 C# 方法名不一致的声明 {len(mism)} 条**（厂商笔误 ✓）")
+        print("     这类声明调用的导出符号 ≠ 方法名 —— 照抄就会调到另一个函数 ✓")
+        for r in mism:
+            print(f"     {r['DLL']}!{r['C#方法名']} → EntryPoint={r['EntryPoint']}"
+                  f"  （{r['源文件']}）")
+    else:
+        print("\n  ✓ 没有 EntryPoint 与方法名不一致的声明")
     return 0
 
 
