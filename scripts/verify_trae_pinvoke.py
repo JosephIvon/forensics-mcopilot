@@ -54,7 +54,17 @@ from collections import OrderedDict, defaultdict
 # ---------------------------------------------------------------- 默认路径
 _REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # trae_factory 仓的位置：环境变量 TRAE_FACTORY_DIR 优先，其次按同级兄弟目录找
-_TRAE = os.environ.get("TRAE_FACTORY_DIR") or os.path.join(os.path.dirname(_REPO), "trae_factory")
+def _sib_trae():
+    """工厂仓目录：新名优先、旧名兜底（目录 2026-10-24 改名，项目标识不变）。"""
+    base = os.path.dirname(_REPO)
+    for n in ("forensics-code-factory", "trae_factory"):
+        p = os.path.join(base, n)
+        if os.path.isdir(p):
+            return p
+    return os.path.join(base, "forensics-code-factory")
+
+
+_TRAE = os.environ.get("TRAE_FACTORY_DIR") or _sib_trae()
 DEFAULT_TRAE_OUT = os.path.join(_TRAE, "out")
 DEFAULT_KNOWLEDGE = os.path.join(_REPO, "knowledge", "sdks", "official_api")
 

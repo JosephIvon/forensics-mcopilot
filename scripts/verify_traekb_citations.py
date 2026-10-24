@@ -47,7 +47,17 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 API = os.path.join(ROOT, "knowledge", "sdks", "official_api")
 # trae_factory 仓的位置：环境变量 TRAE_FACTORY_DIR 优先，其次按同级兄弟目录找
-_TRAE = os.environ.get("TRAE_FACTORY_DIR") or os.path.join(os.path.dirname(ROOT), "trae_factory")
+def _sib_trae():
+    """工厂仓目录：新名优先、旧名兜底（目录 2026-10-24 改名，项目标识不变）。"""
+    base = os.path.dirname(ROOT)
+    for n in ("forensics-code-factory", "trae_factory"):
+        p = os.path.join(base, n)
+        if os.path.isdir(p):
+            return p
+    return os.path.join(base, "forensics-code-factory")
+
+
+_TRAE = os.environ.get("TRAE_FACTORY_DIR") or _sib_trae()
 DEFAULT_KB = os.path.join(_TRAE, "gen", "adapters_kb.js")
 
 # 真值文件 -> 类别

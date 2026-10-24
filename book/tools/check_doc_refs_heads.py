@@ -50,11 +50,26 @@ def _repo(env, default):
     return os.path.abspath(p) if p and os.path.isdir(p) else default
 
 
+def _sibling(*names):
+    """同级仓目录：按给定顺序取第一个存在的。
+
+    为什么不止一个名字：`trae_factory` 目录 2026-10-24 改名为
+    `forensics-code-factory`（与 GitHub 仓名一致），而 `trae_factory`
+    作为**项目标识**（锚点、数据 key）仍然保留。只认一个名字的话，
+    改名会让这个仓静默变成「缺仓不可判定」——门禁少扫，且不报错。
+    """
+    for n in names:
+        p = os.path.join(WS, n)
+        if os.path.isdir(p):
+            return p
+    return os.path.join(WS, names[0])
+
+
 REPOS = {
     "mcopilot": _repo("MCOPILOT_REPO", REPO_ROOT),
     "book": _repo("BOOK_REPO", BOOK),
     "axiscope": _repo("AXISCOPE_REPO", os.path.join(WS, "axiscope")),
-    "trae_factory": _repo("TRAE_REPO", os.path.join(WS, "trae_factory")),
+    "trae_factory": _repo("TRAE_REPO", _sibling("forensics-code-factory", "trae_factory")),
 }
 
 # 哪些仓**在位**？在位 = 目录存在，且里面**有东西可核**（自己的 .git，或者至少一个文件）。

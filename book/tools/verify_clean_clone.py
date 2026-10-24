@@ -32,7 +32,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from _localenv import expand
+from _localenv import expand, sibling
 
 BOOK = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 WS = expand(r"%WORKSPACE%")
@@ -91,11 +91,13 @@ def main(argv):
     try:
         # ① 先把要验的仓**全部克隆出来**，再逐仓跑步骤。
         #    顺序不能反：mcopilot 的接缝 3 对照（门禁 G13）要靠同级兄弟目录
-        #    ../trae_factory 才能真跑——边克隆边跑的话，跑 mcopilot 时兄弟仓还没到，
+        #    ../forensics-code-factory 才能真跑——边克隆边跑的话，跑 mcopilot 时兄弟仓还没到，
         #    对照只能记 SKIP。读者是三个仓一起克隆的，这里也该照那个场景来。
         clones = {}
         for repo in only:
-            src = os.path.join(WS, repo)
+            # 目录名可能已改（见 _localenv.SIBLING_ALIASES）：项目标识仍是 trae_factory，
+            # 但磁盘上的目录叫 forensics-code-factory。
+            src = str(sibling(repo)) if repo in ("axiscope", "trae_factory") else os.path.join(WS, repo)
             dst = os.path.join(tmp, repo)
             print("=" * 78)
             print("【%s】干净克隆复验" % repo)

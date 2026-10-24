@@ -27,7 +27,7 @@ def _first_existing(*names):
 
 BOOK = str(BOOK_DIR)
 AXI = _first_existing("axiscope")
-TRAE = _first_existing("trae_factory")
+TRAE = _first_existing("forensics-code-factory", "trae_factory")
 MCO = _first_existing("mcopilot", "forensics-mcopilot")
 
 

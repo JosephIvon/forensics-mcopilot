@@ -60,7 +60,7 @@ REPO_ROOT = BOOK_DIR.parent
 MCO_REPO = str(REPO_ROOT)
 ROOTS = [
     _first_existing(WS / "axiscope"),
-    _first_existing(WS / "trae_factory"),
+    _first_existing(WS / "forensics-code-factory", WS / "trae_factory"),
     MCO_REPO,
     _first_existing(WS / "mcopilot-pending-20261022"),
     str(BOOK_DIR),

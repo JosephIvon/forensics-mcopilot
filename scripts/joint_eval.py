@@ -74,9 +74,10 @@ def find_trailing_repo():
     env = os.environ.get("TRAE_FACTORY_DIR")
     if env and Path(env).is_dir():
         return Path(env)
-    sib = ROOT.parent / "trae_factory"
-    if sib.is_dir():
-        return sib
+    for name in ("forensics-code-factory", "trae_factory"):
+        sib = ROOT.parent / name
+        if sib.is_dir():
+            return sib
     return None
 
 

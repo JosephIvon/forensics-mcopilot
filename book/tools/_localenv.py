@@ -13,7 +13,7 @@
     读者拿到就能用，不是死记的假路径。
 ``%WORKSPACE%``
     工作区根（同级仓所在）。默认取**本仓的上一级**——
-    同级仓（`axiscope` / `trae_factory` / `forensics-learning-book`）就在那儿，
+    同级仓（`axiscope` / `forensics-code-factory` / `forensics-learning-book`）就在那儿，
     这不是猜的，是布局事实。可用环境变量 `MCOPILOT_WORKSPACE` 覆盖。
 
 环境变量
@@ -46,10 +46,43 @@ def workspace() -> Path:
     return REPO_ROOT.parent
 
 
+# 同级仓的**目录名**可能与仓名不同，也可能改过：
+#   2026-10-24 `trae_factory` 目录改名为 `forensics-code-factory`（与 GitHub 仓名一致）。
+# 代码里对它的引用是**项目标识**（锚点 `trae_factory@954c210`、知识库与测试里的 key），
+# 不该跟着目录改；但**找目录**必须认得出新名字。集中一张别名表，避免各处各写一份。
+SIBLING_ALIASES: dict[str, tuple[str, ...]] = {
+    "trae_factory": ("forensics-code-factory", "trae_factory"),
+}
+
+
+def sibling(name: str):
+    """按别名表解析同级仓目录；都没有就返回首选名（调用方据此判「缺仓」）。"""
+    ws = workspace()
+    for cand in SIBLING_ALIASES.get(name, (name,)):
+        p = ws / cand
+        if p.is_dir():
+            return p
+    return ws / SIBLING_ALIASES.get(name, (name,))[0]
+
+
 def expand(path_like: str) -> str:
     """把 `%USERPROFILE%` / `%WORKSPACE%` 展开成实际路径。
 
     `%WORKSPACE%` 不是系统变量，所以先自己替换，再交给 expandvars 处理其余的。
+
+    同级仓改过名时（见 `SIBLING_ALIASES`），`%WORKSPACE%\trae_factory` 这种
+    **旧写法**会重定向到真实目录——否则它会变成一个不存在的路径，
+    让引用静默落到「仓不在位」，门禁少扫而没人知道。
     """
-    out = path_like.replace("%WORKSPACE%", str(workspace()))
-    return os.path.expandvars(out)
+    ws = workspace()
+    out = path_like.replace("%WORKSPACE%", str(ws))
+    out = os.path.expandvars(out)
+    for alias in SIBLING_ALIASES:
+        stale = ws / alias
+        if stale.exists():
+            continue
+        real = sibling(alias)
+        head = str(stale)
+        if real.exists() and (out == head or out.startswith(head + os.sep)):
+            out = str(real) + out[len(head):]
+    return out

@@ -29,7 +29,16 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 SCRIPT = os.path.join(ROOT, "scripts", "verify_traekb_citations.py")
 # trae_factory 仓的位置：环境变量 TRAE_FACTORY_DIR 优先，其次按同级兄弟目录找
-_TRAE = os.environ.get("TRAE_FACTORY_DIR") or os.path.join(os.path.dirname(ROOT), "trae_factory")
+def _sib_trae():
+    base = os.path.dirname(ROOT)
+    for n in ("forensics-code-factory", "trae_factory"):
+        p = os.path.join(base, n)
+        if os.path.isdir(p):
+            return p
+    return os.path.join(base, "forensics-code-factory")
+
+
+_TRAE = os.environ.get("TRAE_FACTORY_DIR") or _sib_trae()
 DEFAULT_KB = os.path.join(_TRAE, "gen", "adapters_kb.js")
 
 

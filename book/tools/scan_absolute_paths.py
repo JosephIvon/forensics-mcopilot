@@ -69,10 +69,15 @@ def git(repo: str, *a: str) -> str:
 def repo_roots(include_siblings: bool) -> list[tuple[str, str]]:
     roots = [("mcopilot", REPO_ROOT)]
     if include_siblings:
-        for name in ("axiscope", "trae_factory"):
-            p = os.path.join(WS, name)
-            if os.path.isdir(p):
-                roots.append((name, p))
+        # 标签（项目标识）与目录名是两件事：`trae_factory` 目录 2026-10-24 改名为
+        # `forensics-code-factory`，但报告里仍按项目名 `trae_factory` 记账。
+        for label, cands in (("axiscope", ("axiscope",)),
+                             ("trae_factory", ("forensics-code-factory", "trae_factory"))):
+            for name in cands:
+                p = os.path.join(WS, name)
+                if os.path.isdir(p):
+                    roots.append((label, p))
+                    break
     return roots
 
 
