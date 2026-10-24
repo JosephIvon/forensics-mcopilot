@@ -480,7 +480,17 @@ def _rtu_mod():
 
 
 def rtu_available() -> bool:
-    """com0com 对探测：COM3/COM4 都能独占打开并关闭才算在场。"""
+    """com0com 对探测：COM3/COM4 都能独占打开并关闭才算在场。
+
+    **串口层打不开口时抛的是 `SystemExit`（不是 `Exception`）**——
+    `tests/fixtures/modbus/modbus_rtu_slave.py` 的 `Win32SerialPort.open()`
+    用 `raise SystemExit("[从站] 打开串口 ... 失败")` 报告失败。
+    `SystemExit` 继承自 `BaseException`，`except Exception` **接不住**：
+    2026-10-24 在 CI runner 上实测（本机只有 COM2）——这个探测把
+    整个农场带崩（进程以退出码 1 死掉，门禁判 21 红），
+    而不是按设计记 SKIP。缺席是**环境事实**，不是场景失败。
+    同类处理见 `scripts/convert_twincat.py`（那里连 `BaseException` 一起接）。
+    """
     mod = _rtu_mod()
     if mod is None:
         return False
@@ -488,10 +498,13 @@ def rtu_available() -> bool:
         port = mod.Win32SerialPort(name, 9600)
         try:
             port.open()
-        except Exception:
+        except (Exception, SystemExit):
             return False
         finally:
-            port.close()
+            try:
+                port.close()      # 句柄可能压根没建起来，close 失败不能盖掉上面的判断
+            except (Exception, SystemExit):
+                pass
     return True
 
 
@@ -1240,7 +1253,9 @@ def main(argv=None) -> int:
     except EnvironmentError as exc:
         emit(f"[farm-fail] 环境错误：{exc}")
         return EXIT_ENV
-    except Exception as exc:                  # 兜底：异常路径退出码 ≠ 0，绝不崩溃即过
+    except (Exception, SystemExit) as exc:       # 兜底：异常路径退出码 ≠ 0，绝不崩溃即过
+        # SystemExit 也要接：串口层等 fixture 用它报"环境没到位"，
+        # 那是 BaseException，漏了它就会变成裸 traceback 而不是有类型的失败。
         emit(f"[farm-broken] 未捕获异常：{type(exc).__name__}: {exc}")
         return EXIT_BROKEN
 
