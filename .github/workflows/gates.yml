@@ -27,6 +27,20 @@ jobs:
           python --version
           python -c "import sys; print(sys.executable)"
 
+      # setup-python 装的是**干净解释器**，里面没有 pytest —— 不装它，
+      # 后面那步会直接 "No module named pytest" 退 1（2026-10-24 实测踩过）。
+      #
+      # 只装 pytest 与 matplotlib，**不装本包**（`pip install -e .` 也不行）：
+      # 本仓的布局契约要求"从仓库根直接 import mcopilot 应当不成立"，
+      # 而可编辑安装会让它成立 → tests/test_layout_contract.py 立刻变红。
+      # 跑测试靠 pytest 配置里的 pythonpath = ["src"]，不靠装包。
+      # 运行时代码仍是**零三方依赖**；这两个是测试期依赖
+      # （pyproject 的 dev / charts 两个 extra）。
+      # matplotlib 也要装：它是**可选**依赖（缺它时按设计降级为"不画图但报告照出"），
+      # 但 CI 必须真的走一遍画图路径——不然画图坏了没人知道。
+      - name: 装测试期依赖（pytest + matplotlib；不装本包）
+        run: python -m pip install --disable-pip-version-check --upgrade "pytest>=7" "matplotlib>=3.5"
+
       - name: pytest 全量
         env:
           PYTHONPATH: src

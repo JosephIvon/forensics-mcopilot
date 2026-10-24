@@ -25,6 +25,7 @@ SAMPLE = os.path.join(ROOT, "samples", "servo", "twincat_export10.csv")
 sys.path.insert(0, SRC)
 
 from mcopilot.agents import servo  # noqa: E402
+from mcopilot.core import chart  # noqa: E402
 
 
 @pytest.fixture(scope="module")
@@ -174,4 +175,8 @@ def test_cli_exits_zero_on_real_data(tmp_path):
     files = os.listdir(tmp_path)
     assert any(f.endswith(".md") for f in files), f"没有报告: {files}"
     assert any(f.endswith(".json") for f in files), f"没有契约 JSON: {files}"
-    assert any(f.endswith(".png") for f in files), f"没有图: {files}"
+    # 退出码 0、报告与契约产物**不依赖** matplotlib（它是可选依赖，缺它时
+    # 按设计降级为「不画图但报告照出」）。出图这一条只在 matplotlib 在位时断言——
+    # 在位时它坏了，就必须红。
+    if chart.HAS_MPL:
+        assert any(f.endswith(".png") for f in files), f"没有图: {files}"

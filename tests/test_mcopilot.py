@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from mcopilot.agents import adapter_gen, forensics, motion_lab, requirements, review, servo, spc  # noqa: E402
-from mcopilot.core import util  # noqa: E402
+from mcopilot.core import chart, util  # noqa: E402
 
 
 # ------------------------------------------------------------------ 运动
@@ -2552,10 +2552,15 @@ def test_servo_厂商波形没有err列也要出图出报告出契约产物(tmp_
     res = servo.run_diagnose(csv_path, tmp_path, stem="export10")
     res["report"].write(tmp_path, "export10")
     assert (tmp_path / "export10.md").exists()
-    assert list(tmp_path.glob("*.png")), "没有 err 列时也必须出图"
     assert res["c3_json"] and res["c3_json"].exists(), "必须落盘 C3 契约产物"
     c3 = json.loads(res["c3_json"].read_text(encoding="utf-8"))
     assert c3["hypotheses"] is not None and "verdict" in c3 and "differential" in c3
+    # 「出图」这一条**挂在 matplotlib 在位的前提上**：matplotlib 是可选依赖
+    # （pyproject 的 charts extra），缺它时按设计降级为「不画图但报告照出」
+    # （core/chart.py 的降级契约）。所以"没有 err 列也必须出图"只能在
+    # matplotlib 在位时断言——**在位时它坏了，就必须红**。
+    if chart.HAS_MPL:
+        assert list(tmp_path.glob("*.png")), "有 matplotlib 却没出图"
 
 
 def test_servo_时间列不得被当成电流列():
