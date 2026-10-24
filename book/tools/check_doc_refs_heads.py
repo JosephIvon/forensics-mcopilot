@@ -218,7 +218,13 @@ REL_OK = []
 RECORD = []
 IGNORED_HITS = []
 UNDECIDED = []          # 缺仓导致的不可判定引用（不算断链，但必须喊）
+REVIEW_REFS = []        # 评审报告原文里引用的路径（按文件豁免，逐条打印）
 # 反例引用识别：行内明说该路径不存在（教材式举反例 / 事故记要的"缺失即证据"）
+# 评审报告原文：第三方/独立评审归档会**成段引用它评审过的路径**
+# （包括它自己注入的假路径，用来演示门禁能不能抓住）。
+# 那些路径不是本仓的引用——判成本仓断链是拿错了尺子。
+# 与 `docs/AUDIT-*` 同类处置：**按文件不按路径**豁免，且逐条打印，不静默。
+REVIEW_REPORT = re.compile(r"^docs/评审_|^docs/AUDIT-")
 COUNTER = re.compile(r"不存在|一个都|从未|未进|未入库|不入库|缺失|不在仓|没有.*(?:进|在)仓|已被清|清理|删除|已删|拆成|"
                      r"取代|不再|过期|草稿|曾引用|实际落盘路径|复算脚本未入库|本地.*产物.*不入库|"
                      r"更名为|已更名|改名|原名|曾名|旧名|原为|落点")
@@ -279,6 +285,8 @@ for name, repo in REPOS.items():
                     # 反例引用：这一行**明说**该路径不存在（教材式举反例），不算断链
                     if COUNTER.search(ctx):
                         COUNTER_EX.append((name, rel, i, ref))
+                    elif REVIEW_REPORT.match(rel):
+                        REVIEW_REFS.append((name, rel, i, ref))
                     elif _in_history(ref):
                         # **历史残留**：这条路径在在位仓的 git 历史里存在过
                         # （改名/删除前它在那儿），现在 HEAD 与工作树都没有 →
@@ -305,6 +313,14 @@ if MISSING_REPOS:
 for name, rel, i, ref in TRUE_GAPS:
     print(f"  ✗ [{name}] {rel}:{i}  →  {ref}")
 print(f"  小计：{len(TRUE_GAPS)} 处")
+
+if REVIEW_REFS:
+    print("\n" + "=" * 92)
+    print("【一·补】评审报告原文里的路径引用——不是本仓的引用，按文件豁免")
+    print("=" * 92)
+    for name, rel, i, ref in REVIEW_REFS[:40]:
+        print(f"  · [{name}] {rel}:{i}  →  {ref}")
+    print(f"  小计：{len(REVIEW_REFS)} 处（评审报告会成段引用它评审过的路径，含它自己注入的假路径）")
 
 print()
 print("=" * 92)
@@ -375,7 +391,7 @@ for (name, ref), srcs in sorted(agg8.items()):
 print(f"  小计：{len(agg8)} 个不同路径"
       + (f"　（缺仓：{'、'.join(MISSING_REPOS)}）" if MISSING_REPOS else ""))
 
-print(f"\n真断链 {len(TRUE_GAPS)} ｜ 仅工作树 {len(agg)} ｜ 跨仓 {len(agg2)} "
+print(f"\n真断链 {len(TRUE_GAPS)} ｜ 评审原文 {len(REVIEW_REFS)} ｜ 仅工作树 {len(agg)} ｜ 跨仓 {len(agg2)} "
       f"｜ 反例引用 {len(COUNTER_EX)} ｜ 相对路径 {len(REL_OK)} ｜ 记录性 {len(RECORD)} "
       f"｜ 不入库区 {len(agg7)} ｜ 缺仓不可判定 {len(agg8)}")
 if MISSING_REPOS:
