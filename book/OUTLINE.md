@@ -66,7 +66,7 @@
 
 ### 第2章 三态真值：什么可信，分几级可信
 - 概念：构造真值（自洽）≠外部真值（对打）≠部署真值（实测）。挂起不是欠账是设计。
-- 素材：`knowledge/protocols/anchors.json`（14 锚点）、
+- 素材：`knowledge/protocols/anchors.json`（16 锚点）、
   `knowledge/protocols/real_corpora/`、`docs/TODO需实测_协议域.md`（T1-T5 显式挂起）
 - 习题例（知识）：Tier A 通过率 100% 为什么不构成有效性证明？引用条目 3 作答。
 

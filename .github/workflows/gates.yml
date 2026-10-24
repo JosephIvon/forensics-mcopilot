@@ -33,7 +33,7 @@ jobs:
           PYTHONIOENCODING: utf-8
         run: python -m pytest -q
 
-      - name: 文档与电子书同步门禁（双语 / 行号引用 / 书锚点 / 裁剪件 / 结构）
+      - name: 文档与电子书同步门禁（双语 / 行号引用 / 书锚点 / 裁剪件 / 结构 / 书里的数字）
         env:
           PYTHONIOENCODING: utf-8
         run: |
@@ -42,6 +42,7 @@ jobs:
           python book/tools/check_doc_refs_heads.py
           python book/tools/verify_crops_verbatim.py
           python book/tools/check_vol2s_structure.py
+          python book/tools/verify_book_numbers.py
 
       - name: 公开前脱敏门禁（家目录/用户名与本机工作区路径必须是 0）
         env:

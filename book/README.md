@@ -39,7 +39,7 @@
 - [OUTLINE.md](OUTLINE.md) —— 生产大纲与里程碑
 - [decision-lists/](decision-lists/) —— 决策清单（每次大动作的取舍与理由留档，**三个仓的都在**）
 - [evidence/](evidence/) —— **仓外原件的入库留证**（逐行不变的副本 + 来龙去脉；被引用的仓外原件要留证，否则那条主张只剩作者能核）
-- [tools/](tools/) —— 书自己的自检工具链（含锚点门禁 `check_doc_refs_heads.py`）
+- [tools/](tools/) —— 书自己的自检工具链（含锚点门禁 `check_doc_refs_heads.py`、数字门禁 `verify_book_numbers.py`）
 
 > **运行方式不在书里**：那是**代码仓**的事，在 [`../docs/wiki/07-运行方式.md`](../docs/wiki/07-运行方式.md)。
 > 早先它被放在 `book/wiki/` 下，但它讲的是「怎么把这份代码跑起来」——
@@ -111,7 +111,7 @@ python book\tools\check_doc_refs_heads.py
 python book\tools\audit_vol2_coords.py      REM 逐条解析回源文件并打印被引行
 ```
 
-**当前状态：引用 271，可解析 271，失败 0** ✓
+**当前状态：引用 272，可解析 272，失败 0** ✓
 
 > **一条纪律**：书里写的代码仓路径必须以**代码仓根**为基准
 > （例如 `src/mcopilot/agents/forensics_comm.py`、`knowledge/protocols/anchors.json`），

@@ -15,7 +15,7 @@
 |---|---|
 | `docs/项目回顾与收尾_20261021.md` | 第1章 |
 | `docs/TODO需实测_协议域.md`（T1-T5 显式挂起） | 第2章 |
-| `knowledge/protocols/anchors.json`（14 锚点） | 第2章 |
+| `knowledge/protocols/anchors.json`（16 锚点） | 第2章 |
 | `scripts/gate_protocol.ps1`（G1-G12）+ `gate_negative.ps1` | 第3章 |
 | `docs/评审_Trae修复.md`→`评审_Trae修复验证.md`→`评审_Trae修复_二轮.md`（修复→独立复核→主控落地） | 第3/7章 |
 | `docs/协议提取SOP.md` + `knowledge/contracts/comm_log_contract.json` + `scripts/validate_comm_log.py` | 第4章 |
@@ -44,7 +44,7 @@
 | `前言.md`（书级前言：**写给读者的建议** / 这本书在解决什么 / 这一本书讲什么，以及为什么只有一本 / 全书路线 / 五条硬纪律 / 怎么验这本书 / 不承诺什么 / 三种读法） | 书级 |
 | `尾声.md`（书级尾声：写给读者 / 这一场战役的收尾 / 诚实账三张表 / 三条最贵的教训 / 欠账挂账） | 书级 |
 | `chapters/00-导读.md`（卷首导读：写给读者的建议 / 三段路线 / 九章速查表 / 三种读法 / 关于坐标，64 行） | 卷首导读 |
-| `tools/audit_vol2_coords.py`（坐标审计器：**按锚点 commit 读源文件**而非工作树；覆盖 12 个文件（卷一 9 章 + 1 份卷首导读 + 前言 + 尾声）271 引用 0 失败；支持 C1–C7 与 KB0–KB8 别名、区间行号、跨仓消歧、尾路径匹配）、`tools/fix_vol2_anchors.py`（锚点清偿）、`tools/build_crops.py`（**单件裁剪生成器**，仓根从 `__file__` 反推）、`tools/verify_crops_verbatim.py`（裁剪件逐行"原样"核验 + 求职口径复查）、`tools/check_vol2s_structure.py`（**1 卷 + 1 份导读 + 前后记**结构体检；必备件含承接段与证据区，违禁项含裸行号与会话坐标）、`tools/precompute_frontback_facts.py`（规模数亲跑，**axiscope 段按锚点读**；章与导读分列计行）、`tools/machine_ize_all_bare_refs.py` + `tools/attribute_bare_refs.py`（裸行号机判化与归属核对）、`tools/arrange_content_data.py` + `tools/arrange_apply.py`（编排改造②中档：承接段与坐标块下沉） | 全书生产工具链 |
+| `tools/audit_vol2_coords.py`（坐标审计器：**按锚点 commit 读源文件**而非工作树；覆盖 12 个文件（卷一 9 章 + 1 份卷首导读 + 前言 + 尾声）272 引用 0 失败；支持 C1–C7 与 KB0–KB8 别名、区间行号、跨仓消歧、尾路径匹配）、`tools/fix_vol2_anchors.py`（锚点清偿）、`tools/build_crops.py`（**单件裁剪生成器**，仓根从 `__file__` 反推）、`tools/verify_crops_verbatim.py`（裁剪件逐行"原样"核验 + 求职口径复查）、`tools/check_vol2s_structure.py`（**1 卷 + 1 份导读 + 前后记**结构体检；必备件含承接段与证据区，违禁项含裸行号与会话坐标）、`tools/verify_book_numbers.py`（**核书里带文件名的数字**：文件长过、行号没跟着走时，坐标门禁只查『行号在不在范围内』会放行——这道门禁查的是**数字本身对不对**）、`tools/precompute_frontback_facts.py`（规模数亲跑，**axiscope 段按锚点读**；章与导读分列计行）、`tools/machine_ize_all_bare_refs.py` + `tools/attribute_bare_refs.py`（裸行号机判化与归属核对）、`tools/arrange_content_data.py` + `tools/arrange_apply.py`（编排改造②中档：承接段与坐标块下沉） | 全书生产工具链 |
 | `tools/check_doc_refs_heads.py`（**账实相符检查器**：按各仓 `HEAD` 核文档里的路径引用，**八类**分流——真断链 / 仅工作树有 / 跨仓引用 / 反例引用 / 相对路径 / 记录性引用 / 不入库区 / 缺仓不可判定；只有「真断链」判失败；同级独立仓（`axiscope` / `trae_factory`）不在位时归【八】不判死链，否则干净检出上 CI 首跑必红；`.gitignore` 声明的不入库区（`out/` 等）单列为"公开后读者拿不到"；首跑 41 处真断链 → 清偿后 0）、`tools/scan_absolute_paths.py`（**脱敏门禁**：扫家目录/用户名与本机工作区路径，公开前必清零；便携 + 扫工作树，`--tracked` / `--all`）、`tools/_localenv.py`（**路径占位符解析**：`%USERPROFILE%` / `%WORKSPACE%` → 实路径，仓根与工作区从 `__file__` 反推）、`tools/fix_batch_b_doc_gaps.py`（mcopilot 定点清偿 26 处，精确串+命中次数断言，次数不符即退出）、`tools/verify_batch_b_edits.py`（清偿后复验：JSON 解析 / 关键字段 / 行数零漂移）、`tools/verify_codewiki_numbers.py` + `tools/verify_codewiki_numbers2.py` + `tools/verify_codewiki_tree.py`（CodeWiki 数字逐个本机亲跑）、`tools/fix_codewiki_numbers.py`（订正 8 处过期计数）、`tools/probe_exe_rebuild.py`（exe 重建 vs 元数据抖动的判据）、`tools/probe_codewiki_numbers.py`、`tools/probe_gap_windows.py`、`tools/dump_gap_lines.py`、`tools/show_gap_context.py`、`tools/find_missing_artifacts.py`、`tools/probe_doc_head_consistency.py`、`tools/probe_counter_regex.py`、`tools/verify_codewiki_numbers3.py`、`tools/toggle_readme_outnote.py`（分笔提交用行开关） | 公开前审工具链 |
 | `tools/split_vol2_into_two.py`（卷二拆两册：git mv + 章内 §编号重编 60 处）、`tools/fix_section_ranges.py`（区间断链 3 处定点清偿）、`tools/fix_vol2_count_koujing.py`（计数口径更正 4 处）、`tools/fix_ch04_machine_coords.py`、`tools/fix_ch04_machine_coords2.py`、`tools/fix_ch06_07_03_machine_coords.py`（裸行号坐标机判化 18+2 处）、`tools/fix_ch03_cross_repo_anchor.py`（官方物证落点跨仓锚更正） | 拆册与清偿工具链 |
 
@@ -103,14 +103,14 @@
     讲师切分、尾注坐标清单一律未动**。
   - 《前言》改写为读者导览（新增"写给读者的建议"与"全书路线"两节，原七节保留）；
     《尾声》新增"写给读者"开场。
-  - 由此产生的行数变化（物理行，章与导读分列）：9 章 2078 + 导读 64 = 2142。
+  - 由此产生的行数变化（物理行，章与导读分列）：9 章 2079 + 导读 64 = 2143。
 
 - [2026-10-24 改锚] **坐标锚点从旧工作副本切到本仓**（`b53ac62` → `285da78`）：
   - **为什么切**：旧仓 `mcopilot` 是发布前的工作副本，**不随本仓公开**。
     坐标锚在读者拿不到的仓里，「当场可核」就只剩作者能做——而这正是本书要证伪的那件事。
     故锚点改指**读者 clone 下来就有的那个仓**（本仓 `285da78`）。
   - **切锚不是改一行字符串**：审计器的锚点读取是 `git show <rev>:<path>`，
-    切过去以后要重验全部坐标（引用 271 / 可解析 271 / 失败 0）。
+    切过去以后要重验全部坐标（引用 272 / 可解析 272 / 失败 0）。
     另修一处**会静默出假绿的坑**：锚点根切到本仓之后，`book/` 恰好落在锚点根下面——
     若不排除，书里对 `decision-lists/*.md` 的引用会被拿**上一次提交的文字**去核，
     核的是旧行号、报的是假结果。故 `anchored_read()` 显式排除本书仓：
@@ -131,7 +131,7 @@
     主张与切分都留；生成器换为 `tools/build_crops.py`（仓根从 `__file__` 反推，不写死路径）。
   - **"简历句框"改称"可验证主张"**（9 章 39 处，前言 / 导读 / 裁剪件 / 结构体检同步改名）：
     开源后面对的是**一类开发者**，不是一个人的求职。
-  - 规模数按实跑重记：正文 9 章 + 1 份卷首导读（物理行 2142）｜坐标 **271 引用 271 可解析 0 失败**
+  - 规模数按实跑重记：正文 9 章 + 1 份卷首导读（物理行 2143）｜坐标 **272 引用 272 可解析 0 失败**
     ｜裁剪件 **1 件**｜工具 96 支 py｜决策清单 5 份。
   - 仓根解析改为**不依赖固定层数**（`core/util.py` 的 `_resolve_root()`）：
     写死 `parents[1]` 会在装成 wheel 后把根指到 `site-packages`；并附**可操作的报错**

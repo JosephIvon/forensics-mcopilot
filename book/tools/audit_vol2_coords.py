@@ -69,7 +69,7 @@ BOOKS = [
 ANCHORS = {
     expand(r"%WORKSPACE%\axiscope"): "b95ffb2",
     expand(r"%WORKSPACE%\trae_factory"): "954c210",
-    MCO_REPO: "285da78",
+    MCO_REPO: "2dfc6d2",
 }
 
 # 短名 → 相对路径候选（KB2:804 这类简写）
