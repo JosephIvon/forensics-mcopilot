@@ -566,7 +566,7 @@ the criterion is "**which volume's citations can be re-verified against this cod
 The other two volumes travel with their own repos: `axiscope` and `forensics-code-factory` each have their own book, each anchored to its own repo.
 Shipping them together means one clone gets you "the book + one runnable case repo".
 
-**The book's coordinates are anchored to this repo itself**: `forensics-mcopilot@d3c01ed`.
+**The book's coordinates are anchored to this repo itself**: `forensics-mcopilot@fdb8467`.
 They used to be anchored to the pre-release working copy `mcopilot@b53ac62` — a repo that
 **does not ship with this one**. A reader would have had no copy of it, so the coordinates
 could only ever be checked by the author, which is precisely the thing this book argues against.
