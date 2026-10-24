@@ -53,7 +53,7 @@ def group(dirs, pattern, label):
     return len(files), phys, ne
 
 
-AXI_REV = "b95ffb2"  # 书中锚点：规模数一律按此 commit 读，不读工作树
+AXI_REV = "7b0fd88"  # 书中锚点：规模数一律按此 commit 读，不读工作树
 
 
 def ax_lines(rel):

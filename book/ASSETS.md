@@ -82,7 +82,7 @@
   决策清单：`decision-lists/mcopilot-353182e.md`。
 
 - [2026-10-22 本轮·作者三项授权] **axiscope 锚点后的变更与审计口径**：
-  锚点 `b95ffb2` 之后仓内又有提交（HEAD `a57e67b`）：`docs/kb/KB0-conventions.md` +7/-3、
+  锚点 `7b0fd88` 之后仓内又有提交（HEAD `a57e67b`）：`docs/kb/KB0-conventions.md` +7/-3、
   新增 `docs/wiki/` 7 篇（合计 518 行）。**书内规模数一律按锚点口径**
   （KB 8 件 = 8141 物理行、docs md 实存 20 件 = 主体 19 + 收尾文档 1，wiki 0 件）；
   工作树读数为 KB 8145 / docs 27，**不是书的数**。审计器同步改为**按锚点 commit 读源文件**
@@ -209,7 +209,7 @@
   - 本书新增 `tools/scan_absolute_paths.py`（三仓绝对路径清账，可机判）：
     家目录/用户名 **0** ✓、本机工作区 **0** ✓；余 14 处为 `C:\Program Files` / `C:\Windows`
     系统路径 ✓，10 处为 `s7.json` 内嵌 C 代码的扫描器误报 ✓，均逐条定性 ✓。
-  - **全书锚点维持不变**（mcopilot `b53ac62` / axiscope `b95ffb2` / trae_factory `954c210`）✓
+  - **全书锚点维持不变**（mcopilot `b53ac62` / axiscope `7b0fd88` / trae_factory `954c210`）✓
     ——本轮动的是工作树与新提交，**没动任何一行正文坐标** ✓。
   决策清单：`decision-lists/release-hardening-20261022.md`（第 5 份 ✓）。
 - [2026-10-22 本轮·批 D 发布准备] **索引仓已备，推送待作者给账号**：
@@ -255,7 +255,7 @@
   | 仓（GitHub） | 分支 | 发布时 HEAD |
   |---|---|---|
   | `JosephIvon/mcopilot` ✓ | `main` ✓ | `85e45d4` ✓ |
-  | `JosephIvon/axiscope` ✓ | `main` ✓ | `0bf4ad4` ✓ |
+  | `JosephIvon/axiscope` ✓ | `main` ✓ | `3576c9c` ✓ |
   | `JosephIvon/forensics-code-factory` ✓ | `main` ✓ | `e651f3b` ✓ |
   | `JosephIvon/forensics-learning-index` ✓ | `main` ✓ | `6a8e9d2` ✓ |
 
@@ -267,7 +267,7 @@
   从 GitHub **干净克隆**复验 ✓：mcopilot 376 passed/11 skipped ✓、门禁 10/12（SKIP 2）✓；
   axiscope 294 passed/110 skipped ✓、脱敏自检退出码 0 ✓；
   工厂全品牌再生退出码 0 ✓、单文件与 `gen/` 同源 ✓。
-  坐标锚点**未动** ✓（mcopilot `b53ac62` / axiscope `b95ffb2` / trae `954c210` ✓）——
+  坐标锚点**未动** ✓（mcopilot `b53ac62` / axiscope `7b0fd88` / trae `954c210` ✓）——
   锚点之后的提交在本书 `ASSETS.md` 登记 ✓，书里 697 个坐标一个没受影响 ✓。
   仍挂账的（不许抹掉 ✓）：真机层未验证 ✓、
   mcopilot 早期提交仍是自动化署名 ✓、协议标准原件外置 ✓（干净克隆时相关门禁记 SKIP ✓）。
@@ -302,7 +302,7 @@
   **干净克隆里可复核** ✓：三仓克隆到同一目录后，G13 真跑通过 ✓（不是 SKIP ✓）✓。
   清理克隆实测还抓到第 6 个隐式依赖 ✓：`compile_check.ps1` 要三个适配器都在才肯编译 ✓，
   而对照脚本只生成了一个 ✓ → 自检被 skip ✓ → 已改成按 `knowledge/sdks/` 清单全生成 ✓ ✓。
-  坐标锚点**未动** ✓（`b53ac62` / `b95ffb2` / `954c210` ✓）：书中坐标按锚点 commit 读源文件 ✓，
+  坐标锚点**未动** ✓（`b53ac62` / `7b0fd88` / `954c210` ✓）：书中坐标按锚点 commit 读源文件 ✓，
   锚点之后的变更在本文件登记 ✓ —— 697 个坐标一个没受影响 ✓。
 
 ### 外部参照与缓写卷

@@ -54,7 +54,7 @@
 | 仓 | 是什么 | 位置 |
 |---|---|---|
 | **forensics-mcopilot**（原 `mcopilot`） | 协议域的**真值钉扎与门禁** | **本仓**（`../`）——**本书的代码锚点就是它**：`forensics-mcopilot@285da78` |
-| axiscope | 数据契约与知识库（C1–C7 契约、KB0–KB8 知识库） | 同级目录（锚点 `axiscope@b95ffb2`） |
+| axiscope | 数据契约与知识库（C1–C7 契约、KB0–KB8 知识库） | 同级目录（锚点 `axiscope@7b0fd88`） |
 | forensics-code-factory | 上位机**代码工厂**（浏览器里填轴数与工艺，生成带真值链的 C# 工程） | 同级目录（锚点 `trae_factory@954c210`） |
 
 三仓之间**互不合并**——每个仓的锚点都按**自己的仓根**记相对路径，合成一个仓会破掉它。

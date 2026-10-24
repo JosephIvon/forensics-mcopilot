@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """check_scale_counts_at_anchor.py —— 按锚点 commit 复核书里引用的规模数（2026-10-22）。
 
-起因：axiscope 在锚点 `b95ffb2` 之后有提交（KB0 +7/-3、新增 7 篇 wiki），
+起因：axiscope 在锚点 `7b0fd88` 之后有提交（KB0 +7/-3、新增 7 篇 wiki），
 书里"知识库 8 件 8142 行""docs 19 件（实存 27）"这类数字必须与**锚点处**一致。
 本脚本在锚点 commit 上重数：KB 8 件总物理行、docs md 件数、契约件数与行数、
 src/tests 件数与非空行、synth/bench 行数；并与工作树（HEAD）对照，列出差异。
@@ -15,7 +15,7 @@ from _localenv import expand
 
 AXI = expand(r"%WORKSPACE%\axiscope")
 TRAE = expand(r"%WORKSPACE%\trae_factory")
-ANCHOR = "b95ffb2"
+ANCHOR = "7b0fd88"
 HEAD = "a57e67b"
 
 KBS = ["KB0-conventions.md", "KB2-waveform-formats.md", "KB3-tuning-rules.md",

@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """check_anchor_drift.py —— 查书中坐标在"锚点"与"当前 HEAD"之间是否漂移（2026-10-22）。
 
-起因：axiscope 在书中锚点 `b95ffb2` 之后有提交 `a57e67b`（KB0 +7/-3、新增 7 篇 wiki）。
+起因：axiscope 在书中锚点 `7b0fd88` 之后有提交 `a57e67b`（KB0 +7/-3、新增 7 篇 wiki）。
 若书里的坐标在锚点处指的不是同一句话，锚点就是假的（看着对、其实对不齐）。
 本脚本：把书里全部 `KB0:行号` / `KB0-conventions.md:行号` 引用，在锚点与 HEAD 两处各取该行，
 逐条比对文本是否相同；其余 KB / 契约 / src 文件同样比对（确认零漂移）。
@@ -16,7 +16,7 @@ from _localenv import expand
 
 BOOK = expand(r"%WORKSPACE%\forensics-learning-book")
 AXI = expand(r"%WORKSPACE%\axiscope")
-ANCHOR = "b95ffb2"
+ANCHOR = "7b0fd88"
 HEAD = "a57e67b"
 
 CITE = re.compile(

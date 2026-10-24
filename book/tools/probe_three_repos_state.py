@@ -14,7 +14,7 @@ import subprocess
 
 REPOS = [
     ("mcopilot", r"%WORKSPACE%\mcopilot", "b53ac62"),
-    ("axiscope", r"%WORKSPACE%\axiscope", "b95ffb2"),
+    ("axiscope", r"%WORKSPACE%\axiscope", "7b0fd88"),
     ("trae_factory", r"%WORKSPACE%\trae_factory", "954c210"),
 ]
 
