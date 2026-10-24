@@ -107,6 +107,54 @@ def _resolve(rel: str):
     return None
 
 
+ROLE_CLAIM = re.compile(r"\b([a-z_]+)=(\d+)\b")
+
+
+def check_role_breakdown(targets) -> tuple[int, int]:
+    """核对书里「按 role 分账：spec_pdf=7、source_snapshot=1、…」这类**自由文本** ✓。
+
+    为什么单列一条 ✓
+    ---------------
+    上面那套 `CLAIM` 只认 `` `路径`（N 行/锚点） `` 形态 ✓ ——
+    role 分账写成 `spec_pdf=7、…` 时它看不见 ✓，
+    于是锚点表一改、分账数字就静默过期（2026-10-25 实测踩到：
+    补一个 `vendor_csharp_binding` 锚点后 `vendor_csharp_binding=1` 就错了 ✓，
+    而门禁一声不响 ✓）。
+    这条把它一起盯上：凡出现 `xxx=N` 且 xxx 是 anchors.json 里真实存在的 role，
+    就必须等于实际条数 ✓。
+
+    returns: (核对数, 失败数)
+    """
+    p = REPO / "knowledge" / "protocols" / "anchors.json"
+    if not p.is_file():
+        return 0, 0
+    data = json.loads(io.open(p, encoding="utf-8").read())
+    roles: dict[str, int] = {}
+    for a in data.get("anchors", []):
+        r = a.get("role")
+        if r:
+            roles[r] = roles.get(r, 0) + 1
+    if not roles:
+        return 0, 0
+    checked = bad = 0
+    for t in targets:
+        if not t.is_file():
+            continue
+        for no, line in enumerate(io.open(t, encoding="utf-8").read().splitlines(), 1):
+            for m in ROLE_CLAIM.finditer(line):
+                role, n = m.group(1), int(m.group(2))
+                if role not in roles:
+                    continue
+                checked += 1
+                if roles[role] != n:
+                    print(f"  !! {t.relative_to(REPO)} L{no}  role `{role}={n}`"
+                          f" → 实际 {roles[role]}")
+                    print(f"     anchors.json 里 {role} 实际 {roles[role]} 条；"
+                          f"书里写的 {n} 已过期")
+                    bad += 1
+    return checked, bad
+
+
 def main() -> int:
     targets = []
     for d in SCAN_DIRS:
@@ -146,10 +194,13 @@ def main() -> int:
                           f" → 实际 {actual}")
                     print(f"     {rel} 实际 {actual} {unit}；书里写的 {n} {unit} 已过期")
                     bad += 1
+    role_checked, role_bad = check_role_breakdown(targets)
+    bad += role_bad
     if bad:
         print(f"  数字对不上 {bad} 处 —— 读者按书里的数字去数，数不出来。")
         return 1
-    print(f"  已核 {checked} 处带文件名的数字，全部一致"
+    print(f"  已核 {checked} 处带文件名的数字" +
+          (f"、{role_checked} 处 role 分账" if role_checked else "") + "，全部一致"
           + (f"（另有 {unresolved} 处解不出，只计数不判失败）" if unresolved else ""))
     return 0
 

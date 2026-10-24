@@ -15,7 +15,7 @@
 |---|---|
 | `docs/项目回顾与收尾_20261021.md` | 第1章 |
 | `docs/TODO需实测_协议域.md`（T1-T5 显式挂起） | 第2章 |
-| `knowledge/protocols/anchors.json`（16 锚点） | 第2章 |
+| `knowledge/protocols/anchors.json`（17 锚点） | 第2章 |
 | `scripts/gate_protocol.ps1`（G1-G12）+ `gate_negative.ps1` | 第3章 |
 | `docs/评审_Trae修复.md`→`评审_Trae修复验证.md`→`评审_Trae修复_二轮.md`（修复→独立复核→主控落地） | 第3/7章 |
 | `docs/协议提取SOP.md` + `knowledge/contracts/comm_log_contract.json` + `scripts/validate_comm_log.py` | 第4章 |
