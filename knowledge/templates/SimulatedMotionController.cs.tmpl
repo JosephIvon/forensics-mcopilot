@@ -1,0 +1,377 @@
+// ============================================================================
+//  运动控制器仿真实现（SimulatedMotionController）
+//
+//  用途：在没有硬件的情况下跑通业务逻辑与契约测试（CI 里跑的就是这个）。
+//  它用简单的梯形速度曲线做运动学积分，精度够验证「单位口径、状态流转、参数校验」
+//  这些最容易出错的逻辑，但不用于验证实际到位精度。
+//
+//  真实硬件的精度验证请用 `mcopilot motion` 的黄金测试向量 + 实机回读对比。
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+
+namespace Motion
+{
+    public sealed class SimulatedMotionController : IMotionController
+    {
+        private sealed class Axis
+        {
+            public double PositionMm;
+            public double TargetMm;
+            public double VelocityMmS;
+            public double AccelMmS2;
+            public double StartPositionMm;
+            public double StartTimeS;
+            public double DurationS;
+            public bool Moving;
+            public bool Jogging;   // 点动中：没有自然终点，位置随时间线性外推
+            public bool Enabled;
+            public int StopReason;
+        }
+
+        private readonly Axis[] _axes;
+        private readonly double[] _pulsePerMm;
+        private readonly bool[] _inputs;
+        private readonly bool[] _outputs;
+        private readonly Dictionary<int, double> _compare = new Dictionary<int, double>();
+        private readonly Dictionary<int, int> _latch = new Dictionary<int, int>();
+        private readonly double _followingErrorTauS;
+        private readonly bool _realFeedback;
+        private double _clock;          // 虚拟时钟（秒），完全确定性
+        private bool _isOpen;
+
+        /// <param name="realFeedback">
+        /// false = 模拟**开环轴**：反馈位置是指令位置的副本（正运动 ATYPE=1/7 脉冲轴的真情）。
+        /// 这种轴上跟随误差必然恒为 0，契约测试必须据此把「跟随误差必须非零」判为不适用。
+        /// </param>
+        public SimulatedMotionController(int axisCount = 4, double defaultPulsePerMm = 1000.0,
+                                         double followingErrorTauS = 0.002, bool realFeedback = true)
+        {
+            _axes = new Axis[axisCount];
+            _pulsePerMm = new double[axisCount];
+            _inputs = new bool[32];
+            _outputs = new bool[32];
+            _followingErrorTauS = followingErrorTauS;
+            _realFeedback = realFeedback;
+            for (var i = 0; i < axisCount; i++)
+            {
+                _axes[i] = new Axis();
+                _pulsePerMm[i] = defaultPulsePerMm;
+            }
+        }
+
+        public string Vendor => "Simulator";
+        public int AxisCount => _axes.Length;
+        public bool IsOpen => _isOpen;
+
+        /// <summary>虚拟时钟推进。测试里显式调用，结果完全确定。</summary>
+        public void Advance(double seconds) => _clock += seconds;
+
+        /// <summary>推进直到所有轴停止或超时。</summary>
+        public bool AdvanceUntilDone(double timeoutS = 5.0, double stepS = 0.001)
+        {
+            var t = 0.0;
+            while (t < timeoutS)
+            {
+                Advance(stepS);
+                t += stepS;
+                bool allDone = true;
+                for (var i = 0; i < _axes.Length; i++)
+                {
+                    // 走 IsMotionDone 而不是直接看 a.Moving —— 只有它会把轴真正置为完成
+                    if (!IsMotionDone(i)) { allDone = false; break; }
+                }
+                if (allDone) return true;
+            }
+            return false;
+        }
+
+        public void Open() => _isOpen = true;
+
+        public void Close() => _isOpen = false;
+
+        public void Dispose() => Close();
+
+        public void Enable(int axis, bool on)
+        {
+            CheckAxis(axis);
+            _axes[axis].Enabled = on;
+        }
+
+        public bool IsEnabled(int axis)
+        {
+            CheckAxis(axis);
+            return _axes[axis].Enabled;
+        }
+
+        public void MoveAbs(int axis, double posMm, MotionProfile profile)
+        {
+            CheckAxis(axis);
+            var a = _axes[axis];
+            a.Jogging = false;          // 新的定位指令取消点动
+            a.StartPositionMm = CurrentPositionMm(a);
+            a.TargetMm = posMm;
+            a.VelocityMmS = profile.VelocityMmS;
+            a.AccelMmS2 = profile.AccelMmS2;
+            a.StartTimeS = _clock;
+            a.DurationS = TrapezoidTime(a.StartPositionMm, a.TargetMm, profile);
+            a.Moving = true;
+            a.StopReason = 0;
+        }
+
+        public void MoveRel(int axis, double distMm, MotionProfile profile)
+        {
+            CheckAxis(axis);
+            MoveAbs(axis, _axes[axis].PositionMm + distMm, profile);
+        }
+
+        public void MoveLinear(IReadOnlyList<double> targetsMm, MotionProfile profile)
+        {
+            if (targetsMm == null) throw new ArgumentNullException(nameof(targetsMm));
+            if (targetsMm.Count < 2) throw new ArgumentException("直线插补至少需要 2 个轴", nameof(targetsMm));
+            if (targetsMm.Count > _axes.Length)
+                throw new ArgumentOutOfRangeException(nameof(targetsMm), $"轴数 {targetsMm.Count} 超过 {_axes.Length}");
+            for (var i = 0; i < targetsMm.Count; i++) MoveAbs(i, targetsMm[i], profile);
+        }
+
+        public void MoveArc(double centerXMm, double centerYMm, double endXMm, double endYMm,
+                            bool counterClockwise, MotionProfile profile)
+        {
+            throw new NotSupportedException("仿真器不实现圆弧插补");
+        }
+
+        public void Jog(int axis, double speedMmS)
+        {
+            CheckAxis(axis);
+            var a = _axes[axis];
+            // 点动必须真的让轴走：方向是厂商 API 里最容易写反的映射
+            // （dmc_vmove 的 dir 是 0/1 编码，ZAux_Direct_Single_Vmove 是 -1/1）。
+            // 参考模型里「速度符号 = 运动方向」，适配器必须与之一致。
+            a.Jogging = true;
+            a.Moving = true;
+            a.StartTimeS = _clock;
+            a.StartPositionMm = CurrentPositionMm(a);
+            a.VelocityMmS = speedMmS;
+        }
+
+        public void Stop(int axis, StopMode mode = StopMode.Decelerate)
+        {
+            CheckAxis(axis);
+            var a = _axes[axis];
+            if (a.Jogging)
+            {
+                a.PositionMm = a.StartPositionMm + a.VelocityMmS * (_clock - a.StartTimeS);
+                a.TargetMm = a.PositionMm;   // 点动终点成为新的静止位置
+                a.Jogging = false;
+            }
+            a.Moving = false;
+            a.StopReason = mode == StopMode.Immediate ? 2 : 0;
+        }
+
+        public void Home(int axis)
+        {
+            CheckAxis(axis);
+            MoveAbs(axis, 0.0, MotionProfile.Default);
+            _axes[axis].StopReason = 0;
+        }
+
+        public double GetPositionMm(int axis)
+        {
+            CheckAxis(axis);
+            return CurrentPositionMm(_axes[axis]);
+        }
+
+        private double CurrentPositionMm(Axis a)
+        {
+            // 点动：位置随时间线性外推（没有加减速段）
+            if (a.Jogging) return a.StartPositionMm + a.VelocityMmS * (_clock - a.StartTimeS);
+            if (!a.Moving) return a.TargetMm;
+            var dt = _clock - a.StartTimeS;
+            var t = Math.Min(dt, a.DurationS);
+            var dist = a.TargetMm - a.StartPositionMm;
+            var sign = Math.Sign(dist);
+            var v = Math.Abs(a.VelocityMmS);
+            var acc = a.AccelMmS2;
+            if (v <= 0 || acc <= 0) return a.StartPositionMm;
+            var tAcc = v / acc;
+            var dAcc = 0.5 * acc * tAcc * tAcc;
+            var dTotal = Math.Abs(dist);
+            double travelled;
+            if (dTotal <= dAcc)
+            {
+                travelled = 0.5 * acc * t * t;
+            }
+            else
+            {
+                var tCruise = (dTotal - dAcc) / v;
+                if (t <= tAcc) travelled = 0.5 * acc * t * t;
+                else if (t <= tAcc + tCruise) travelled = dAcc + v * (t - tAcc);
+                else
+                {
+                    var td = t - tAcc - tCruise;
+                    var tDec = v / acc;
+                    td = Math.Min(td, tDec);
+                    travelled = dTotal - 0.5 * acc * (tDec - td) * (tDec - td);
+                }
+            }
+            return a.StartPositionMm + sign * travelled;
+        }
+
+        public double GetFeedbackMm(int axis)
+        {
+            CheckAxis(axis);
+            var a = _axes[axis];
+            var cmd = GetPositionMm(axis);
+            // 开环轴（realFeedback=false）：反馈就是指令位置的副本 —— 正运动 ATYPE=1/7 脉冲轴的真情。
+            if (!_realFeedback) return cmd;
+            // 反馈位置**滞后于**指令位置（速度正比的一阶跟随误差模型）。
+            // 如果这里直接返回指令位置，跟随误差恒为 0 ——
+            // 那「跟随误差必须非零」这条契约就永远抓不到假反馈，仿真器也就失去了意义。
+            var dt = a.Moving ? _clock - a.StartTimeS : a.DurationS;
+            return cmd - VelocityAt(a, dt) * _followingErrorTauS;
+        }
+
+        /// <summary>该轴的反馈位置是否来自独立的真实测量通道。</summary>
+        public bool HasRealFeedback(int axis)
+        {
+            CheckAxis(axis);
+            return _realFeedback;
+        }
+
+        /// <summary>当前速度（mm/s，带符号）。运动结束后为 0。</summary>
+        private double VelocityAt(Axis a, double dt)
+        {
+            if (a.Jogging) return a.VelocityMmS;
+            if (!a.Moving) return 0.0;
+            // 必须夹到运动时长以内：三角形段是 acc*dt，不夹的话运动结束后速度会一直涨。
+            if (dt > a.DurationS) dt = a.DurationS;
+            var dist = a.TargetMm - a.StartPositionMm;
+            var sign = Math.Sign(dist);
+            var v = Math.Abs(a.VelocityMmS);
+            var acc = a.AccelMmS2;
+            if (v <= 0 || acc <= 0) return 0.0;
+            var tAcc = v / acc;
+            var dAcc = 0.5 * acc * tAcc * tAcc;
+            var dTotal = Math.Abs(dist);
+            if (dTotal <= dAcc) return sign * acc * dt;                 // 三角形段
+            var tCruise = (dTotal - dAcc) / v;
+            if (dt <= tAcc) return sign * acc * dt;
+            if (dt <= tAcc + tCruise) return sign * v;
+            var td = Math.Min(Math.Max(dt - tAcc - tCruise, 0.0), tAcc);
+            return sign * Math.Max(0.0, v - acc * td);
+        }
+
+        public bool IsMoving(int axis)
+        {
+            CheckAxis(axis);
+            return _axes[axis].Moving;
+        }
+
+        public bool IsMotionDone(int axis)
+        {
+            CheckAxis(axis);
+            var a = _axes[axis];
+            if (a.Jogging) return false;   // 点动没有自然终点，只能靠 Stop
+            if (!a.Moving) return true;
+            if (_clock - a.StartTimeS >= a.DurationS)
+            {
+                a.Moving = false;
+                a.PositionMm = a.TargetMm;
+                return true;
+            }
+            return false;
+        }
+
+        public int GetStopReason(int axis)
+        {
+            CheckAxis(axis);
+            return _axes[axis].StopReason;
+        }
+
+        public string GetStopReasonText(int axis)
+        {
+            CheckAxis(axis);
+            var r = _axes[axis].StopReason;
+            if (r == 0) return "（正常停止）";
+            if (r == 2) return "（立即停止）";
+            return $"（停止原因 {r}）";
+        }
+
+        public AxisState GetState(int axis)
+        {
+            CheckAxis(axis);
+            var a = _axes[axis];
+            if (a.Moving) return AxisState.Started;
+            if (!a.Enabled) return AxisState.StartDisabled;
+            return AxisState.Stopped;
+        }
+
+        public bool ReadInput(int port)
+        {
+            if (port < 0 || port >= _inputs.Length) throw new ArgumentOutOfRangeException(nameof(port));
+            return _inputs[port];
+        }
+
+        public void WriteOutput(int port, bool on)
+        {
+            if (port < 0 || port >= _outputs.Length) throw new ArgumentOutOfRangeException(nameof(port));
+            _outputs[port] = on;
+        }
+
+        public void SetCompareOutput(int axis, double posMm, int outPort)
+        {
+            CheckAxis(axis);
+            // 端口号越界 = 比较点打到别的端子 = 飞拍误触发/误拍照。
+            // 真机上这类错不报错、不写日志，只在产线上炸 —— 所以这里必须拦。
+            if (outPort < 0 || outPort >= _outputs.Length)
+                throw new ArgumentOutOfRangeException(nameof(outPort),
+                    $"比较输出端口 {outPort} 越界（可用 0~{_outputs.Length - 1}）");
+            _compare[axis] = posMm;
+        }
+
+        public void SetLatch(int axis, int inPort)
+        {
+            CheckAxis(axis);
+            // 锁存端口越界同样必须显式失败：雷赛的锁存通道由**轴号**决定
+            // （LTC0 锁 0~3 号轴、LTC1 锁 4~7 号轴；ACC-X400 上是 IN14/IN15，不是 IN4~IN7），
+            // 传错端口在真机上表现为「锁存永远不触发」，现场会误判成传感器坏了。
+            if (inPort < 0 || inPort >= _inputs.Length)
+                throw new ArgumentOutOfRangeException(nameof(inPort),
+                    $"锁存输入端口 {inPort} 越界（可用 0~{_inputs.Length - 1}）");
+            _latch[axis] = inPort;
+        }
+
+        public void SetPulsePerMm(int axis, double pulsePerMm)
+        {
+            CheckAxis(axis);
+            if (pulsePerMm <= 0) throw new ArgumentOutOfRangeException(nameof(pulsePerMm));
+            _pulsePerMm[axis] = pulsePerMm;
+        }
+
+        public double GetPulsePerMm(int axis)
+        {
+            CheckAxis(axis);
+            return _pulsePerMm[axis];
+        }
+
+        private void CheckAxis(int axis)
+        {
+            if (axis < 0 || axis >= _axes.Length)
+                throw new ArgumentOutOfRangeException(nameof(axis), $"轴号 {axis} 超出范围 0..{_axes.Length - 1}");
+        }
+
+        private static double TrapezoidTime(double from, double to, MotionProfile p)
+        {
+            var dist = Math.Abs(to - from);
+            var v = p.VelocityMmS;
+            var a = p.AccelMmS2;
+            if (dist <= 0 || v <= 0 || a <= 0) return 0.0;
+            var tAcc = v / a;
+            var dAcc = 0.5 * a * tAcc * tAcc;
+            if (dist <= dAcc) return Math.Sqrt(2.0 * dist / a);
+            var tCruise = (dist - dAcc) / v;
+            return tAcc + tCruise + tAcc;
+        }
+    }
+}

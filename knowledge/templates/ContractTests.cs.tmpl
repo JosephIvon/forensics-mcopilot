@@ -1,0 +1,378 @@
+// ============================================================================
+//  运动卡适配器契约测试基类
+//  —— 每接入一个品牌，只需继承本类并实现 CreateController()。
+//
+//  这套测试的意义：让「换卡不改业务代码」这句话从口号变成 CI 里的一条红绿。
+//  新卡适配器必须通过全部契约用例，否则不允许合入。
+//
+//  跑法：
+//    1) 把本文件与 SimulatedMotionController.cs 放进测试工程；
+//    2) 为每个品牌写一个继承类，例如：
+//         public class DmcContractTests : MotionContractTests {
+//             protected override Motion.IMotionController Create() =>
+//                 new Motion.Adapters.Leisai.DmcMotionController(card: 0);
+//         }
+//    3) 跑 dotnet test。没插卡时跳过需真机的用例（NeedsRealHardware 特性）。
+//
+//  框架：xUnit。若团队用 NUnit，把 [Fact]/[Theory] 换成 [Test]/[TestCase] 即可，
+//  断言写法是 Assert.Equal / Assert.True / Assert.Throws 三种，照搬很快。
+// ============================================================================
+
+using System;
+using Motion;
+using Xunit;
+
+namespace Motion.ContractTests
+{
+    /// <summary>标记需要真实硬件的用例。</summary>
+    [AttributeUsage(AttributeTargets.Method)]
+    public sealed class NeedsRealHardwareAttribute : Attribute { }
+
+    public abstract class MotionContractTests
+    {
+        /// <summary>由具体品牌适配器实现：返回一个已连接的控制器。</summary>
+        protected abstract IMotionController Create();
+
+        private IMotionController Open()
+        {
+            var c = Create();
+            c.Open();
+            return c;
+        }
+
+        // ------------------------------------------------------------ 生命周期
+        [Fact]
+        public void Open_Close_可重复调用()
+        {
+            using (var c = Open())
+            {
+                Assert.True(c.IsOpen);
+            }
+            using (var c = Open())
+            {
+                Assert.True(c.IsOpen);
+            }
+        }
+
+        [Fact]
+        public void Vendor_非空()
+        {
+            using (var c = Open())
+            {
+                Assert.False(string.IsNullOrWhiteSpace(c.Vendor));
+                Assert.True(c.AxisCount > 0);
+            }
+        }
+
+        // ------------------------------------------------------------ 单位口径（本套测试最重要的一条）
+        [Fact]
+        public void 指令位置与反馈位置_单位一致()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.SetPulsePerMm(axis, 1000.0);
+                c.Enable(axis, true);
+                c.MoveAbs(axis, 10.0, MotionProfile.Default);
+                WaitDone(c, axis);
+
+                var cmd = c.GetPositionMm(axis);
+                Assert.Equal(10.0, cmd, 3);
+
+                // 无真实反馈的轴（开环 / 反馈是指令位置的副本）上，反馈读数不参与单位核对：
+                // 拿它比只会得到「误差 = 整个位移量」这种假结论，反而把真问题盖掉。
+                if (!c.HasRealFeedback(axis))
+                {
+                    Assert.True(true,
+                        $"轴 {axis} 无真实反馈（开环轴 / 反馈是指令位置的副本）：只校验了指令侧。" +
+                        "若这台卡实际接了编码器，请在适配器配置里声明该轴有真实反馈。");
+                    return;
+                }
+
+                // 伺服到位后跟随误差需要一点时间收敛（真机上还有整定残差），
+                // 所以先等反馈稳定，再比单位 —— 收紧到 0.001mm 会把「整定不好」误报成「单位错」。
+                WaitSettled(c, axis);
+
+                var fb = c.GetFeedbackMm(axis);
+                // 指令位置与反馈位置必须用同一套换算，否则会出现「显示 10mm 实际 10000mm」。
+                // 容差 0.05mm：既能抓住 10 倍/1000 倍的单位错，又不会被真机整定残差误伤。
+                Assert.True(Math.Abs(cmd - fb) <= 0.05,
+                    $"指令位置 {cmd:F4}mm 与反馈位置 {fb:F4}mm 换算口径不一致（单位错会差 10~1000 倍）");
+            }
+        }
+
+        /// <summary>
+        /// 跟随误差必须非零 —— 这条抓的是**假反馈**。
+        /// 如果适配器把 GetFeedbackMm 写成「返回 GetPositionMm」，那永远不会有跟随误差，
+        /// 伺服整定、飞拍补偿、闭环定位全部失去依据，而且现场看不出任何异常。
+        ///
+        /// 但开环轴上跟随误差**必然**恒为 0（正运动 ATYPE=1/7 脉冲轴的 MPOS 只是 DPOS 的副本），
+        /// 那不是 bug，是没有反馈通道 —— 所以先问 HasRealFeedback，不适用就明说，不误报。
+        /// </summary>
+        [Fact]
+        [NeedsRealHardware]
+        public void 跟随误差必须非零_抓假反馈()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.SetPulsePerMm(axis, 1000.0);
+                c.Enable(axis, true);
+
+                if (!c.HasRealFeedback(axis))
+                {
+                    Assert.True(true,
+                        $"轴 {axis} 无真实反馈（开环轴 / 反馈是指令位置的副本），本用例不适用 —— " +
+                        "这种轴上跟随误差必然恒为 0。首次上机请按 L3/L1 清单核对反馈通道接线。");
+                    return;
+                }
+
+                c.MoveAbs(axis, 200.0, new MotionProfile(500.0, 2000.0, 10000.0));
+
+                var maxErr = 0.0;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                while (sw.ElapsedMilliseconds < 500)
+                {
+                    var err = Math.Abs(c.GetPositionMm(axis) - c.GetFeedbackMm(axis));
+                    if (err > maxErr) maxErr = err;
+                }
+
+                Assert.True(maxErr > 0.001,
+                    $"跟随误差恒为 0（实测最大 {maxErr:F6}mm）：要么轴没动，要么反馈位置是假数据。" +
+                    "该轴已声明有真实反馈（HasRealFeedback=true），所以这条不能放过。");
+            }
+        }
+
+        [Fact]
+        public void 脉冲当量改变_位置读数随之改变()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.SetPulsePerMm(axis, 1000.0);
+                Assert.Equal(1000.0, c.GetPulsePerMm(axis), 6);
+                c.SetPulsePerMm(axis, 2000.0);
+                Assert.Equal(2000.0, c.GetPulsePerMm(axis), 6);
+            }
+        }
+
+        [Fact]
+        public void 非法脉冲当量_必须抛异常而不是静默接受()
+        {
+            using (var c = Open())
+            {
+                Assert.Throws<ArgumentOutOfRangeException>(() => c.SetPulsePerMm(0, 0.0));
+                Assert.Throws<ArgumentOutOfRangeException>(() => c.SetPulsePerMm(0, -1.0));
+            }
+        }
+
+        // ------------------------------------------------------------ 运动
+        [Fact]
+        public void 绝对定位_到位后位置正确()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.Enable(axis, true);
+                c.SetPulsePerMm(axis, 1000.0);
+                c.MoveAbs(axis, 25.0, MotionProfile.Default);
+                Assert.True(WaitDone(c, axis), "运动未在超时内完成");
+                Assert.Equal(25.0, c.GetPositionMm(axis), 3);
+                Assert.Equal(0, c.GetStopReason(axis));
+            }
+        }
+
+        [Fact]
+        public void 相对定位_位置增量正确()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.Enable(axis, true);
+                c.SetPulsePerMm(axis, 1000.0);
+                c.MoveAbs(axis, 10.0, MotionProfile.Default);
+                Assert.True(WaitDone(c, axis));
+                c.MoveRel(axis, 5.0, MotionProfile.Default);
+                Assert.True(WaitDone(c, axis));
+                Assert.Equal(15.0, c.GetPositionMm(axis), 3);
+            }
+        }
+
+        /// <summary>
+        /// 回零后位置必须归零 —— 回零是**工件坐标的基准**。
+        /// 归零不准（或归零后没清零），后面所有定位都是错的，而且现场看不出异常。
+        /// </summary>
+        [Fact]
+        public void 回零后_位置归零()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.Enable(axis, true);
+                c.SetPulsePerMm(axis, 1000.0);
+                c.MoveAbs(axis, 37.5, MotionProfile.Default);
+                Assert.True(WaitDone(c, axis));
+                c.Home(axis);
+                Assert.True(WaitDone(c, axis));
+                Assert.Equal(0.0, c.GetPositionMm(axis), 3);
+            }
+        }
+
+        /// <summary>多轴直线插补：各轴必须同时到达各自目标（不是各走各的）。</summary>
+        [Fact]
+        public void 直线插补_各轴到达目标()
+        {
+            using (var c = Open())
+            {
+                if (c.AxisCount < 2) return;     // 单轴卡不适用
+                c.Enable(0, true);
+                c.Enable(1, true);
+                c.SetPulsePerMm(0, 1000.0);
+                c.SetPulsePerMm(1, 1000.0);
+                c.MoveLinear(new double[] { 10.0, -20.0 }, MotionProfile.Default);
+                Assert.True(WaitDone(c, 0));
+                Assert.True(WaitDone(c, 1));
+                Assert.Equal(10.0, c.GetPositionMm(0), 3);
+                Assert.Equal(-20.0, c.GetPositionMm(1), 3);
+            }
+        }
+
+        [Fact]
+        public void 停止后_不再处于运动中()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.Enable(axis, true);
+                c.MoveAbs(axis, 1000.0, MotionProfile.Default);
+                c.Stop(axis, StopMode.Immediate);
+                Assert.False(c.IsMoving(axis));
+            }
+        }
+
+        [Fact]
+        public void 正常完成时_停止原因必须为0()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.Enable(axis, true);
+                c.MoveAbs(axis, 5.0, MotionProfile.Default);
+                Assert.True(WaitDone(c, axis));
+                var reason = c.GetStopReason(axis);
+                // 失败时把「人话」一起打出来：停止原因码有几十个，光甩一个 int 给现场没用。
+                Assert.True(reason == 0,
+                    $"到位后停止原因应为 0（正常停止），实际 {reason}：{c.GetStopReasonText(axis)}");
+            }
+        }
+
+        // ------------------------------------------------------------ 点动方向（真机才跑得起来）
+        /// <summary>
+        /// 点动方向：正速度必须向正方向走。
+        ///
+        /// 方向是厂商 API 里**最容易写反、后果最严重**的一处映射：
+        /// 雷赛 dmc_vmove 用 0/1 编码，正运动 ZAux_Direct_Single_Vmove 用 -1/1。
+        /// 写反了不会报错、不会有日志，轴会直接往反方向跑。
+        ///
+        /// 跑这条之前必须确认：急停可用、软限位已生效、运动方向上无干涉机构。
+        /// </summary>
+        [Fact]
+        [NeedsRealHardware]
+        public void 点动方向_正速度必须向正方向运动()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                c.Enable(axis, true);
+                c.SetPulsePerMm(axis, 1000.0);
+
+                var p0 = c.GetPositionMm(axis);
+                c.Jog(axis, 5.0);          // 5 mm/s，慢速
+                var moved = false;
+                var sw = System.Diagnostics.Stopwatch.StartNew();
+                while (sw.ElapsedMilliseconds < 1000)
+                {
+                    if (c.GetPositionMm(axis) > p0) { moved = true; break; }
+                    System.Threading.Thread.Sleep(20);
+                }
+                c.Stop(axis, StopMode.Immediate);
+
+                Assert.True(moved,
+                    "正速度点动后位置必须增加。位置减少 → 点动方向编码反了（立刻停机，核对厂商手册）；" +
+                    "位置完全不动 → 查使能、软限位、速度单位。");
+            }
+        }
+
+        // ------------------------------------------------------------ 参数校验
+        [Fact]
+        public void 非法轴号_必须抛ArgumentOutOfRangeException()
+        {
+            using (var c = Open())
+            {
+                Assert.Throws<ArgumentOutOfRangeException>(() => c.MoveAbs(-1, 1.0, MotionProfile.Default));
+                Assert.Throws<ArgumentOutOfRangeException>(() => c.MoveAbs(c.AxisCount, 1.0, MotionProfile.Default));
+                Assert.Throws<ArgumentOutOfRangeException>(() => c.GetPositionMm(c.AxisCount + 5));
+            }
+        }
+
+        // ------------------------------------------------------------ 能力缺口必须是显式的
+        [Fact]
+        public void 不支持的能力_必须抛NotSupportedException()
+        {
+            using (var c = Open())
+            {
+                // 圆弧插补并非所有卡都支持。关键在于：不支持时要**显式失败**，
+                // 不能悄悄做错事（很多现场事故就是「以为支持了」）。
+                var ex = Record.Exception(() => c.MoveArc(0, 0, 10, 10, true, MotionProfile.Default));
+                if (ex != null) Assert.IsType<NotSupportedException>(ex);
+            }
+        }
+
+        // ------------------------------------------------------------ 使能
+        [Fact]
+        public void 使能状态_可读回()
+        {
+            using (var c = Open())
+            {
+                var axis = 0;
+                try
+                {
+                    c.Enable(axis, true);
+                }
+                catch (NotSupportedException)
+                {
+                    // 该品牌没有可用的使能入口（总线型需 PDO 映射）。
+                    // 显式失败本身就是正确行为，能力缺口由「不支持的能力必须抛 NotSupportedException」覆盖。
+                    return;
+                }
+                Assert.True(c.IsEnabled(axis));
+                c.Enable(axis, false);
+                Assert.False(c.IsEnabled(axis));
+            }
+        }
+
+        // ------------------------------------------------------------ 工具
+        protected static bool WaitDone(IMotionController c, int axis, int timeoutMs = 5000)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                if (c.IsMotionDone(axis)) return true;
+                System.Threading.Thread.Sleep(5);
+            }
+            return false;
+        }
+
+        /// <summary>等待指令位置与反馈位置的差收敛到容差内（伺服到位后需要一点时间稳定）。</summary>
+        protected static bool WaitSettled(IMotionController c, int axis, double toleranceMm = 0.05, int timeoutMs = 2000)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            while (sw.ElapsedMilliseconds < timeoutMs)
+            {
+                if (Math.Abs(c.GetPositionMm(axis) - c.GetFeedbackMm(axis)) <= toleranceMm) return true;
+                System.Threading.Thread.Sleep(5);
+            }
+            return false;
+        }
+    }
+}

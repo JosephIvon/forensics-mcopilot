@@ -1,0 +1,277 @@
+{
+  "meta": {
+    "title": "共享行为评测集（接缝 3）",
+    "version": "1.0",
+    "updated": "2026-10-23",
+    "unique_source": "本文件是接缝 3 的**唯一数据源**。工厂生成时实时读取（trae_factory gen/truth_kb.js → jointEvalFile），不许另设副本。",
+    "why": "工厂端到端 PASS 里的每一步都要能指到一条断言上——否则就是无背书的自证。空白项是明码标价的整改清单，n/a 是能力矩阵差异，不许算 FAIL。",
+    "counts": {
+      "cases_total": 19,
+      "both_sides_verified": 11,
+      "factory_only": 1,
+      "single_sided": 7,
+      "not_applicable": 5,
+      "blank_or_partial": 0,
+      "divergences": 3
+    },
+    "counts_note": "计数由 scripts/joint_eval.py 实测后自数并打印，文档抄打印行（KB0 §6 检查 27 的同一纪律）。single_sided=7 是 mcopilot 侧独验 5 条（工厂接口无此概念，not_applicable=5 是它的子集）+ 工厂侧独验 2 条（BEH-17/18，mcopilot 侧无对应工具）；factory_only=1 指 BEH-16 多轴工艺流程端到端——它是工厂自己的流程断言，mcopilot 侧无对应工具也无对应断言。",
+    "status_legend": {
+      "pass": "工厂侧有对应断言（已验）",
+      "partial": "工厂侧只打印不断言（部分）",
+      "blank": "工厂侧应验未验（整改清单）",
+      "n/a": "工厂侧接口无此概念（能力矩阵差异，不许算 FAIL）"
+    },
+    "scope_legend": {
+      "factory_only": "工厂侧有断言、mcopilot 侧无对应工具也无对应断言（BEH-16 多轴工艺流程端到端）",
+      "single_sided": "只有一侧有对应工具（BEH-17/18 工厂有、mcopilot 侧无工具；BEH-02/05/06/10/11 反之）"
+    }
+  },
+  "cases": [
+    {
+      "id": "BEH-01",
+      "name": "跟随误差必须非零（抓假反馈）",
+      "domain": "反馈真伪",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 BehaviorSelfCheck 内 [BEH-01]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-01（生成 out/csharp/MotionSelfCheck.cs 真跑）"
+      }
+    },
+    {
+      "id": "BEH-02",
+      "name": "开环轴必须报告无真实反馈",
+      "domain": "反馈真伪",
+      "factory": {
+        "status": "n/a",
+        "ref": "IMotionController 无 HasRealFeedback 一类接口（gen/core.js 接口定义）"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-02"
+      }
+    },
+    {
+      "id": "BEH-03",
+      "name": "点动方向必须与速度符号一致",
+      "domain": "运动方向",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 BehaviorSelfCheck 内 [BEH-03]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-03"
+      }
+    },
+    {
+      "id": "BEH-04",
+      "name": "指令位置与反馈位置单位一致",
+      "domain": "位置口径",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 BehaviorSelfCheck 内 [BEH-04]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-04"
+      }
+    },
+    {
+      "id": "BEH-05",
+      "name": "到位后停止原因必须为 0",
+      "domain": "停止语义",
+      "factory": {
+        "status": "n/a",
+        "ref": "IMotionController 无 StopReason 一类接口（gen/core.js 接口定义）"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-05"
+      }
+    },
+    {
+      "id": "BEH-06",
+      "name": "停止原因必须能翻译成人话",
+      "domain": "停止语义",
+      "factory": {
+        "status": "n/a",
+        "ref": "IMotionController 无停止原因码与文本接口（gen/core.js 接口定义）"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-06"
+      }
+    },
+    {
+      "id": "BEH-07",
+      "name": "非法脉冲当量必须被拒绝",
+      "domain": "错误语义",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 BehaviorSelfCheck 内 [BEH-07]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-07"
+      }
+    },
+    {
+      "id": "BEH-08",
+      "name": "越界轴号必须被拒绝",
+      "domain": "错误语义",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 RunProcess 参数守卫自检内 [BEH-08]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-08"
+      }
+    },
+    {
+      "id": "BEH-09",
+      "name": "停止后不再处于运动中",
+      "domain": "状态机",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 BehaviorSelfCheck 内 [BEH-09]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-09"
+      }
+    },
+    {
+      "id": "BEH-10",
+      "name": "比较点端口越界必须被拒绝",
+      "domain": "IO 边界",
+      "factory": {
+        "status": "n/a",
+        "ref": "IMotionController 无硬件比较输出口接口（gen/core.js 接口定义）"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-10"
+      }
+    },
+    {
+      "id": "BEH-11",
+      "name": "锁存端口越界必须被拒绝",
+      "domain": "IO 边界",
+      "factory": {
+        "status": "n/a",
+        "ref": "IMotionController 无位置锁存口接口（gen/core.js 接口定义）"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-11"
+      }
+    },
+    {
+      "id": "BEH-12",
+      "name": "直线插补必须各轴到位",
+      "domain": "插补",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 RunProcess 内 [BEH-12]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-12"
+      }
+    },
+    {
+      "id": "BEH-13",
+      "name": "圆弧插补：不支持时必须显式失败",
+      "domain": "插补",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 RunProcess 内 [BEH-13]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-13（mcopilot 仿真器不实现圆弧，测「显式失败」）"
+      }
+    },
+    {
+      "id": "BEH-14",
+      "name": "相对定位增量正确",
+      "domain": "位置口径",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 BehaviorSelfCheck 内 [BEH-14]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-14"
+      }
+    },
+    {
+      "id": "BEH-15",
+      "name": "回零后位置归零",
+      "domain": "回零",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 BehaviorSelfCheck 内 [BEH-15]"
+      },
+      "mcopilot": {
+        "ref": "knowledge/templates/SelfCheck.cs.tmpl → BEH-15"
+      }
+    },
+    {
+      "id": "BEH-16",
+      "name": "多轴工艺流程端到端（走胶→圆弧→DI 互锁→力控）",
+      "domain": "工艺流程",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 RunProcess 末尾 [BEH-16]"
+      },
+      "scope": "factory_only"
+    },
+    {
+      "id": "BEH-17",
+      "name": "DI 互锁等待（超时必须显式失败）",
+      "domain": "IO 时序",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 RunProcess 内 [BEH-17]"
+      },
+      "scope": "single_sided"
+    },
+    {
+      "id": "BEH-18",
+      "name": "AO 力控设定与反馈读取",
+      "domain": "力控",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 RunProcess 内 [BEH-18]"
+      },
+      "scope": "single_sided"
+    },
+    {
+      "id": "BEH-19",
+      "name": "SPC 判定（Cpk>=1.33 合格）",
+      "domain": "统计判定",
+      "factory": {
+        "status": "pass",
+        "ref": "gen/core.js → 生成 Program.cs 的 SpcReport 内 [BEH-19]"
+      },
+      "mcopilot": {
+        "ref": "scripts/joint_eval.py 从工厂 glue_report.csv 原始样本独立重算 Cpk 再比对（机器比对）"
+      },
+      "compare": "cpk"
+    }
+  ],
+  "divergences": [
+    {
+      "id": "DIV-01",
+      "topic": "报错风格",
+      "mcopilot": "仿真器抛 .NET 标准异常（ArgumentOutOfRangeException）",
+      "factory": "接口返回 MotionResult.Fail + Message（Virtual 层的读数方法另有抛异常，与 BEH-08 守卫一致）",
+      "note": "同一语义两种表达：mcopilot 侧用异常表达「非法」，工厂侧用返回码表达「非法」。**不是 FAIL**——但真机适配器必须二选一说清楚，不能两套混着来。"
+    },
+    {
+      "id": "DIV-02",
+      "topic": "圆弧支持",
+      "mcopilot": "仿真器不实现圆弧，测「不支持时必须显式失败」",
+      "factory": "Virtual 实现 MoveArc2D，测「圆弧到位」",
+      "note": "两边的断言**方向不同但都对**：一方验「明确拒绝」，一方验「真能走」。合起来才覆盖「不支持」与「支持」两种世界。"
+    },
+    {
+      "id": "DIV-03",
+      "topic": "停止原因",
+      "mcopilot": "有 StopReason 码 + 文本翻译（现场报警要给人看）",
+      "factory": "接口无此概念（工厂接口只有 MoveResult 语义，无停止原因码）",
+      "note": "能力矩阵差异：不是谁对谁错，是接口面不同。真机接入若需要停止原因翻译，必须在适配层补，不能指望工厂接口有。"
+    }
+  ]
+}

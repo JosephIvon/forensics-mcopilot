@@ -1,0 +1,112 @@
+{
+  "schema_version": "failure_signatures/1",
+  "updated": "2026-10-21",
+  "purpose": "harness 接入闭环第一切片的失败解读引擎语料库：全部条目为本轮 session 亲手挖出并已修复/门禁化的真实缺陷（含回归点），每条带可查证据。供 scripts/onboard_loop.py 在契约失败时做确定性归因。",
+  "match_discipline": "按 signatures 数组顺序逐条 re.search（在整个失败证据文本上），首个命中即归因；全部不命中 → 结构化上报 UNKNOWN（需人/LLM 介入），绝不猜、绝不无签名重试。",
+  "action_class_vocabulary": {
+    "rerun": "同配置有界重试（环境侧瞬态故障；重试次数计入 attempts，超限即停）",
+    "rerun_canonical": "弃用漂移副本/旧产物，恢复模板源（canonical）后重跑既有门禁",
+    "escalate": "停止自动行动：需要人/LLM 解读后处置"
+  },
+  "signatures": [
+    {
+      "id": "SIG-01-OLD-DLL-CS1061",
+      "signature": "CS1061[\\s\\S]{0,240}TransactRaw",
+      "root_cause": "编译引用了 2026-10-21 之前的旧产物 DLL（out/_protocols_csharp/ModbusClients.dll）：该库构建于低层事务方法 TransactRaw() 加入之前，契约套件发数量 0/越界/不支持 FC 的原始帧时缺成员 → CS1061。属构建链漂移，不是协议实现缺陷。",
+      "next_action": "弃用旧 DLL 引用，改源码直编（ModbusTcpClient.cs + ModbusContractTests.cs + ModbusContractRunner.cs 同批 csc，即 run_contract.ps1 的既有路线）后重跑。",
+      "action_class": "rerun_canonical",
+      "gate": "G1/G3",
+      "evidence": [
+        "path:knowledge/templates/protocol/run_contract.ps1#为什么不 /r: 引用 out/_protocols_csharp/ModbusClients.dll",
+        "path:knowledge/templates/protocol/run_contract.ps1#TransactRaw",
+        "commit:1336bf6"
+      ],
+      "probe_sample": "ModbusTcpClient.cs(513,34): error CS1061: \"ModbusTcpClient\" 未包含 \"TransactRaw\" 的定义，并且找不到可接受第一个 \"ModbusTcpClient\" 类型参数的可访问扩展方法 \"TransactRaw\"(是否缺少 using 指令或程序集引用?)"
+    },
+    {
+      "id": "SIG-P1-1-BITBYTE-CAP-245",
+      "signature": "响应字节数字段与帧长不符：2(?:4[6-9]|50)",
+      "root_cause": "客户端位响应 Byte Count 上限倒退回 0xF5(245)——P1-1 回归：FC1/FC2 数量 ≥1961 的合法响应（246..250 字节，上限应为 ceil(2000/8)=250）被误拒。评审挖出的三个 P1 之一。",
+      "next_action": "把 ModbusConst.MaxBitResponseBytes 恢复为 ceil(MaxReadBits/8)=250（P1-1 修复值，回归点=契约 FC1_LargeQuantity1969_Roundtrip 的线缆层断言）；若缺陷出在漂移副本/旧产物上，弃用之恢复模板源后重跑。",
+      "action_class": "rerun_canonical",
+      "gate": "G2/G3",
+      "evidence": [
+        "path:docs/协议域代码评审_20261021.md#P1-1",
+        "path:knowledge/templates/protocol/ModbusTcpClient.cs#MaxBitResponseBytes",
+        "commit:1336bf6"
+      ],
+      "probe_sample": "RESULT\tFAIL\tFC1_LargeQuantity1969_Roundtrip\tIOException: FC1 响应字节数字段与帧长不符：247"
+    },
+    {
+      "id": "SIG-P1-2-SHORT-READ",
+      "signature": "从站短读：请求 \\d+，实收 \\d+",
+      "root_cause": "响应帧自洽（MBAP 长度/CRC 无误）但数据量少于请求量——劣化从站或链路丢数据；P1-2 防护（EnsureReadCount）触发：静默返回短数组会让缺失数据被上层当真值。",
+      "next_action": "环境/从站侧故障：核对从站负载与链路后重跑（有界重试）；复现则升级人工处置，不得调小请求量掩盖。",
+      "action_class": "rerun",
+      "gate": "G3",
+      "evidence": [
+        "path:docs/协议域代码评审_20261021.md#P1-2",
+        "path:knowledge/templates/protocol/ModbusTcpClient.cs#EnsureReadCount",
+        "path:knowledge/templates/protocol/ModbusContractTests.cs#ShortRead_ResponseLessThanQuantity_ThrowsIo",
+        "commit:1336bf6"
+      ],
+      "probe_sample": "RESULT\tFAIL\tShortRead_ResponseLessThanQuantity_ThrowsIo\tIOException: FC3 从站短读：请求 5，实收 4（响应数量不足，疑似劣化从站或链路丢数据）"
+    },
+    {
+      "id": "SIG-P1-3-POISONED-CONN",
+      "signature": "事务标识不匹配|单元标识不匹配|连接已因协议/网络错误失效，请重连",
+      "root_cause": "管道被残帧/陈旧帧污染（网关重发旧响应、从站复位后缓冲残留）→ P1-3 毒化保护触发：传输/帧级错误即断开，后续调用得确定性「失效，请重连」，而非残余字节流造成的诡异 TID/错位错。",
+      "next_action": "「出错即重连」：Connect() 以全新 socket 复活（循环侧 = 重跑既有门禁）；反复复现则改查网关/抓包重放设备（升级）。",
+      "action_class": "rerun",
+      "gate": "G3",
+      "evidence": [
+        "path:docs/协议域代码评审_20261021.md#P1-3",
+        "path:knowledge/templates/protocol/ModbusTcpClient.cs#EnsureNotPoisoned",
+        "path:knowledge/templates/protocol/ModbusContractTests.cs#StickyStaleFrame_PoisonsConnection_ReconnectRecovers",
+        "commit:1336bf6"
+      ],
+      "probe_sample": "InvalidOperationException: 连接已因协议/网络错误失效，请重连"
+    },
+    {
+      "id": "SIG-RTU-CRC-REJECT",
+      "signature": "RTU 帧 CRC 校验失败",
+      "root_cause": "串行链路噪声/电气干扰使响应帧 CRC 失配——RTU 帧层按「预期长度+CRC」收满后校验拒绝（解析层静默丢弃是 RTU 正确姿势，行为层表现 = 客户端确定性 InvalidDataException，com0com 虚拟对 + --corrupt-next 注入实测）。",
+      "next_action": "物理层问题：有界重试；持续出现则查线缆/接地/波特率与校验位配置（模板默认 8N1 对严格 11 位从站需显式 8E1/8N2，见模板待办第一条），不改协议代码。",
+      "action_class": "rerun",
+      "gate": "G2/G4",
+      "evidence": [
+        "path:knowledge/templates/protocol/ModbusRtuClient.cs#RTU 帧 CRC 校验失败",
+        "path:knowledge/templates/protocol/ModbusFrameTests.cs#RTU_CRC损坏拒绝解析",
+        "path:knowledge/templates/protocol/run_rtu_contract.ps1#corrupt",
+        "path:docs/项目回顾与收尾_20261021.md#RTU 行为契约（11 条）"
+      ],
+      "probe_sample": "InvalidDataException: RTU 帧 CRC 校验失败（响应帧：01-83-02-C1-F1）"
+    },
+    {
+      "id": "SIG-G8-DOC-DRIFT",
+      "signature": "docsync-fail|!= 实算",
+      "root_cause": "文档/矩阵登记数字与代码/知识库实算不一致（数字漂移）——文档在抄旧结论，不是代码错。检测器 = gate_docsync.ps1 的实算对账（黄金/TCP 契约/RTU 契约条数与 s7/focas/slmp 知识库条数全部反向实算）。",
+      "next_action": "按 docsync-fail 行逐条把文档数字改回实算值后重跑 G8；禁止反向「改实算凑文档」。",
+      "action_class": "escalate",
+      "gate": "G8",
+      "evidence": [
+        "path:scripts/gate_negative.ps1#N4_README黄金计数漂移",
+        "path:scripts/gate_docsync.ps1#数字漂移",
+        "path:docs/项目回顾与收尾_20261021.md#负向检测力"
+      ],
+      "probe_sample": "[docsync-fail] README 黄金测试数 31 != 实算 30（ModbusFrameTests.cs）"
+    }
+  ],
+  "must_not_match_samples": [
+    "RESULT\tPASS\tFC3_ReadSeededRegisters\t",
+    "[compile] Framework csc(C#5) 源码直编: ModbusTcpClient.cs + ModbusContractTests.cs + ModbusContractRunner.cs -> 单文件 exe",
+    "RESULT\tFAIL\tFC3_ReadSeededRegisters\tContractFailureException: 种子寄存器不符：期望 [1234, 5678]，实际 [1234, 5678]",
+    "IOException: 连接在对帧过程中被远端关闭",
+    "SocketException: 由于目标计算机积极拒绝，无法连接 127.0.0.1:15020"
+  ],
+  "honest_boundary": [
+    "语料库只收「本轮 session 亲手挖出并有可查证据」的缺陷，不为凑数编造条目；语料外失败一律 UNKNOWN 升级。",
+    "evidence 锚点可查性由 tests/test_onboard_loop.py 守护（path 文件+锚点文本在场、commit 散列在仓库文本可查）。",
+    "已知签名 = 确定性归因；归因 ≠ 自动修复：除 rerun/rerun_canonical 两个确定性动作外一律停给人/LLM。"
+  ]
+}

@@ -1,0 +1,406 @@
+{
+  "version": 3,
+  "note": "运动控制卡能力矩阵。verified=public-doc 表示来自公开厂商资料/官方示例；needs-manual-check 表示必须查厂商函数手册后才能填，工具不会替你猜。",
+  "brand_list_source": "需求基线 R-03「统一封装固高、雷赛、正运动、软赢、高川、ACS等品牌的SDK接口」与 Q-04「固高GTS/GSN/GEN卡、雷赛DMC/EMC系列运动控制卡、正运动ZMC、软赢、高川、ACS中多家的API」；2026-10-20 复核修正：此前把「雷赛」误写为「菁赛」，导致雷赛（本仓库做得最深的一家）反而没进品牌清单。",
+  "brands_total": 6,
+  "cards": [
+    {
+      "brand": "雷赛",
+      "key": "leisai",
+      "model": "DMC3000 / DMC5000 脉冲卡 + DMC-E 系列（PCIe 插卡，EtherCAT 总线版）",
+      "interface": "PCIe 插卡 + dmc.dll / LTDMC.dll（PC 直接调用；**DMC-E 与 DMC 是同一套头文件、同一个 DLL**，不是两个产品线）",
+      "verified": "public-doc",
+      "axes": "按型号（手册 8.x 参数取值范围反推：DMC3C00 0~11 = 12 轴 / DMC3800 0~7 = 8 轴 / DMC3600 0~5 = 6 轴 / DMC3400A 0~3 = 4 轴；PCIe 变体见表 1.1），一台 PC 最多 8 块",
+      "position_unit": "pulse（指令脉冲）",
+      "feedback_unit": "pulse（编码器计数，28 位有符号）",
+      "feedback_truth": "dmc_get_encoder 是**独立计数通道**（与指令脉冲两套计数）；**但只有现场接了编码器且计数随动时才是真反馈**，没接则恒为 0 → 用适配器的 EncoderFeedbackWired 配置项声明，不靠代码猜",
+      "velocity_unit": "pulse/s",
+      "pulse_ratio": "mm/pulse 由机械参数换算，控制卡本身不认 mm",
+      "interpolation": "2 轴硬件插补（坐标系 crd，支持 2 个坐标系，直线插补精度 ±0.8 pulse、圆弧 ±1.5 pulse，表 1.1）；圆弧**必须用 _unit 后缀版本**（dmc_arc_move_center_unit / dmc_arc_move_radius_unit），无后缀版在官方 SDK 里不存在",
+      "electronic_gear": "通过 dmc_set_profile / 脉冲当量参数体现，需按机械换算设置",
+      "electronic_cam": "**原生凸轮表，三家里唯一能从上位机整表下发的**：dmc_cam_table_unit(CardNo, MasterAxisNo, SlaveAxisNo, Count, pMasterPos[], pSlavePos[], SrcMode) 直接把「主轴位置数组 + 从轴位置数组」写进控制器；dmc_cam_set 启用表，dmc_cam_move / dmc_cam_move_cycle 单次/循环，dmc_cam_out 凸轮输出，dmc_get_cam_out_status 读状态。**凸轮表点数上限、凸轮表号数量、SrcMode 枚举语义官方绑定只给了签名，DMC3000 手册也没有凸轮章节**（只有错误码 2600~2614 提到凸轮）→ 已列为向厂商索取项。另有 dmc_cam_read_point / dmc_cam_write_point 等符号在 LTDMC.dll 导出表里但**不在官方 C# 绑定里**（官方没给托管签名），可用但签名须自证",
+      "position_compare": "支持：dmc_hcmp_*（FPGA 高速比较，飞拍用）+ dmc_compare_*（低速比较）。**hcmp 0~3 一一对应硬件 CMP0~CMP3**（手册 8.19）；CMP0/CMP1 普通光耦 4kHz、CMP2/CMP3 高速光耦 1MHz；比较模式 0 禁止/1 等于/2 小于/3 大于/4 队列（127 点）/5 线性。**CMP 端口落在哪个物理端子随接线盒型号而变**（ACC-X400：CN23 的 PWM0/PWM1 = CMP0/1、CN21 的 OUT14/OUT15 = CMP2/3）",
+      "position_latch": "支持：dmc_set_ltc_mode（ltc_logic = 0 下降沿/1 上升沿/2 双边沿；**ltc_mode 与 filter 是保留参数，固定值 0**）+ dmc_set_latch_mode（all_enable = 0 单次/2 连续/3 触发延时急停；latch_source = 0 指令位置/1 编码器位置；**triger_chunnel 是保留参数，锁存通道由轴号决定**：LTC0 锁 0~3 轴、LTC1 锁 4~7 轴，DMC3400A 只有 LTC0）+ dmc_get_latch_value",
+      "speed_profile": "梯形 + S 形（dmc_set_s_profile，S 段单位=秒）",
+      "max_pulse_freq": "4 MHz（DMC3000 表 1.1：控制电机脉冲 **1 Hz～4 MHz**，精度 1 Hz；编码器输入 4 MHz，4 倍频后 16 MHz；手轮 500 kHz）",
+      "position_range": "-134217728 ~ +134217728 pulse（脉冲长度 28 位有符号，表 1.1）",
+      "io": "通用 DI/DO **口号 0~15**（dmc_read_inbit 返回**电平本身** 0/1；dmc_read_inport 返回 UInt32 位图 —— 第 0 组 bit0~15 = IN0~IN15（**bit14 = IN14/LTC0、bit15 = IN15/LTC1**）、bit16~23 = EL0+~EL7+、bit24~31 = EL0-~EL7-；第 1 组 bit0~7 = ORG0~7、bit8~15 = ALM0~7、bit16~23 = RDY0~7、bit24~31 = INP0~7）。DI 16 口（可扩展）光电隔离 RC 滤波、最高响应频率 4kHz、输入电流 5~10mA；DO 16 口（可扩展）光电隔离集电极开路、最大 500mA（5~24Vdc 吸入）",
+      "axis_state": "**脉冲卡（DMC3000 系列）没有轴状态机函数** —— 官方绑定里唯一的 nmc_get_axis_state_machine 是 EtherCAT 总线轴专用，脉冲卡上调用只会失败或给出总线轴语义。脉冲卡按手册 8.7 自行映射：dmc_axis_io_status 位图（bit0 ALM / bit1 EL+ / bit2 EL- / bit3 EMG / bit4 ORG / bit6 SL+ / bit7 SL- / bit8 INP / bit9 EZ / bit10 RDY / bit11 DSTP）+ dmc_check_done（0 运行中 / 1 已停止）",
+      "edge_cases": [
+        "**返回值分两类**：多数函数 0=成功；但 dmc_get_position / dmc_get_encoder / dmc_read_inbit / dmc_read_inport / dmc_get_latch_value **直接返回业务值**，当成错误码会把高电平当失败、把位置当错误",
+        "**带 _unit 后缀的函数返回物理单位(mm)，不带后缀的返回脉冲** —— 混用差一个脉冲当量（常见 1000 倍）",
+        "dmc_board_init() **无参数**，返回识别到的在线卡数（<=0 失败），不是错误码；dmc_board_close() 同样无参数",
+        "板卡型 DMC 本身不提供 Modbus/EtherCAT 主站能力，PC 必须通过 dmc.dll 调用（这点常被误解成「DMC 支持 Modbus」）",
+        "指令脉冲（command）与编码器计数（feedback）是两套计数，换品牌时最容易在这里错 1 个数量级",
+        "**编码器接没接，代码里看不出来**：dmc_get_encoder 恒为 0（没接线）与「适配器把反馈写成了指令位置」在现象上一模一样 → 用 EncoderFeedbackWired 显式声明，别靠猜",
+        "**nmc_* 不是另一个 DLL**：它和 dmc_* 同在 LTDMC.dll（官方绑定实测 nmc_ 214 个），只是**总线轴专用** —— 纯脉冲卡（DMC3000）上没有总线轴，nmc_* 调了没意义；别把「前缀不同」当成「库不同」",
+        "**脉冲卡根本没有轴状态机函数** —— 官方绑定里只有总线轴专用的 nmc_get_axis_state_machine，别拿它硬套脉冲卡。脉冲卡的状态要自己用 dmc_axis_io_status 位图 + dmc_check_done 映射",
+        "**雷赛有三套同名 LTDMC 库**（V2.5.7.23 / 2024-09-09 / 2023-12-11 EMC，导出数 3781 / 3489 / 3393）—— 拷错版本会缺一整套功能；EMC 那套是独立产品线（EMC/MC/PAC 整机）的开发包（绑定 804 条、emc_ 前缀 0 个 —— **用的还是同一套 dmc_ 函数名**）",
+        "**保留参数传非 0 = 未定义行为**：dmc_set_ltc_mode 的 ltc_mode/filter、dmc_set_latch_mode 的 triger_chunnel 全是手册标注的保留参数（固定值 0），all_enable 的合法值只有 0/2/3",
+        "**DMC-E 与 EMC 的当量是控制器侧的，和脉冲卡完全反过来**：总线卡/独立控制器用 `dmc_set_equiv(CardNo, axis, equiv)` 在**控制器里**设当量（设 100 → 控制器发 100 位置 = 1mm，速度单位随之变 mm/s；设 1 → 单位是 pulse），**这时不该再在软件侧换算**；而 DMC3000 脉冲卡**没有这个函数**，是软件侧除脉冲当量。**两套模型混用 = 位置差一个当量倍数**。",
+        "**EMC（独立整机）用的是同一个 `LTDMC.dll`、同一套 `dmc_` 函数名** —— 只多一个 `dmc_board_init_eth(IP)`（以太网，默认 IP 192.168.5.11，最多 254 台组网）。但**「卡号」在 EMC 上是链接号/控制器号**，语义与插卡的 PCI 卡号不同；且 EMC 另有本体 12 入 12 出高速 IO 与背板总线（可扩 32 个模块）。",
+        "**手册的函数名可能拼错，照抄会 `EntryPointNotFound`**：EMC 手册把 `dmc_emg_stop` 写成 `dmc_EMG_stop`、`dmc_axis_io_status` 写成 `dmc_axis_IO_status`（正文 + C 原型 + 附录 4 索引都错）。**PE 导出名大小写敏感**，官方 C# 绑定与三个版本的 DLL 导出表都只有全小写 → **绑定必须对着官方绑定/导出表抄，不抄手册**。",
+        "**总线轴的使能语义仍未公开**：入口函数是 `nmc_set_axis_enable`/`nmc_set_axis_disable`，但**手册没写使能序列**（主机是否写 CiA402 0x6040/0x6041 由谁做）→ **总线轴的 Enable 保持显式失败**，不替厂商做机器安全动作的决定。"
+      ],
+      "strength": "PC 直驱、时序确定、脉冲频率高、国内产线装机量大、资料与中文支持完善",
+      "boundary": "多卡同步与总线级同步能力弱于纯总线卡；CMP/LTC 的**通道号**已定死（hcmp 0~3 ↔ CMP0~3、LTC 由轴号决定），但**通道落到哪个物理端子随接线盒型号而变**；固件版本决定部分功能可用（输出状态重连需 3XX201615+、限位回零需 3XX201611+）；**DMC-E1000 不支持插补、LTC 口 0 个**，DMC-E3000/5000 通用 IO 只有 8/8；**EMC 没有专用 EMG 端子**，急停要自己在通用输入口上做 IO 映射（安全项）",
+      "form_factor": "plug_in_card",
+      "driver_model": "卡驱动 P/Invoke（LTDMC.dll）：脉冲轴用 dmc_*，EtherCAT 总线轴用 nmc_*，**同一个 DLL 里共存**（官方绑定 V2.5.7.23 实测 dmc_ 1252 + nmc_ 214 个，共 1466 条声明 / 1463 个函数名；EMC 套件 804 条且 emc_ 前缀 0 个 —— **EMC 用的就是同一套 dmc_ 函数名**）",
+      "product_line_split": "雷赛内部按「卡 / 控制器」分栏：**卡（插进 PC 机箱）** = DMC 脉冲卡（DMC3000 系列，PCI/PCIe）与 DMC-E EtherCAT 总线卡（DMC-E1000 经济型 / E3000 通用型 / E5000 轨迹型，PCI/PCIe），**共用同一套 `LTDMC.dll` 与 `dmc_`/`nmc_` API**（官方 DMC-E 头文件与 DMC 头文件同一份文件）；**独立式控制器（整机）** = EMC / MC / PAC，走**以太网 TCP/IP**（`dmc_board_init_eth(IP)`），**函数名与 DMC 完全相同**（`emc_` 前缀官方绑定里 0 个），**不是另一套库**"
+    },
+    {
+      "brand": "正运动",
+      "key": "zmotion",
+      "model": "ZMotion / ZMC 系列（独立式以太网控制器，控制器本体带 EtherCAT 总线口）",
+      "interface": "以太网连独立控制器（ZMC）+ **zauxdll.dll**（官方绑定里 399 个 ZAux_* 全部指向它；zmotion.dll 是配套的低层 ZMC_* 库，两者都要部署）",
+      "verified": "public-doc",
+      "axes": "按型号，单控制器多轴",
+      "position_unit": "单位（由轴参数 UNITS 定义脉冲当量）",
+      "feedback_unit": "单位（MPOS 测量反馈位置，与 UNITS 同口径）",
+      "feedback_truth": "**ATYPE 决定 MPOS 真伪**：1/7（脉冲轴/虚拟轴）上 MPOS 只是 DPOS 的副本 = **假反馈**；4/5（带编码器反馈的脉冲轴）、50（RTEX）、65/66/67（EtherCAT 总线轴）是真反馈。脉冲轴上跟随误差恒为 0 是正常的，不是适配器写错",
+      "velocity_unit": "单位/秒（由 UNITS 决定）",
+      "pulse_ratio": "SetAxisParam(axis, \"UNITS\", 脉冲当量) —— 厂商直接提供「脉冲当量」这个概念",
+      "interpolation": "**4 参轴列表式**多轴插补：ZAux_Direct_MoveAbs(handle, 轴数, 轴列表[], 目标列表[])；单轴走 Single_* 符号族",
+      "electronic_gear": "总线型由伺服侧电子齿轮 + 控制器 UNITS 共同决定",
+      "electronic_cam": "**原生凸轮，但表在控制器侧**：ZAux_Direct_Cam(handle, iaxis, istartpoint, iendpoint, ftablemulti, fDistance) 只**引用凸轮表的起止区间**，不携带表内容；ZAux_Direct_Cambox 另带链接轴与选项。**凸轮表本身要在控制器里用 CAM 指令/BASIC 建立** → 「从上位机动态换整张凸轮表」这条路走不通，换表要改控制器侧程序。凸轮表点数上限、ftablemulti 含义、ioption 位定义必须查手册",
+      "position_compare": "支持：ZAux_Direct_HwPswitch2（9 参数）PSO 硬件比较输出，模式1=单轴比较（4 个比较点）、模式2=清除比较点",
+      "position_latch": "支持：ZAux_Direct_Regist(handle, axis, imode) 位置锁存 + GetMark/GetRegPos 读回",
+      "speed_profile": "梯形 / S 形（SRAMP 平滑时间 0~250 毫秒，0=梯形）",
+      "max_pulse_freq": "脉冲轴模式下受脉冲输出频率限制；总线轴由总线周期决定",
+      "position_range": "浮点单位，理论范围受 UNITS 与总线分辨率限制",
+      "io": "控制器本体 IO + 总线从站 IO（需区分）",
+      "axis_state": "GetIfIdle：-1=已停止 / 0=运动中；AXISSTATUS 位域（bit3=远程驱动器报错，bit4/5=硬限位，bit8=随动误差超限）。**没有雷赛式 8 态状态机**",
+      "edge_cases": [
+        "**单轴与多轴是两套独立符号**：单轴用 ZAux_Direct_Single_MoveAbs / Single_Move / Single_Vmove / Single_Cancel，多轴插补用 4 参的 ZAux_Direct_MoveAbs(handle, 轴数, 轴列表[], 目标列表[])。抄成同名的 3 参版就是栈错位",
+        "ZAux_OpenEth **只有 2 个参数**（IP + 输出句柄），没有端口参数；写成 (handle, ip, port) 一定连不上",
+        "速度单位是「单位/秒」而不是「脉冲/秒」，与雷赛的 pulse/s 口径差一个 UNITS 倍数（常见 1000 倍）；UNITS 在建连时就要推给控制器",
+        "轴类型 Atype 设错（虚拟轴 / 脉冲轴 / 振镜轴 21 / 总线 CSP 65、CSV 66、CST 67）时，指令正常返回但电机不动作",
+        "DPOS（指令位置）与 MPOS（测量反馈位置）必须分清：拿 DPOS 顶替反馈位置，跟随误差恒为 0，伺服整定和飞拍补偿全部失去依据",
+        "**ATYPE 决定 MPOS 的真假**：ATYPE=1（脉冲轴）/7 上 MPOS 只是 DPOS 的副本 = 假反馈；4/5（带编码器反馈的脉冲轴）、50、65/66/67 是真反馈。脉冲轴上跟随误差恒为 0 是**正常的**，别去「修」本来正确的代码",
+        "ZAux_Direct_Single_Vmove 的第 3 参是**方向**（-1/1）不是速度；速度走 SPEED 轴参数",
+        "总线轴使能走 CiA402（0x6040 序列 0x06→0x07→0x0F），前提是拿到该从站的 PDO 映射表 —— 拿不到就不要猜一个可能让电机突然动的序列"
+      ],
+      "strength": "总线型同步与分布式时钟、PSO 硬件比较输出生态成熟、.NET 资料多、ZBasic 可做在线逻辑",
+      "boundary": "学习曲线陡；轴类型/UNITS/PDO 三套概念混在一起时易出错；CiA402 使能与 PDO 映射必须由厂商确认",
+      "form_factor": "standalone_controller",
+      "driver_model": "控制器通信库（主机经以太网 P/Invoke 到 zauxdll.dll）：ZAux_OpenEth(IP, 句柄) 连的是网络设备，不是 PCIe 卡",
+      "product_line_split": "ZMC 是**独立式以太网控制器**（ZMC408CE 等）：主机侧只有 zauxdll.dll / zmotion.dll 两个库，**没有板卡驱动**；脉冲轴模式下才在控制器本体出脉冲"
+    },
+    {
+      "brand": "固高",
+      "key": "googol",
+      "model": "GTS-400 / GTS-800 系列（PCIe 插卡脉冲型运动控制器；另有 GEN 系列独立式控制器，见 product_line_split）",
+      "interface": "PCIe 插卡 + gts.dll（**单卡库 / 多卡库指令同名**，多卡库多一个 cardNum 参数；SDK 压缩包按 VC/VB6.0/C#/VB.NET/Delphi × 32bit/64bit × single_card/multi_card 分目录；**4 个 SDK 的 gts.dll 导出表完全相同（各 782 个符号）**，本项目按 64bit_single_card 绑定）",
+      "verified": "official-binding",
+      "axes": "4 轴（GTS-400）/ 8 轴（GTS-800）；另有 9、10 号两路辅助编码器与 11 号手轮专用编码器",
+      "position_unit": "pulse（轴规划位置 = **当量变换之后**的值；默认 1:1 当量下即原始脉冲）",
+      "feedback_unit": "pulse（轴编码器位置，同样是当量变换之后的值）",
+      "feedback_truth": "**编码器通道可能是外部编码器，也可能是内部脉冲计数器**（GT_EncOn / GT_EncOff 切换）—— 后者就是指令脉冲的副本 = **假反馈**。接没接编码器在代码里看不出来（跟得上就是真反馈），所以由适配器的 EncoderFeedbackWired 配置项显式声明，不靠代码猜",
+      "velocity_unit": "**pulse/ms**（GT_SetVel、GT_SetTrapPrm 的 acc/dec 是 pulse/ms²）—— 不是 pulse/s，差 1000 倍",
+      "pulse_ratio": "控制器**没有** SetPulsePerMm：当量是 GT_ProfileScale(axis, alpha, beta) / GT_EncScale 的**分数比**，且手册只给了取值范围、没给变换公式与 alpha/beta 方向 → 本工具**不下发**当量变换，要求控制器保持默认 1:1 当量，脉冲当量（脉冲/mm）由现场提供、软件侧换算",
+      "interpolation": "**坐标系插补**：TCrdPrm（含 profile[8] 规划轴↔坐标系 X/Y/Z/A 映射）+ GT_SetCrdPrm + GT_LnXY(2D) / GT_LnXYZ / GT_ArcXYC(10 参) + GT_CrdStart；坐标系号 [1,2]，缓存区 fifo [0,1]",
+      "electronic_gear": "GT_PrfGear + GT_SetGearMaster + GT_SetGearRatio（masterEven / slaveEven / masterSlope，单位 pulse）",
+      "electronic_cam": "**GTS SDK 里没有凸轮表**：gts.h 535 条声明、gts.cs 473 条绑定、5 个 gts.dll 的 PE 导出表里 'cam' 相关符号**一个都没有**（不是没找到，是确实没有）。主从同步走「跟随段 + 事件交叉」：GT_BufFollowStart / GT_BufFollowNext / GT_BufFollowReturn 分段跟随 + GT_BufFollowEventCross 事件交叉 + GT_SetFollowMaster 设主轴；电子齿轮用 GT_SetGearRatio + GT_GearStart。**语义与雷赛/正运动的查表插值凸轮不同 —— 跨品牌换卡时这一项不能直接平移**。TBufFollowEventCross 字段语义、跟随段数量上限、GEN 产品线（GTN_）是否有凸轮都需另行确认",
+      "position_compare": "支持，但**只有 HSIO 两个通道**：GT_CompareData(encoder, source, pulseType, startLevel, time, pBuf1, count1, pBuf2, count2)。位置是**相对调用时当前位置的偏移**、每边最多 4096 点、必须单调；source（0 内部脉冲计数器 / 1 外部编码器）**必须与配置文件「脉冲计数源」一致**",
+      "position_latch": "支持，但**捕获源只有 HOME(1) / INDEX(2) / PROBE(3) / HSIO0(6) / HSIO1(7)** —— **普通 DI 不能做捕获**，要接普通输入点做锁存得走 HSIO 口",
+      "speed_profile": "梯形 + 平滑时间（smoothTime 单位 ms，取值 0~50）；Jog 另有平滑系数 smooth ∈ [0,1)",
+      "max_pulse_freq": "**1MHz**（GTS-400-PCIe 用户手册 R1.0 p60 表 6-5，RS-422 差分输出，4 路；指 AB 相正交四倍频**之前**的频率，换算线数要 ÷4）。编码器输入上限 **2MHz**（p61 表 6-7）",
+      "position_range": "目标位置 [-1073741823, 1073741823] pulse；软限位默认 正 0x7fffffff / 负 0x80000000（即默认无效）",
+      "io": "**按「类型 + 位图」模型，不是物理通道号**：GT_GetDi(diType, &value) 的 diType 是类型枚举（MC_LIMIT_POSITIVE=0 / MC_LIMIT_NEGATIVE=1 / MC_ALARM=2 / MC_HOME=3 / MC_GPI=4 / MC_ARRIVE=5 / MC_MPG=6），返回值是该类型的位图；doType 取 MC_ENABLE=10 / MC_CLEAR=11 / MC_GPO=12。通用输入 DI 1~16 ↔ bit0~bit15。**读到的电平受配置里的「输入取反」影响**；挂接了轴的 do 不能直接写（返回 1）",
+      "axis_state": "**没有轴状态机指令**：只有 32 位状态字（GT_GetSts）—— 0x2 伺服报警 / 0x10 跟随误差越限 / 0x20 正限位 / 0x40 负限位 / 0x80 平滑停止 / 0x100 急停 / 0x200 伺服使能 / 0x400 规划器运动。运动模式另走 GT_GetPrfMode（0 点位 / 1 Jog / 2 PT / 3 齿轮 / 4 Follow / 5 插补 / 6 PVT）。**也没有厂商停止原因码** —— 手册只有指令返回值表（0 成功 / 1 执行错误 / 2 license 不支持 / 7 参数错误 / 8 固件不支持 / -1~-5 通讯失败 / -6 打开失败 / -7 无响应 / -8 资源忙）",
+      "edge_cases": [
+        "**官方 gts.cs 里有 1 个函数随包 DLL 根本没导出**：GT_GantryHoming（龙门回零）—— 官方 C# 绑定声明了、官方 gts.h 里没有、4 个 gts.dll 的导出表里也没有 → **照抄官方绑定就会 EntryPointNotFound**。本项目没绑它（同类案例：正运动 ZAux_Direct_GetNtype）",
+        "**速度单位是 pulse/ms，不是 pulse/s**：换算 ×脉冲当量÷1000；加速度是 pulse/ms²（÷1e6）。照抄别家的 pulse/s 数值，节拍直接差 1000 倍，而且控制器不报错",
+        "**轴号是 1 基**（手册所有 axis/profile 参数都是「正整数」，4 轴卡取值 [1,4]）；位掩码参数（GT_Update / GT_Stop）也是 bit0=轴1。适配器对外 0 基、内部一律 +1，抄的时候别混",
+        "**没有 SetPulsePerMm，当量是分数比**：GT_ProfileScale(axis, alpha, beta) 且要求 |alpha| > |beta|，**手册没给变换公式与方向** → 谁要是「顺手按脉冲当量猜一个 alpha/beta 调下去」，位置会整体偏一个未知比例。本工具的做法是**不下发**当量变换、要求控制器保持默认 1:1（手册 PDF p60 原文），脉冲当量由现场提供、软件侧换算",
+        "**IO 不是「端口号」模型**：读一个输入要先选类型（限位/报警/原点/到位/通用），再取该类型位图的某一位。固高把限位、驱动报警、原点开关、电机到位**分成四种独立 IO 类型**，不像雷赛那样统一成逻辑输入口号 —— 跨品牌照抄「读 IN5」必然读错对象",
+        "**读到的电平可能被配置取反**：GT_GetDi 读的是取反后的逻辑电平（reverse=1 时 1=低电平），GT_GetDiRaw 才是原始值。常闭接法 + 取反设错，限位判断会整个反过来",
+        "**位置比较只有 HSIO 2 个通道，且比较位置是相对偏移**：GT_CompareData 的 pBuf1/pBuf2 是「相对调用时当前位置的偏移」，最多 4096 点、必须单调（违反返回 7）；source 与配置文件的「脉冲计数源」不一致 → 比较点落在错的计数上，飞拍会整体偏",
+        "**普通 DI 不能做位置捕获**：固高的锁存 = 编码器捕获，捕获源只有 HOME/INDEX/PROBE/HSIO0/HSIO1。想用普通输入点做触发，硬件上必须走 HSIO 口",
+        "**固高没有厂商停止原因码**：只有状态字位。别拿别家的停止原因码表去对照固高的返回值 —— 语义完全不同（本工具按状态字位推导了一套**自定义**编码，已在 knowledge/sdks/gts.json 里写明）",
+        "**写 do 会因「挂接轴」被拒**：伺服使能 do 默认挂接轴，GT_SetDoBit 会返回 1。通用输出只剩 1~16 可自由用",
+        "**固高至少有两条产品线，签名族不同但很可能共用同一个 SDK 包**：GTS 用 **GT_** 前缀（PCIe 插卡，单卡库无卡号参数）；GEN 用 **GTN_** 前缀且**第一个参数是控制器编号**（GTN_Reset(1) / GTN_LoadConfig(1,...) / GTN_ClrSts(1,1,8) / GTN_AxisOn(1,AXIS)）→ 两族签名不能互换。**但 GEN 手册的例程仍然 `#include \"gts.h\"`**，两本手册指向同一个下载页 pro_view-3.html → **很可能同一个 gts.dll 同时导出两族**。拿到官方 gts.h/gts.dll 之前不要断言「不共用 DLL」（雷赛 nmc_/dmc_ 就是同库不同前缀的现成例子）",
+        "**单卡库与多卡库指令同名**：多卡库多一个 cardNum 参数（第一张卡卡号为 0）。插多张卡时必须选对版本的 gts.dll，否则参数个数对不上",
+        "**GTS SDK 包里有 5 个 gts.dll，只有 4 个能当程序依赖**：4 个 SDK 的（32/64 位 × 单卡/多卡）**导出表完全相同（各 782 个符号）**；第 5 个是 **03_Demo工具_MCT2008/ 目录里自带的旧版，只有 569 个导出、少了 214 个**（含 GT_StopCapture / GT_GetDllVersion / GT_GetProfileScale / GT_SetProfileScale 等）。**拷错不会立刻崩，但会缺一整套功能** —— 部署时只拷 02_CSharp封装/<位数>_single_card/ 那一份",
+        "**THomePrm 按官方 C# 绑定的 88 字节实现，不是 C 头文件的 80 字节**：官方 gts.cs 的 THomePrm 是 23 个字段（pad1_1/2/3、pad2_1/2/3、pad3_1/2/3），官方 gts.h 的 C 写法是 `long pad3[2]`（80 字节）—— **厂商自己的两个件差 8 字节**。GT_GetHomePrm 会把整块参数写回我们的结构体，按 80 字节实现就是**内存越界写**。宁可大不小：缓冲区比 DLL 预期大最多被多写几字节",
+        "**手册用 0 基、官方 C# 绑定用 1 基命名保留位**：手册《编程手册-基本功能 R1.5》p204 写 pad1[0]（用 velHigh 还是 velLow）与 pad2[1]（启动回零时是否检测限位/原点），官方 C# 绑定叫 pad1_1 与 pad2_2 → **手册 pad1[0] = 官方 pad1_1（偏移 10）、手册 pad2[1] = 官方 pad2_2（偏移 52）**",
+        "**通用输出是 OC（集电极开路）输出，只能输出低电平和高阻**（GTS-400-PCIe 用户手册 R1.0 p62 表 6-11）：写 do = 拉低；单路 sink ≤500mA、16 路总功率 ≤8A、最大开关频率 1kHz → 接继电器/电磁阀要外接上拉",
+        "**通用输入 9~19V 是不确定区**（同手册 p62 表 6-10）：逻辑 1 要 >19V、逻辑 0 要 <9V，9~19V 控制器判不准 → 接 5V 信号不行；驱动报警/到位是光耦输入、**低电平有效**"
+      ],
+      "strength": "官方手册质量高（返回值表、状态字、IO 语义、指令索引 167 条齐全）；指令面广（点位/Jog/齿轮/插补/PT/Follow/PVT/比较/捕获/螺距补偿/反向间隙补偿）；PC 直驱时序确定；中文资料与支持完善",
+      "boundary": "单卡/多卡库要选对版本；**SDK 包里有 5 个 gts.dll，03_Demo工具_MCT2008 那份只有 569 个导出（少 214 个），别拷错**；插补坐标系映射是站点配置；位置比较与捕获都只有 HSIO 2 个通道；**当量变换公式仍未公开**（手册只给取值范围）",
+      "form_factor": "plug_in_card",
+      "driver_model": "卡驱动 P/Invoke（gts.dll，**GT_ 前缀，单卡库 167 条指令**）；单卡库无卡号参数，多卡库每个函数多一个 cardNum",
+      "product_line_split": "**固高至少两条产品线，SDK 包是分开的（2026-10-20 实测）**：**GTS 系列**（GT_ 前缀，PCIe 插卡）与 **GEN 系列**（GTN_ 前缀，独立式控制器）。官方 GTS SDK 包里 **GTN_ 符号一个都没有**：gts.h 535 条声明、gts.cs 473 条声明、4 个 gts.dll（各 782 个导出）、MCT2008 的 gts.dll（569 个导出）全部无 GTN_；GEN 手册前言写明它配套《GEN 系列运动控制器用户手册》《GEN 系列运动控制器编程手册之基本功能》《GEN 扩展功能》，是独立产品线 + 独立手册体系。**GEN 手册例程里的 `#include \"gts.h\"` 只是同名文件**（GEN 自己 SDK 包里的头文件也叫 gts.h），不能当「共用 DLL」的证据 —— **要接 GEN 必须单独要 GEN 的 SDK 包**。（教训仍是那句「前缀不同 ≠ 库不同」：雷赛 nmc_/dmc_ 同在 LTDMC.dll，固高这次是反过来的例子。）"
+    }
+  ],
+  "pending_brands": [
+    {
+      "brand": "软赢",
+      "family": "—",
+      "source_hint": "厂商 SDK 头文件 + 函数手册",
+      "fields": [
+        "position_unit",
+        "velocity_unit",
+        "interpolation",
+        "position_compare",
+        "position_latch"
+      ],
+      "modeling_hint": "形态待确认 → 先问形态再定路线"
+    },
+    {
+      "brand": "高川",
+      "family": "—",
+      "source_hint": "厂商 SDK 头文件 + 函数手册",
+      "fields": [
+        "position_unit",
+        "velocity_unit",
+        "interpolation",
+        "position_compare",
+        "position_latch"
+      ],
+      "modeling_hint": "形态待确认 → 先问形态再定路线"
+    },
+    {
+      "brand": "ACS",
+      "family": "ACS Motion Control",
+      "source_hint": "ACS 官方 .NET API 文档（ACSCONTROL）与 EtherCAT 手册",
+      "fields": [
+        "position_unit",
+        "velocity_unit",
+        "interpolation",
+        "position_compare",
+        "position_latch",
+        "max_pulse_freq"
+      ],
+      "form_factor": "standalone_controller",
+      "modeling_hint": "**ACS 不能走 P/Invoke 绑定路线**：SA/SA-LT 是独立式整机（Stand Alone），主机侧走通信库（ACSPL+ 命令 + SPiiPlus C/.NET，TCP/IP 或串口）；SPiiPlus PCI 才是插卡；SC-LT 是跑在主机里的软 EtherCAT 主站 —— 三种形态三种驱动模型"
+    }
+  ],
+  "out_of_scope_brands": [
+    {
+      "brand": "菁赛",
+      "why_not_in_scope": "**菁赛不在需求基线的品牌清单里**。基线 R-03 覆盖的是「固高、雷赛、正运动、软赢、高川、ACS」，Q-04 覆盖的是「固高GTS/GSN/GEN卡、雷赛DMC/EMC系列运动控制卡、正运动ZMC、软赢、高川、ACS」—— 菁赛是此前转写时误读「雷赛」造成的。",
+      "action": "不建绑定、不进需求覆盖口径。若客户现场实际用菁赛卡，再按「加品牌 = 加一个 JSON」补进去（官方 SDK 头文件 + 函数手册到手后）。"
+    }
+  ],
+  "cross_brand_diffs": [
+    {
+      "topic": "电子凸轮",
+      "leisai": "**原生凸轮表**（dmc_cam_table_unit 整表下发：主轴位置数组 + 从轴位置数组），另有 dmc_cam_set/move/move_cycle/out 系列",
+      "zmotion": "**原生凸轮，但表在控制器侧**（ZAux_Direct_Cam 只引用表的起止区间；ZAux_Direct_Cambox 带链接轴）",
+      "googol": "**没有凸轮表**（gts.dll 导出表里 cam 符号 0 个）；主从同步走「跟随段 + 事件交叉」（GT_BufFollowStart / GT_BufFollowEventCross）",
+      "risk": "「换卡不改业务代码」在这一项上直接失效：雷赛能从上位机换整张表，正运动换表要改控制器程序，固高压根不是查表插值。按同一套接口直接平移，现场表现是「功能没了」而不是「报错」",
+      "how_to_avoid": "把电子凸轮写成**能力声明**（有无凸轮表 / 表能否从上位机下发 / 语义是查表还是事件驱动），跨品牌契约测试只断言声明与行为一致；凸轮表本身先用 `mcopilot cam check` 离线校验（段间速度阶跃、从轴峰值速度/加速度），别靠上机试"
+    },
+    {
+      "topic": "速度单位",
+      "leisai": "pulse/s（脉冲每秒）",
+      "zmotion": "单位/秒（由 UNITS 决定）",
+      "googol": "**pulse/ms**（脉冲每毫秒）—— 比 pulse/s 小 1000 倍",
+      "risk": "换卡时照抄速度参数，节拍可能差 1000 倍",
+      "how_to_avoid": "业务层统一用 mm/s，适配层负责换算；契约测试断言同一运动在两品牌上的时间误差 < 2%"
+    },
+    {
+      "topic": "位置单位",
+      "leisai": "指令 pulse 与反馈 pulse 两套计数（dmc_get_position / dmc_get_encoder）",
+      "zmotion": "统一的「单位」，由 UNITS 定义（DPOS / MPOS）",
+      "googol": "pulse（**当量变换之后**的值；默认 1:1 当量下即原始脉冲）",
+      "risk": "反馈口径混用会导致位置显示与实际差一个倍数",
+      "how_to_avoid": "接口分别暴露 GetPositionMm 与 GetFeedbackMm，适配层各自换算；契约测试要求两者单位一致且**跟随误差非零**（抓假反馈）"
+    },
+    {
+      "topic": "反馈真伪",
+      "leisai": "dmc_get_encoder 独立计数，**接了编码器才有效**（没接恒为 0）",
+      "zmotion": "MPOS；**ATYPE=1/7 时只是 DPOS 的副本**（假反馈）",
+      "googol": "编码器通道可能是外部编码器，也可能是内部脉冲计数器（GT_EncOn/GT_EncOff）→ 后者是**假反馈**",
+      "risk": "开环轴上跟随误差必然恒为 0，误判成「适配器写错了」会逼着人去改本来正确的代码",
+      "how_to_avoid": "接口暴露 HasRealFeedback(axis)：适配器按轴类型/接线如实声明；契约测试按它分流 —— 开环轴把「跟随误差必须非零」判为不适用，真反馈轴照常抓假反馈"
+    },
+    {
+      "topic": "返回值语义",
+      "leisai": "多数函数 0=成功；dmc_get_position / dmc_get_encoder / dmc_read_inbit / dmc_read_inport / dmc_get_latch_value 直接返回业务值",
+      "zmotion": "统一返回 int 错误码（0=成功），业务值一律走 out 参数",
+      "googol": "统一返回 short 错误码（0=成功），业务值一律走 out 参数；**但没有厂商停止原因码**，只有 32 位状态字",
+      "risk": "把「返回值=业务值」当错误码判 → 高电平被当成读失败、位置被当成错误码",
+      "how_to_avoid": "每个返回值型函数在绑定里写明语义；读失败抛异常而不是静默返回 0"
+    },
+    {
+      "topic": "插补模型",
+      "leisai": "坐标系 crd + 2 轴直线；圆弧必须用 _unit 后缀的 9 参版本",
+      "zmotion": "4 参轴列表式（轴数 + 轴列表 + 目标列表），单轴另走 Single_* 符号族",
+      "googol": "**坐标系式**（TCrdPrm + GT_LnXY + GT_CrdStart），坐标系↔规划轴映射是站点配置",
+      "risk": "单轴/多轴符号抄混 → 栈错位；圆弧函数名抄错 → EntryPointNotFound",
+      "how_to_avoid": "接口只暴露 MoveLinear/MoveArc，适配层各自映射到自己的符号族，映射表写进 knowledge/sdks/*.json"
+    },
+    {
+      "topic": "硬件比较输出",
+      "leisai": "dmc_hcmp_*（高速比较，FPGA）",
+      "zmotion": "ZAux_Direct_HwPswitch2（PSO，模式1=单轴比较）",
+      "googol": "GT_CompareData（**HSIO 只有 2 个通道**，位置是相对当前位置的偏移）",
+      "risk": "飞拍触发点写错会导致每片拍照位置漂移",
+      "how_to_avoid": "比较点统一由运动层计算（mcopilot motion compare），适配层只负责下发计数值；通道号→物理端子映射必须按型号确认后再上机"
+    },
+    {
+      "topic": "错误反馈",
+      "leisai": "返回 short 错误码 + dmc_get_stop_reason 停止原因",
+      "zmotion": "返回 int 错误码 + AXIS_STOPREASON + ZAux_GetErrString 可读文本",
+      "googol": "返回 short 错误码 + 32 位状态字（**无厂商停止原因码**）",
+      "risk": "只判 return==0 会漏掉「正常返回但停止原因是异常」的情况",
+      "how_to_avoid": "契约测试要求每个品牌都实现 GetStopReason 并在到位后读取；读不到就抛异常，不许静默返回 0"
+    },
+    {
+      "topic": "产品形态与驱动模型",
+      "leisai": "DMC 脉冲卡 / DMC-E 总线卡都是**插卡**（PCIe）→ P/Invoke 到 LTDMC.dll（EMC 独立式另用 emc_* 库）",
+      "zmotion": "ZMC 是**独立式以太网控制器**→ P/Invoke 到 zauxdll.dll（同样是 P/Invoke，但对象是网络设备）",
+      "googol": "GTS 是 PCIe 插卡 → P/Invoke 到 gts.dll（**GT_ 前缀**；GEN 系列用 GTN_ 前缀且首参是控制器编号，**签名族不同**）",
+      "risk": "**独立式控制器没有板卡驱动可 P/Invoke**（如 ACS SA/SA-LT 整机）—— 照「绑定 DLL 导出符号」的建模方式做出来根本连不上；反过来把「函数前缀不同」当成「库不同」也会误判（DMC-E 的 nmc_* 与 DMC 的 dmc_* 同在 LTDMC.dll）",
+      "how_to_avoid": "能力矩阵加 form_factor / driver_model 字段；接新品牌先问形态，再选路线：卡驱动型(P/Invoke) / 独立控制器通信型(通信库，如 ACSPL+) / 软主站型(SC-LT)"
+    }
+  ],
+  "pending_manual_items": [
+    {
+      "brand": "两家",
+      "level": "必须",
+      "item": "现场产品的形态：插卡 还是 独立式控制器（第 0 项，先问这条）",
+      "why": "形态决定驱动模型：插卡 = 板卡驱动 P/Invoke（雷赛 LTDMC.dll、固高 gts.dll，主机必须装驱动）；独立整机 = **没有卡驱动可 P/Invoke**，主机侧走通信库（ACS SA/SA-LT 是 ACSPL+ 命令 + SPiiPlus .NET，TCP/IP 或串口）。选错等于从零重做",
+      "known": "雷赛 DMC-E = EtherCAT 总线版**插卡**（《EtherCAT 总线卡用户使用手册 2024.11》第4章 硬件及驱动程序的安装）；EMC/MC/PAC = **独立整机**（《EMC 系列总线型独立式控制器 用户使用手册 2024.1》）；DMC-E 与 DMC 头文件 SHA256 相同 → 同库同 API（官方绑定 dmc_ 1252 个 + nmc_ 214 个同在 LTDMC.dll，emc_ 0 个）。正运动 ZMC = 独立式以太网控制器（zauxdll.dll）。固高 GTS = 插卡（手册原文「工控机插入多张控制卡…靠近 CPU 的 PCI 插槽为 0 号卡」，库 gts.dll）。ACS：SA/-LT = 独立整机，SPiiPlus PCI = 插卡，SC-LT = 软 EtherCAT 主站",
+      "ask": "①现场雷赛是 DMC/DMC-E 插卡，还是 EMC/MC/PAC 独立式？②正运动是 ZMC 独立式吗？③若近期要接 ACS，是 SA/SA-LT 整机还是 SPiiPlus PCI 插卡？",
+      "blocks": "ACS 这类品牌的接口形状与实现路线（适配层要不要加「通信库」分支）"
+    },
+    {
+      "brand": "固高",
+      "level": "必须",
+      "item": "固高 GTS 卡的当量变换公式 + 现场实际型号与固件版本 + GEN 的 SDK 包",
+      "why": "**剩下的三件事**：①当量变换公式（GT_ProfileScale/GT_EncScale 的 alpha/beta 方向）决定 mm↔pulse 换算，公式搞反会整体偏一个未知比例且不报错；②现场到底装的是哪张卡（GTS-400-PG 是纯脉冲输出、-PV 带模拟量轴输出）配哪块端子板（GT2-400-ACC2-VB-G / -V）决定有没有模拟量轴、飞拍接哪两个 HSIO 端子（CN14 的 HSIO_A± / HSIO_B±）；③GEN 控制器（GTN_ 前缀）在本 SDK 包里一个符号都没有，必须单独要 GEN 的 SDK",
+      "known": "**已在官方 SDK 包与手册里查到的（2026-10-20）**：调用约定 = __stdcall（gts.h 第 3 行 `#define GT_API extern \"C\" short __stdcall`）；IO 端子表全表（GTS-400-PCIe 用户手册 R1.0 第 3 章，121 行，含 EXI0~EXI15 / EXO0~EXO15 / HOME0~3 / LIMIT0±~LIMIT3± / HSIO_A±·HSIO_B± / 辅编 CN12·CN13 / AIN CN19 / MPG CN20）；PG 与 PV 的区别（p8 型号说明：X=G 脉冲量输出、X=V 模拟量或脉冲量输出）与端子板型号；脉冲输出上限 1MHz、编码器输入 2MHz；捕获源只有 HOME/INDEX/PROBE/HSIO0/HSIO1（探针接 EXI0）。**还没查到的**：当量公式（p212/p181 只给取值范围与 |alpha|>|beta|，没给公式与方向）、现场实际型号与固件版本、GEN 的 SDK",
+      "ask": "①当量变换的确切公式（轴位置 = 规划位置 × ? ），alpha/beta 谁在分子？现场 MCT2008 里当量配的是多少？②现场卡的完整型号（主卡 + 端子板 + 固件版本 + 目标进程位数）、DI/DO 与 HSIO 在端子板上的实际接线？③GEN 控制器能否提供 GEN 自己的 SDK 包（GTN_ 那套）？",
+      "blocks": "SetPulsePerMm 的真实实现（当量在软件侧换算需要这个数）；现场接线与飞拍参数；GEN 的适配器"
+    },
+    {
+      "brand": "雷赛",
+      "level": "必须",
+      "item": "现场在用卡的完整型号 + 配套接线盒型号 + 现场固件版本与要部署的 SDK 版本",
+      "why": "**剩下只要三件事**：①现场到底装的是哪张卡、哪块接线盒 —— 决定我们从手册哪本附录抄端子表（《DMC3000 系列卡用户使用手册》附录 1~10 覆盖了九款接线盒，但**只覆盖 DMC3000 系列**；现场若是 DMC5000 系列 2210/2410/2610 或 DMC-E/EMC，下面所有端子结论都不适用）；②现场固件版本 —— `dmc_set_output_status_repower`（断线重连后输出状态）需 **3XX201615 及以上**、限位回零（mode 10/11/12）需 **3XX201611 及以上**，旧固件上这些功能直接失败；③部署要拷哪一版 LTDMC.dll —— 我们实测贵司有**三套同名 SDK**（V2.5.7.23 / 2024-09-09 / 2023-12-11 EMC），版本不匹配会缺一整套功能",
+      "known": "**已在贵司官方件里查到的（2026-10-20 本轮逐页核对）**：①《DMC3000 系列卡用户使用手册 V2.0》**表 1.1 技术指标**：控制电机脉冲 1Hz~4MHz（精度 1Hz）、编码器输入 4MHz（4 倍频后 16MHz）、手轮 500kHz、通用 DI 16 口（可扩展，最高响应频率 4kHz，光电隔离 RC 滤波，输入电流 5~10mA）、通用 DO 16 口（可扩展，集电极开路 500mA / 5~24Vdc 吸入）、脉冲长度 28 位有符号、直线插补精度 ±0.8 pulse、圆弧 ±1.5 pulse、坐标系 2 个、同 PC 最多 8 卡；②**1.4 订货信息 表 1.2~1.11**：10 款卡 ↔ 接线盒配套；③**附录 1~10**：九款接线盒（ACC-X400 / ACC-X400B / ACC3600 / ACC3800 / ACC-XC00 / ACC2-X400B / ACC2-3600 / ACC2-3800 / ACC2-XC00）+ ACC2-68B 接线板的**完整端子表** —— **IO 端子表不需要贵司再给，我们自己抄**（ACC-X400 一款已抄成 88 行并逐行对上）；④**8.13**：伺服使能走**每轴一个的 SEVON 专用端子**（ACC-X400 上是 CN1~CN4 第 3 脚），按**轴号**写、**不占通用输出位**；⑤**8.14 表 8.3**：通用 IO 口号 0~15，**bit14=IN14/LTC0、bit15=IN15/LTC1**；⑥**8.17**：锁存通道**由轴号决定**（LTC0 锁 0~3 轴、LTC1 锁 4~7 轴），triger_chunnel 是保留参数固定 0；⑦**8.19**：hcmp 0~3 一一对应硬件 CMP0~CMP3，比较模式 0 禁止/1 等于/2 小于/3 大于/4 队列/5 线性，CMP0/1 普通光耦 4kHz、CMP2/3 高速光耦 1MHz；⑧**8.7**：**脉冲卡没有轴状态机函数**，只有 `dmc_axis_io_status` 位图 + `dmc_check_done`；⑨**附录 11**：169 条运动控制函数索引（已抄成真值表逐条比对）；⑩三套官方 SDK 的 C# 绑定（1466 / 1433 / 804 条声明）与 C 头文件（1513 条）已逐条核对，**我们绑定的每一条在三套 × 32/64 位里都导得出（缺 0）**",
+      "ask": "①现场卡丝印上的**完整型号**（DMC3C00S / DMC3C00-PCIe / DMC3800 / DMC3600 / DMC3400A / DMC5000 系列 2210·2410·2610 / DMC-E EtherCAT 总线卡？）；②配套**接线盒型号**（ACC-X400 / ACC-X400B / ACC3600 / ACC3800 / ACC-XC00 / ACC2-* 系列）与是否加装 ACC2-68B 接线板、CAN-IO 扩展模块；③现场**固件版本**（`dmc_get_card_soft_version` 的返回值）与**部署要用的 LTDMC.dll 版本**（开发包目录名，如 LTDMC_升级包_V2.5.7.23）；④现场 SEVON 端子接的是**常闭还是常开**（决定哪个电平算「伺服使能」）",
+      "blocks": "端子表从哪本附录抄、可用 IO 口数与轴数、固件相关的可用功能、部署拷哪一版 DLL、伺服使能判据"
+    },
+    {
+      "brand": "正运动",
+      "level": "必须",
+      "item": "总线从站的字节级 PDO 映射（ESI 文件）+ 使能归属",
+      "why": "状态字与控制字走 PDO/SDO；**主机写控制字属于可能让电机突然动作的机器安全动作**，归属不明就不写",
+      "known": "官方绑定已给出 SDO 入口（ZAux_BusCmd_SDOReadAxis/SDOWriteAxis，6 参按轴读写）与 CiA402 对象号（0x6040/0x6041/0x6064/0x60F4）；使能序列 0x06→0x07→0x0F 是标准。**但官方手册管的是控制器，不管从站** —— 从站 PDO 布局与「主机该不该写 0x6040」仍需从站厂商/FAE 回答",
+      "ask": "①该从站型号的 ESI 文件或输入/输出各 8 字节的对象字典索引与长度；②上位机是否需要（以及是否允许）自己写 0x6040/0x6041？若需要，走 PDO 还是 SDO？③该型号推荐的使能序列与状态机等待时间要求",
+      "blocks": "Enable() / IsEnabled() 的真实实现（当前显式抛 NotSupportedException，不猜序列）"
+    },
+    {
+      "brand": "正运动",
+      "level": "必须",
+      "item": "硬件比较输出可用端子（opnum 可取范围）",
+      "why": "飞拍触发要接在能做硬件比较输出的口上，取错会打到普通输出口",
+      "known": "ZMC408CE 支持 8 通道（OUT0~OUT7），但逐型号端子对照表未找到",
+      "ask": "该控制器型号上哪些物理输出口能做硬件比较输出",
+      "blocks": "SetCompareOutput() 的接线"
+    },
+    {
+      "brand": "两家",
+      "level": "必须",
+      "item": "SDK 版本 ↔ 固件版本 + 目标进程位数",
+      "why": "位数不匹配会直接 EntryPointNotFound 或加载失败，现场表现为「程序一开就崩」",
+      "known": "正运动需 zauxdll.dll + zmotion.dll（32/64 位分开下载，ZAux_* 全在 zauxdll.dll）；雷赛官方绑定用 LTDMC.dll（部分功能还需 PVT.dll），另有系列用 dmc3000.dll",
+      "ask": "本次交付对应的 SDK 版本号、目标进程位数、DLL 与固件的版本匹配关系",
+      "blocks": "部署与现场换机"
+    },
+    {
+      "brand": "固高",
+      "level": "建议",
+      "item": "HSIO 通道与「脉冲计数源」的配置口径",
+      "why": "位置比较输出只有 HSIO 两个通道，且 GT_CompareData 的 source（0 内部脉冲计数器 / 1 外部编码器）**必须与配置文件里的「脉冲计数源」一致**，不一致则比较点落在错的计数上、飞拍整体偏；而且比较位置是「相对调用时当前位置的偏移」，接线与语义都要现场对齐",
+      "known": "手册 PDF p175-178：GT_CompareData / GT_CompareStatus / GT_CompareStop / GT_CompareLinear / GT_ComparePulse；pBuf1→HSIO0、pBuf2→HSIO1，每边最多 4096 点、必须单调（违反返回 7）。**端子表已查实**（GTS-400-PCIe 用户手册 R1.0 p27 表 3-5）：HSIO 在端子板 CN14 上，HSIO_A± = 比较输出通道 0、HSIO_B± = 比较输出通道 1，差分输出、复位后 A 高 B 低 → **只有 2 个通道，没有第 3 个**",
+      "ask": "①HSIO_A / HSIO_B 在现场分别接到了哪个设备（相机触发？激光？）；②现场「脉冲计数源」配的是内部计数器还是外部编码器；③比较输出是要脉冲还是电平、脉宽多少（GT_CompareData 的 time 参数，单位？手册 p175）",
+      "blocks": "SetCompareOutput 的接线与参数（当前只做软件侧换算并强制 outPort ∈ {1,2}）"
+    },
+    {
+      "brand": "固高",
+      "level": "建议",
+      "item": "位置锁存的触发源（普通 DI 还是 HSIO）与触发沿",
+      "why": "固高的锁存 = 编码器捕获，捕获源**只有** HOME/INDEX/PROBE/HSIO0/HSIO1 —— **普通 DI 根本不能做捕获**。如果现场的触发信号是从普通输入点来的，硬件上必须改走 HSIO 口（或占用探针脚 EXI0），否则「锁存」功能用不了",
+      "known": "手册 PDF p214-215：GT_SetCaptureMode(encoder, mode) / GT_SetCaptureSense(encoder, mode, sense)（sense：0 下降沿 / 1 上升沿）/ GT_GetCaptureStatus(encoder, &status, &value)。**端子表已查实**（GTS-400-PCIe 用户手册 R1.0）：捕获源 HOME/INDEX 走 CN9-1 的 HOME0~HOME3，**探针接 EXI0（CN9-1 第 17 脚，手册标注「通用输入/探针输入」）**，HSIO0/HSIO1 走 CN14；辅助编码器 CN12/CN13 手册明确「辅编不能用以捕获功能」→ **EXI1~EXI15 都不能做捕获**",
+      "ask": "①现场锁存触发信号接在哪个口（HOME 几号 / EXI0 / HSIO 几号）？②触发沿是上升还是下降？③锁存后要不要立即回零到该位置",
+      "blocks": "SetLatch 的接线与参数（当前只接受 inPort ∈ {1,2} 即 HSIO 通道）"
+    },
+    {
+      "brand": "固高",
+      "level": "建议",
+      "item": "坐标系 ↔ 规划轴的映射（TCrdPrm.profile[8]）与插补需求",
+      "why": "插补走坐标系，profile[] 决定哪个规划轴对应 X/Y/Z/A，映射错了轴会走到错误坐标。手册只给规则（不允许两个轴映射到同一坐标轴），不给本项目的值",
+      "known": "手册 PDF p216（TCrdPrm 结构体与 profile[8] 规则）、p207（GT_LnXY 7 参）、p164-168（GT_ArcXYC 10 参，circleDir 0=顺时针/1=逆时针，半径正负决定 ≤180°/大于180°）、p179（GT_CrdStart）",
+      "ask": "①现场要不要用插补（多轴同步走直线/圆弧）？②要用的话，坐标系 1 的 X/Y/Z 各对应哪几个轴？③合成速度与合成加速度上限",
+      "blocks": "MoveLinear / MoveArc 的真实实现（当前显式抛 NotSupportedException，不做近似）"
+    },
+    {
+      "brand": "正运动",
+      "level": "建议",
+      "item": "ATYPE=5 / 7 / 21 的确切定义与 MPOS 真伪",
+      "why": "ATYPE 决定 MPOS 是真反馈还是 DPOS 副本；判错就会在脉冲轴上把假反馈当真反馈（或反之）",
+      "known": "公开资料：ATYPE=1/7 → MPOS 是 DPOS 副本（假反馈）；4/5（带编码器反馈的脉冲轴）、50（RTEX）、65/66/67（EtherCAT 总线轴）→ 真反馈。5 与 7 的确切语义、21 振镜轴的反馈真伪未见原文",
+      "ask": "ATYPE 取值全表（尤其 5、7、21），以及各类型下 MPOS 的来源（编码器 / DPOS 副本）",
+      "blocks": "HasRealFeedback 的判定，以及「跟随误差必须非零」在对应轴上能不能跑"
+    },
+    {
+      "brand": "正运动",
+      "level": "建议",
+      "item": "控制器是否 4 系列、固件是否支持「模式+100」自动清零",
+      "why": "ATYPE=4 的轴回零后不保证清 MPOS，不清则工件坐标错",
+      "known": "标准回零模式自动清 DPOS/MPOS；4 系列可用模式+100，否则手动 ZAux_Direct_SetMpos",
+      "ask": "贵司控制器是否 4 系列、固件是否支持 +100",
+      "blocks": "回零后位置读数是否可信"
+    },
+    {
+      "brand": "正运动",
+      "level": "建议",
+      "item": "位置锁存 imode 18~21（脉冲轴 R2/R3）",
+      "why": "脉冲轴的锁存源是 R2/R3，对应 18~21，公开表未覆盖",
+      "known": "1/2=Z升降沿、3/4=R0升降沿、14/15=R1升降沿（ZBasic REGIST 表）；总线轴用 R0/R1/Z，脉冲轴用 R2/R3",
+      "ask": "imode 18~21 的完整定义",
+      "blocks": "脉冲轴的 SetLatch()"
+    },
+    {
+      "brand": "雷赛",
+      "level": "建议",
+      "item": "电子凸轮（cam）功能的说明：凸轮表点数上限、凸轮表号数量、SrcMode 枚举语义、挺杆（tappet）规则",
+      "why": "雷赛是三家里**唯一能整表下发凸轮曲线**的（`dmc_cam_table_unit` 直接把「主轴位置数组 + 从轴位置数组」写进控制器），但官方绑定只给了签名 —— 而《DMC3000 系列卡用户使用手册 V2.0》里**没有凸轮函数章节**（全文 `dmc_cam_` 出现 0 次，只有 8.33 错误码表提到凸轮：2600 凸轮轴未使能 / 2607 添加的凸轮数据个数超出范围 / 2609 插入的凸轮数据表已满 / 2611 凸轮表编号超出允许范围 / 2612 凸轮表挺杆编号超出允许范围 / 2613·2614 挺杆点列表已空/已满）。**上限数值与枚举语义在手册里查不到**",
+      "known": "官方 LTDMC.cs 里有 dmc_cam_table_unit / dmc_cam_set / dmc_cam_move / dmc_cam_move_cycle / dmc_cam_out / dmc_get_cam_out_status / dmc_cam_read_points / dmc_cam_write_points / dmc_cam_read_points_packet / dmc_cam_write_points_packet / dmc_cam_add_tappet / dmc_cam_read_tappet_status / dmc_cam_read_tappet_value / dmc_cam_write_tappet_value / dmc_cam_in / dmc_get_cam_in 等一整套（我们已逐条核对签名与官方绑定一致）。**缺的是「规则」不是「接口」**。⚠ 只有**单数**版 dmc_cam_read_point / dmc_cam_write_point 不在官方托管绑定里（只在官方 C 头文件 leisai_cpp.csv L47/L53 有原型）—— 本条曾把这两个单数版误写成「LTDMC.cs 里有」，2026-10-20 逐条对 official_api/leisai.csv 核对后订正",
+      "ask": "凸轮功能的用户手册或编程说明（凸轮表最大点数与表号上限、SrcMode 枚举各值的含义、挺杆点列表规则、凸轮曲线数据格式），或官网下载链接",
+      "blocks": "电子凸轮表格下发这一块（三家能力差异表里雷赛是唯一能整表下发的，缺规则就只能停在「能发接口、不知道边界」）"
+    },
+    {
+      "brand": "雷赛",
+      "level": "建议",
+      "item": "DMC5000 系列（DMC2210 / DMC2410 / DMC2610 等）用户手册",
+      "why": "我们手上只有《DMC3000 系列卡用户使用手册 V2.0》，它只覆盖 DMC3000 系列。**DMC5000 系列的端子表、技术指标、回零方式、IO 扩展在各自的手册里** —— 现场若用的是这一系列，上面关于接线盒、IO 口号、CMP/锁存映射的结论全部不适用",
+      "known": "官方绑定与 C 头文件（1513 条声明）是**跨系列共用**的 —— 同一套 LTDMC.dll 同时服务 DMC3000 / DMC5000 / DMC-E；差的只是硬件手册。我们已按 DMC3000 手册把结论查实并落进代码与回归测试",
+      "ask": "DMC5000 系列（DMC2210 / DMC2410 / DMC2610 等）的用户手册；若其端子表已包含在 DMC3000 手册附录里也请告知",
+      "blocks": "若现场是 DMC5000 系列：端子表、IO 口号范围、脉冲频率上限、锁存/CMP 通道映射都要按该系列重查"
+    },
+    {
+      "brand": "雷赛",
+      "level": "建议",
+      "item": "DMC-E / EMC 手册附录 3《常用 PDO 对象表》的 PDO 映射方向确认 + EMC 的急停接线方式",
+      "why": "**① 方向存疑**：附录 3 表 F3.0 共 23 个对象，其中 **15 行的「PDO 映射」列与 CiA402 惯例相反**（6040 控制字标 R_PDO、6041 状态字标 T_PDO、6064 实际位置标 T_PDO、60FD 数字输入标 T_PDO、60FE 物理输出标 R_PDO…）。方向搞反 = 主站写从站、从站写主站，**表现是「轴不动」或「状态永远读不到」**。**② EMC 没有专用 EMG 急停端子**：手册 2.2.1 原文建议「在本地通用输入口选一个口当 EMG，再用 IO 映射功能映射成急停」→ 现场若没做这个映射，**等于没有急停**。",
+      "known": "**PDO 表本身手册自带**（DMC-E 附录 3 p335 / EMC 附录 3 p258，两本逐行相同），已导出为 23 行真值表（含「手册标注」与「按 CiA402 惯例应为」两列对照）；扩展 PDO 的 API 是 `nmc_write_rxpdo_extra` / `nmc_read_rxpdo_extra` / `nmc_read_txpdo_extra`；手册还给了「6041 状态字 bit10 = INP」的读法。**我们没有按这张表的 T/R 列写代码**，方向未确认前总线轴适配器不落地。",
+      "ask": "① 表 F3.0 的 T_PDO / R_PDO 各自的准确含义，以及 6040/6041/6064/606C/60FD/60FE 这几行到底该标哪个（是笔误还是我们对 T/R 的理解反了）；② EMC 的急停推荐接线：具体用哪个通用输入口号、IO 映射的完整配置步骤、以及是否有独立硬接线急停端子（若有请给端子号）。",
+      "blocks": "总线轴适配器的 PDO 读写方向与状态机读取；EMC 现场急停接线的正确性（安全项）"
+    }
+  ],
+  "brands_in_scope": [
+    "固高",
+    "雷赛",
+    "正运动",
+    "软赢",
+    "高川",
+    "ACS"
+  ]
+}

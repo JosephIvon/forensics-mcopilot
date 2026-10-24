@@ -1,0 +1,2580 @@
+{
+ "version": 5,
+ "note": "伺服波形离线诊断的阈值与判据。所有阈值都是起点，必须按你们的伺服型号与机械刚度校准。\n\nv3：接入两个新输入 —— 波形 CSV 的转矩/电流列（cur_q，解锁 SRV-15/16/17/20）与 C6 格式事件流 events.jsonl（解锁 SRV-24/25/26/29 全事件侧判据）。SRV-23/28 含因果条件（事件对到误差），需事件-波形同步验证，否则按 events_sync_unverified 拒答；SRV-18 因 drive_params 无入口保持结构性不可评，blocked_by 已按真正缺的输入拆分。新增阈值 27 项均为起点值，须按机型校准。 v4：axis.json 铭牌侧车（cpr/pole_pairs/screw_pitch_mm）解锁转矩纹波的阶次归因（SRV-17 attribution），侧车是 C1 样本包文件，不是 C6 契约对象（C6 全文无 cpr 字段）；阶次取整容差 order_integer_tol。 v5：搁置判据批次 A1/A3/B1/B2 落地——温度列（SRV-21/22）、配方事件（SRV-27）、drive_params.json 侧车（SRV-18）、cmd 扫频自动检测 + 相干 H1（SRV-19，闭环口径不冒充相位裕度）；15 项新阈值；修正 SRV-23 反事实竞争 slug 笔误。 v5b：删掉 inputs_present.cpr 残键（v4 已由 axis_nameplate 取代，无判据引用）。",
+ "contract": {
+  "schema": "mcopilot.servo.diagnosis/1",
+  "source": "axiscope C3-diagnosis.md / KB0-conventions.md §2 / KB3-tuning-rules.md / KB4-attribution-model.md",
+  "spec": "docs/kb3_判据抽取.md",
+  "rules": "本文件是阈值、判据与 fault_mode slug 的唯一来源；src/mcopilot/agents/servo.py 里只有信号计算与通用求值器。"
+ },
+ "thresholds": {
+  "overshoot_high_pct": 20.0,
+  "overshoot_ok_pct": 8.0,
+  "osc_freq_min_hz": 12.0,
+  "osc_freq_max_hz": 120.0,
+  "osc_prominence_min": 8.0,
+  "follow_err_ratio_high": 3.0,
+  "follow_err_ratio_low": 0.33,
+  "type1_vel_corr_min": 0.85,
+  "type1_vel_ratio_cv_max": 0.25,
+  "settle_ratio_high": 1.5,
+  "tail_ripple_ratio_min": 0.35,
+  "overshoot_zeta_ref_max": 0.5,
+  "accel_window_min_samples": 20.0,
+  "min_samples_default": 64.0,
+  "spectral_min_freq_hz": 0.5,
+  "spectral_line_over_dynamic_min": 0.05,
+  "spectral_edge_bin_min": 2.0,
+  "resonance_freq_match_max": 0.08,
+  "cmd_jump_min_ratio": 1e-06,
+  "refresh_harmonic_tol": 0.05,
+  "refresh_max_rate_ratio": 0.5,
+  "refresh_min_prominence": 5.0,
+  "steady_window_min_samples": 64.0,
+  "steady_window_len_s": 0.5,
+  "steady_linear_residual_ratio": 0.05,
+  "quant_integer_tol": 0.05,
+  "reversal_min_speed_ratio": 0.1,
+  "reversal_min_count": 2.0,
+  "backlash_window_s": 0.05,
+  "backlash_ratio_min": 3.0,
+  "backlash_cv_max": 0.3,
+  "backlash_baseline_ratio_max": 0.3,
+  "loose_spike_window_s": 0.05,
+  "loose_p999_over_rms_min": 4.0,
+  "loose_spike_cv_min": 0.4,
+  "encoder_min_speed_levels": 2.0,
+  "encoder_min_speed_ratio": 0.3,
+  "encoder_freq_speed_tol": 0.15,
+  "ff_accel_min_ratio": 0.05,
+  "ff_asymmetry_min": 1.5,
+  "ff_accel_corr_min": 0.6,
+  "dwell_min_samples": 50.0,
+  "limit_cycle_freq_min": 20.0,
+  "limit_cycle_over_band_min": 0.5,
+  "quant_step_over_band_min": 0.3,
+  "quant_sign_change_rate_min": 0.25,
+  "offset_dominant_ratio_max": 0.05,
+  "limit_cycle_sustain_min": 0.7,
+  "offset_mean_over_std_min": 3.0,
+  "band_gate_floor_hz": 2000.0,
+  "band_reliable_divisor": 1.25,
+  "zero_threshold": 0.0,
+  "bool_true": true,
+  "ff_asymmetry_min_neg": -1.5,
+  "cruise_moving_ratio": 0.3,
+  "stiction_breakaway_window_s": 0.05,
+  "stiction_breakaway_ratio_min": 2.0,
+  "crawl_stall_speed_ratio": 0.2,
+  "crawl_stall_min_samples": 3,
+  "crawl_stall_count_min": 3,
+  "crawl_stall_time_ratio_min": 0.02,
+  "ti_res_freq_min_hz": 20.0,
+  "ti_pair_ratio_min": 0.8,
+  "ti_pair_ratio_max": 1.25,
+  "host_pause_max_ms": 10.0,
+  "host_pause_count_min": 2,
+  "host_err_aligned_ratio_min": 0.5,
+  "causal_window_ms": 30.0,
+  "underrun_count_min": 1,
+  "wkc_count_min": 1,
+  "vision_latency_p95_max_ms": 50.0,
+  "vision_count_min": 5,
+  "move_count_min": 3,
+  "settle_check_window_ms": 40.0,
+  "settle_err_ratio_max": 3.0,
+  "polling_interval_max_ms": 20.0,
+  "polling_regular_cv_max": 0.35,
+  "sync_uncertainty_ms": 5.0,
+  "sync_match_window_ms": 50.0,
+  "sync_min_anchor_pairs": 3,
+  "sync_cluster_gap_s": 0.1,
+  "host_err_spike_k": 3.0,
+  "causal_ring_ms": 150.0,
+  "order_integer_tol": 0.2,
+  "curloop_res_ratio_min": 1.0,
+  "curloop_res_ratio_comp_max": 0.7,
+  "sweep_coh_min": 0.8,
+  "sweep_bw_valid_min_hz": 2.0,
+  "sweep_bw_wn_ratio_max": 0.5,
+  "sweep_dip_min": 1.5,
+  "sweep_f_hi_min_hz": 20.0,
+  "sweep_f_span_min_hz": 15.0,
+  "sweep_cross_min": 30,
+  "thermal_span_k_min": 2.0,
+  "thermal_corr_min": 0.6,
+  "thermal_err_per_k_min": 0.002,
+  "motor_heat_rate_min": 0.3,
+  "motor_heat_corr_min": 0.5,
+  "recipe_change_count_min": 1,
+  "recipe_scale_step_min": 0.05,
+  "backlash_over_rms_min": 0.3,
+  "sweep_window_min_s": 2.0
+ },
+ "signals": {
+  "note": "信号层只负责「实测是多少」，判据在 rules[].conditions。单位与口径写在这里，代码里不写死阈值。",
+  "err_dynamic_std": {
+   "unit": "counts",
+   "how": "全记录跟随误差去常数偏置后的标准差（std(error − mean(error))）",
+   "why": "频率类判据必须以「谱线绝对幅值 ÷ 误差动态量级」来判断，不能用带内能量占比、也不能用相对突出度：误差本身很小时，比例会把可忽略的谱线吹成主角"
+  },
+  "refresh_rate_hz": {
+   "unit": "Hz",
+   "how": "**整段记录**上 cmd 通道跳变间隔的中位数取倒数；跳变阈值 = cmd_jump_min_ratio × 全记录 cmd 幅值",
+   "guard": "刷新率必须 < refresh_max_rate_ratio × fs（否则测到的是采样本身，不是刷新）；跳变次数不足时判为「测不到」",
+   "why": "上位机按固定周期刷新指令，cmd 因此带一个固定周期的成分；这条线会真实地同时出现在 cmd / fb / err 里 —— 它不是伪谱线，而是「指令刷新成分，非被控对象响应」，必须与被控对象响应互斥登记。刷新率是**指令流本身**的属性，所以量**整段记录**：只量稳态窗会踩坑（窗口正好落在指令完全静止的空窗里时跳变数为 0，刷新率测不出来，而那恰恰是最容易把刷新线当成对象响应的场景）"
+  },
+  "line_at_refresh_harmonic": {
+   "unit": "bool",
+   "how": "误差谱主频是否落在 refresh_rate_hz 的整数倍上（相对偏差 ≤ refresh_harmonic_tol）",
+   "why": "落在刷新率或其谐波上的谱峰不进 hypotheses，只进 differential.not_evaluable（blocked_by = spectral_line_at_command_refresh_rate）"
+  },
+  "tail_line_amplitude": {
+   "unit": "counts",
+   "how": "稳态窗内误差谱窄带峰的**绝对幅值**（Hann 相干增益修正），与 tail_resolution_hz 一起报告",
+   "why": "只报无量纲的「突出度」会误导（交叉验证 §F-07：0.49 Hz / 突出度 238 这种数字看着吓人，其实幅值可忽略）"
+  },
+  "tail_resolution_hz": {
+   "unit": "Hz",
+   "how": "fs / nfft（本次实现的 nfft 默认 1024）",
+   "why": "没有分辨率就无法判断「这个峰是不是真的分辨得开」；主频落在最低/最高 bin（k=1 或 k=末）时必须提示"
+  },
+  "line_over_dynamic": {
+   "unit": "1",
+   "how": "tail_line_amplitude / 同一稳态窗内误差的去偏置动态 std（line_over_dynamic_global 是全记录口径，一并报出）",
+   "why": "小于 spectral_line_over_dynamic_min 时该谱峰不作为物理现象，只做 not_evaluable 登记。分母取**同一窗**的动态量级：频谱讲的是这一段里有没有相对误差自身量级不可忽略的窄带成分；用全记录 std 会把阶跃瞬间的尖峰算进去（阶跃响应的全记录 std 比稳态大一个量级），真实谐振反而被判成可忽略"
+  },
+  "steady_window": {
+   "unit": "samples",
+   "how": "按**线性度**选窗：窗内 cmd 能被一条直线拟合（残差 RMS ≤ steady_linear_residual_ratio × 窗内幅值）⟹ 指令不动或等速；候选窗之间取窗内误差动态量中位数最大的那个（并列取靠后的）；长度须 ≥ steady_window_min_samples",
+   "why": "频谱窗口必须落在真正的稳态段；窗口跨运动事件时频域判据降级为不适用。用线性度（比例判据）而不是绝对速度阈值：慢速斜坡（Export10 的 2 mm/s）同样有诊断价值，用「峰值速度的 10%」这种相对门槛会把它筛掉"
+  },
+  "err_dynamic_std_window": {
+   "unit": "counts",
+   "how": "稳态窗内误差去常数偏置后的标准差",
+   "why": "谱线判据的分母：频谱讲的是「这一段里有没有相对误差自身量级不可忽略的窄带成分」，分母必须来自同一段（见 line_over_dynamic）"
+  },
+  "limit_cycle_sustain_ratio": {
+   "unit": "1",
+   "how": "保持段（指令不动）后 1/4 段的振荡幅值 ÷ 前 1/4 段的振荡幅值（两者都相对稳态段自己的均值）",
+   "guard": "保持段不足 64 点时无定义（null）",
+   "why": "AX R-14 的极限环要求「静止时也持续、幅值收敛于极限环」。欠阻尼阶跃的振铃是**衰减**的：拿整段保持段量幅值，量到的是阶跃瞬间那个尖峰（case_b 会量成 97 mm 的「极限环」），于是「位置环增益过高自激」在**任何**欠阻尼阶跃上都会误命中"
+  },
+  "offset_suspect": {
+   "unit": "bool",
+   "how": "|mean(error)| ≥ offset_mean_over_std_min × std(error) 且 std(error) ≤ offset_dominant_ratio_max × peak(error)",
+   "why": "常数偏置主导的误差不是跟随误差（常见于 cmd/fb 跨轴错配）；此时依赖误差的判据一律降级为 not_evaluable，判据只用去偏置后的动态部分"
+  },
+  "asymmetry_signed": {
+   "unit": "1",
+   "how": "A_s = ratio（ratio ≥ 1）或 −1/ratio（ratio < 1），ratio = 加速段误差 RMS / 减速段误差 RMS",
+   "why": "A-26 的镜像定义：欠补偿与过补偿必须能分开，两个分支用 any_of 并联"
+  },
+  "backlash_estimate": {
+   "unit": "counts",
+   "how": "各换向点邻域（± backlash_window_s）内的最大 |误差去偏置| 的均值，减去非换向区基线 RMS",
+   "why": "R-08：换向处出现固定宽度的位置失动"
+  },
+  "quant_step_counts": {
+   "unit": "counts",
+   "how": "位置反馈全部非零 |Δ| 的 10% 分位作候选 q，再验证「所有 |Δ| 都在 q 的整数倍附近（quant_integer_tol 内）」；验证不过则量化台阶无定义",
+   "why": "连续反馈的反馈量没有量化台阶，不能报 0，只能报「无定义」"
+  },
+  "fe_sign_change_rate_hz": {
+   "unit": "Hz",
+   "how": "去偏置误差的符号翻转次数 / 记录时长",
+   "why": "R-17：误差近零乱翻 ⟹ 白噪声型抖动（量化主导），与窄带线互斥"
+  }
+ },
+ "severity": {
+  "SRV-01": "中",
+  "SRV-02": "高",
+  "SRV-03": "高",
+  "SRV-04": "低",
+  "SRV-05": "高",
+  "SRV-06": "中",
+  "SRV-07": "中",
+  "SRV-08": "高",
+  "SRV-09": "高",
+  "SRV-10": "高",
+  "SRV-11": "中",
+  "SRV-12": "高",
+  "SRV-13": "中",
+  "SRV-14": "中",
+  "SRV-15": "中",
+  "SRV-16": "高",
+  "SRV-17": "中",
+  "SRV-18": "中",
+  "SRV-19": "中",
+  "SRV-20": "高",
+  "SRV-21": "中",
+  "SRV-22": "中",
+  "SRV-23": "高",
+  "SRV-24": "高",
+  "SRV-25": "高",
+  "SRV-26": "中",
+  "SRV-27": "中",
+  "SRV-28": "中",
+  "SRV-29": "中"
+ },
+ "interpretation": {
+  "SRV-01": "超调偏大：环路增益偏高或阻尼不足。",
+  "SRV-02": "跟随误差存在明显周期性振荡：优先怀疑机械谐振（传动件固有频率附近）。",
+  "SRV-03": "实测跟随误差远大于二阶模型预测：等效模型没覆盖真实行为 —— 查速度前馈、惯量比、增益整定，以及脉冲当量口径。",
+  "SRV-04": "实测明显小于预测：前馈在起作用（type-2 成立），或等效 ωn 估偏大，以实测为准。",
+  "SRV-05": "误差与速度高度相关、且误差/速度比值恒定：type-1（无速度前馈），此时 e≈a/ωn² 不适用。仅相关系数高不足以判定 —— 机械谐振时误差与速度一起振荡，相关系数同样高，但比值不稳定。",
+  "SRV-06": "整定时间远长于二阶预测：实际带宽低于设定值，查机械刚度与惯量辨识。",
+  "SRV-07": "到位后误差不收敛：定位后仍有余振，重复精度无法保证。",
+  "SRV-08": "振铃频率与稳态误差谱主频一致，且该谱线的绝对幅值相对误差动态量级不可忽略：结构模态被激励（低频段机械谐振）。",
+  "SRV-09": "指令每次换向都出现固定宽度的位置失动（死区），且跨换向重复性高：传动链反向间隙。",
+  "SRV-10": "反向瞬间反复出现冲击尖峰，且冲击幅值跨次散布大、误差分布尖峰化：安装/紧固松动。",
+  "SRV-11": "误差主频随速度成比例变化（每转周期锁定）：编码器/光栅的每转周期误差。",
+  "SRV-12": "加速段与减速段的跟随误差显著不对称：加速度前馈失配（欠补偿或过补偿，二者镜像）。",
+  "SRV-13": "保持位置时出现窄带极限环，频率与环路带宽同量级：位置环增益过高自激（hunting）。",
+  "SRV-14": "位置反馈呈离散台阶且误差近零乱翻、谱线不集中：测量链分辨率/量化主导，不是机械或控制故障。",
+  "SRV-15": "静摩擦突破：起动瞬间转矩尖峰远超稳态摩擦。需电流通道，缺通道时不可评估。",
+  "SRV-16": "低速爬行（粘滑极限环）：速度呈近等周期锯齿并完全停止。需速度反馈与电流通道。",
+  "SRV-17": "转矩纹波：电流通道存在窄带峰及整数/半整数谐波阶次，位置侧未响应。",
+  "SRV-18": "电流环带宽不足：转矩指令跟踪滞后。需电流指令/反馈与驱动器带宽参数。",
+  "SRV-19": "速度环 PI 失谐：相位裕度落在稳定裕度之外。需实测扫频/频响。",
+  "SRV-20": "低频传动链双惯性：谐振-反谐振成对出现。需电流通道做相干。",
+  "SRV-21": "热漂移：保持位置随温度单调漂移。需温度通道与冷热机对比。",
+  "SRV-22": "电机发热/转矩常数漂移：同等位移下电流需求随温升上升。需温度通道与冷热机配对。",
+  "SRV-23": "上位机线程调度抖动造成跟随误差尖峰。需事件流与时钟对齐证据。",
+  "SRV-24": "插补缓冲区欠载：路径段误差阶跃与插补欠载事件对齐。需事件流。",
+  "SRV-25": "现场总线丢周期/WKC 异常：指令单周期保持且与网络事件对齐。需事件流与驱动器 WKC 通道。",
+  "SRV-26": "视觉测量结果迟到：误差呈「等后突进」且与视觉事件对齐。需事件流与视觉通道。",
+  "SRV-27": "换型流程覆盖脉冲当量/标定系数：同一运动在不同 recipe 下比例性偏差。需 recipe/工序上下文。",
+  "SRV-28": "到位判定窗口过短：报告到位时轴仍在衰减振铃。需工序事件（move_started/move_done）。",
+  "SRV-29": "到位判定靠轮询带来的叠加误差：到位散布等于轮询周期。需事件流。"
+ },
+ "confidence_model": {
+  "g_offset": 0.5,
+  "g_saturation_base": 4.0,
+  "n_factor_base": 0.6,
+  "n_factor_scale": 0.4,
+  "w_max": 0.55,
+  "w_rest": 0.45,
+  "a_con_cap": 0.5,
+  "penalty_rho_strong": 2.0,
+  "penalties": {
+   "strong": 0.2,
+   "medium": 0.1,
+   "weak": 0.05,
+   "none": 0.0
+  },
+  "absence_penalty_per_reason": 0.05,
+  "max_absence_reasons": 4,
+  "same_family_not_evaluable_threshold": 3,
+  "same_family_penalty": 0.05,
+  "max_total_penalty": 0.2
+ },
+ "caps": {
+  "bandwidth_estimate": 0.6,
+  "no_static_segment": 0.55,
+  "counterfactual_unresolved": 0.6,
+  "derived_velocity_feedback": 0.7
+ },
+ "severity_map": {
+  "高": 3,
+  "中": 2,
+  "低": 1
+ },
+ "inputs_present": {
+  "cmd": "channel",
+  "fb": "channel",
+  "err": "channel_or_derived",
+  "vel": "channel",
+  "torque": "channel",
+  "vel_fb": "derived_fb_velocity",
+  "temp": "channel",
+  "events": "events_file",
+  "recipe": "events_recipe",
+  "sweep": "derived_sweep",
+  "drive_params": "drive_params_sidecar",
+  "axis_nameplate": "axis_sidecar"
+ },
+ "input_labels": {
+  "cmd": "指令位置通道",
+  "fb": "反馈位置通道",
+  "err": "跟随误差通道（或由指令/反馈派生）",
+  "vel": "速度通道",
+  "torque": "电流/转矩通道 cur_q",
+  "vel_fb": "编码器速度反馈（由 fb 差分派生；本工具读不到直采通道，判据按 CAP-10 封顶 0.7）",
+  "temp": "CSV 温度列（temp/temperature/电机温度）",
+  "events": "上位机/控制器事件流 events.jsonl（C6 格式：一行一事件，t/source/code 必填）",
+  "recipe": "事件流里的 recipe_change 事件（source=recipe|host）",
+  "sweep": "cmd 本身是扫频/chirp 激励（无新文件，自动检测）",
+  "cpr": "电机每转 counts（CPR）/ 编码器线数",
+  "drive_params": "drive_params.json 侧车（current_loop_bandwidth_hz）",
+  "axis_nameplate": "axis.json 侧车（cpr/pole_pairs/screw_pitch_mm）"
+ },
+ "fault_modes": {
+  "mechanical_resonance": {
+   "display_name": "机械谐振（结构模态被瞬态激励）",
+   "family": "mechanical",
+   "definition": "阶跃/加减速瞬态激励结构模态，能量集中在窄带、与指令节律无关。",
+   "ax_rules": [
+    "R-02",
+    "R-03",
+    "R-04",
+    "R-10"
+   ],
+   "kb4_nodes": [
+    "CP-1",
+    "CP-2"
+   ],
+   "rules": [
+    "SRV-02",
+    "SRV-08"
+   ]
+  },
+  "mechanical_backlash": {
+   "display_name": "反向间隙 / 失动（lost motion）",
+   "family": "mechanical",
+   "definition": "方向反转时存在与行程无关的固定 counts 死区，每次反向重复。",
+   "ax_rules": [
+    "R-08",
+    "R-27"
+   ],
+   "kb4_nodes": [
+    "CP-3",
+    "CP-5"
+   ],
+   "rules": [
+    "SRV-09"
+   ]
+  },
+  "mechanical_friction_stiction": {
+   "display_name": "静摩擦突破（stiction）",
+   "family": "mechanical",
+   "definition": "每次由静止起动都出现超出稳态摩擦所需的转矩尖峰。",
+   "ax_rules": [
+    "R-06"
+   ],
+   "kb4_nodes": [
+    "CP-3"
+   ],
+   "rules": [
+    "SRV-15"
+   ]
+  },
+  "mechanical_crawling": {
+   "display_name": "低速爬行（粘滑极限环）",
+   "family": "mechanical",
+   "definition": "恒低速指令下速度呈周期性锯齿并出现完全停止，频率几乎不随速度变化。",
+   "ax_rules": [
+    "R-05"
+   ],
+   "kb4_nodes": [
+    "CP-4"
+   ],
+   "rules": [
+    "SRV-16"
+   ]
+  },
+  "mechanical_encoder_periodic_error": {
+   "display_name": "编码器每转周期误差",
+   "family": "mechanical",
+   "definition": "位置误差含锁定于电机轴/标尺旋转周期的周期分量，其频率与速度成正比。",
+   "ax_rules": [
+    "R-07"
+   ],
+   "kb4_nodes": [
+    "CP-4"
+   ],
+   "rules": [
+    "SRV-11"
+   ]
+  },
+  "mechanical_loose_structure": {
+   "display_name": "结构松动",
+   "family": "mechanical",
+   "definition": "方向反转时重复出现瞬态冲击尖峰，尖峰时刻与反向强相关但幅值散布大。",
+   "ax_rules": [
+    "R-02"
+   ],
+   "kb4_nodes": [
+    "CP-6"
+   ],
+   "rules": [
+    "SRV-10"
+   ]
+  },
+  "mechanical_thermal_drift": {
+   "display_name": "热漂移",
+   "family": "mechanical",
+   "definition": "闭环保持位置随温度单调漂移，而非高频误差恶化。",
+   "ax_rules": [
+    "R-01"
+   ],
+   "kb4_nodes": [],
+   "rules": [
+    "SRV-21"
+   ]
+  },
+  "mechanical_double_inertia": {
+   "display_name": "低频传动链双惯性（皮带/绳/减速器）",
+   "family": "mechanical",
+   "definition": "在可靠频带内存在由柔性传动环节构成的谐振-反谐振对。",
+   "ax_rules": [
+    "R-09"
+   ],
+   "kb4_nodes": [
+    "CP-1"
+   ],
+   "rules": [
+    "SRV-20"
+   ]
+  },
+  "electrical_current_loop_bandwidth": {
+   "display_name": "电流环带宽不足",
+   "family": "electrical",
+   "definition": "电流环交越相对速度环过低，转矩指令跟踪滞后。",
+   "ax_rules": [
+    "R-12"
+   ],
+   "kb4_nodes": [
+    "CP-8"
+   ],
+   "rules": [
+    "SRV-18"
+   ]
+  },
+  "electrical_velocity_pi_detune": {
+   "display_name": "速度环 PI 失谐",
+   "family": "electrical",
+   "definition": "速度环交越/相位裕度落在稳定裕度之外，谐振峰位于低频、衰减慢。",
+   "ax_rules": [
+    "R-13"
+   ],
+   "kb4_nodes": [],
+   "rules": [
+    "SRV-19"
+   ]
+  },
+  "electrical_position_pi_detune": {
+   "display_name": "位置环 PI 失谐 / 增益过高自激（hunting）",
+   "family": "electrical",
+   "definition": "静止保持位置时出现窄带极限环，频率与位置环带宽相当。",
+   "ax_rules": [
+    "R-14"
+   ],
+   "kb4_nodes": [
+    "CP-9"
+   ],
+   "rules": [
+    "SRV-01",
+    "SRV-13"
+   ]
+  },
+  "electrical_feedforward_mismatch": {
+   "display_name": "加速度前馈失配（加/减速段跟随误差不对称）",
+   "family": "electrical",
+   "definition": "加速段跟随误差显著大于减速段（或反之），误差与指令加速度强相关。",
+   "ax_rules": [
+    "R-15",
+    "R-26"
+   ],
+   "kb4_nodes": [
+    "CP-1",
+    "CP-7",
+    "CP-8"
+   ],
+   "rules": [
+    "SRV-03",
+    "SRV-04",
+    "SRV-05",
+    "SRV-12"
+   ]
+  },
+  "electrical_torque_ripple": {
+   "display_name": "转矩纹波",
+   "family": "electrical",
+   "definition": "电流通道存在窄带峰及其整数/半整数阶次结构，位置侧未产生响应。",
+   "ax_rules": [
+    "R-11"
+   ],
+   "kb4_nodes": [
+    "CP-2"
+   ],
+   "rules": [
+    "SRV-17"
+   ]
+  },
+  "electrical_motor_heating": {
+   "display_name": "电机发热 / 转矩常数漂移",
+   "family": "electrical",
+   "definition": "温升使绕组电阻与 k_t 漂移，同等位移指令下电流需求上升。",
+   "ax_rules": [
+    "R-16"
+   ],
+   "kb4_nodes": [],
+   "rules": [
+    "SRV-22"
+   ]
+  },
+  "electrical_resolution_quantization": {
+   "display_name": "分辨率 / 量化噪声主导",
+   "family": "electrical",
+   "definition": "位置测量量化台阶相对容差过大，误差呈台阶 + 小幅极限环 + 高频抖动。",
+   "ax_rules": [
+    "R-17"
+   ],
+   "kb4_nodes": [],
+   "rules": [
+    "SRV-14"
+   ]
+  },
+  "software_induced_host_thread_jitter": {
+   "display_name": "上位机线程调度抖动造成跟随误差尖峰",
+   "family": "software_induced",
+   "definition": "跟随误差尖峰与上位机进程停顿事件以优于同步不确定度的精度相关。",
+   "ax_rules": [
+    "R-18"
+   ],
+   "kb4_nodes": [
+    "CP-6",
+    "CP-10"
+   ],
+   "rules": [
+    "SRV-23"
+   ]
+  },
+  "software_induced_interp_buffer_underrun": {
+   "display_name": "插补缓冲区欠载",
+   "family": "software_induced",
+   "definition": "连续路径段的跟随误差阶跃与插补欠载事件对齐，且事件集中在路径段内。",
+   "ax_rules": [
+    "R-19"
+   ],
+   "kb4_nodes": [],
+   "rules": [
+    "SRV-24"
+   ]
+  },
+  "software_induced_bus_cycle_miss": {
+   "display_name": "现场总线丢周期 / WKC 异常",
+   "family": "software_induced",
+   "definition": "现场总线丢周期或 WKC 校验失败，导致指令单周期保持、反馈不连续跳变。",
+   "ax_rules": [
+    "R-20"
+   ],
+   "kb4_nodes": [
+    "CP-10"
+   ],
+   "rules": [
+    "SRV-25"
+   ]
+  },
+  "software_induced_late_vision_result": {
+   "display_name": "视觉测量结果迟到",
+   "family": "software_induced",
+   "definition": "视觉结果到达时刻晚于轴运动消费它的需要时刻，误差呈「等后突进」。",
+   "ax_rules": [
+    "R-21"
+   ],
+   "kb4_nodes": [],
+   "rules": [
+    "SRV-26"
+   ]
+  },
+  "software_induced_pulse_eq_overwritten": {
+   "display_name": "换型流程覆盖脉冲当量 / 标定系数",
+   "family": "software_induced",
+   "definition": "同一物理运动在不同 recipe 下呈现比例性位置偏差，与方向无关、无每转周期结构。",
+   "ax_rules": [
+    "R-22",
+    "R-27"
+   ],
+   "kb4_nodes": [
+    "CP-5"
+   ],
+   "rules": [
+    "SRV-27"
+   ]
+  },
+  "software_induced_settle_window_too_short": {
+   "display_name": "到位判定窗口过短",
+   "family": "software_induced",
+   "definition": "上位机「到位」判定时间窗短于轴的实际整定需要，报告到位时轴仍在衰减振铃。",
+   "ax_rules": [
+    "R-23"
+   ],
+   "kb4_nodes": [
+    "CP-9"
+   ],
+   "rules": [
+    "SRV-28"
+   ]
+  },
+  "software_induced_polling_latency": {
+   "display_name": "到位判定靠轮询带来的叠加误差",
+   "family": "software_induced",
+   "definition": "到位状态由上位机按固定周期轮询读取，检测滞后与状态采样量化被叠加进误差预算。",
+   "ax_rules": [
+    "R-24"
+   ],
+   "kb4_nodes": [
+    "CP-9"
+   ],
+   "rules": [
+    "SRV-29"
+   ]
+  }
+ },
+ "family_labels": {
+  "mechanical": "机械",
+  "electrical": "电气",
+  "software_induced": "软件诱导",
+  "software_induced_error": "软件诱导（族级标签，KB0 A-18：不是 slug，只许出现在 differential.*）"
+ },
+ "legacy_rule_slugs": {
+  "SRV-01": {
+   "primary": "electrical_position_pi_detune",
+   "alternates": [
+    "mechanical_resonance",
+    "electrical_velocity_pi_detune"
+   ],
+   "benign": false
+  },
+  "SRV-02": {
+   "primary": "mechanical_resonance",
+   "alternates": [
+    "electrical_position_pi_detune",
+    "mechanical_double_inertia"
+   ],
+   "benign": false
+  },
+  "SRV-03": {
+   "primary": "electrical_feedforward_mismatch",
+   "alternates": [
+    "mechanical_resonance",
+    "electrical_velocity_pi_detune"
+   ],
+   "benign": false
+  },
+  "SRV-04": {
+   "primary": "electrical_feedforward_mismatch",
+   "alternates": [],
+   "benign": true
+  },
+  "SRV-05": {
+   "primary": "electrical_feedforward_mismatch",
+   "alternates": [
+    "electrical_velocity_pi_detune",
+    "mechanical_resonance"
+   ],
+   "benign": false
+  },
+  "SRV-06": {
+   "primary": "electrical_velocity_pi_detune",
+   "alternates": [
+    "mechanical_resonance",
+    "mechanical_loose_structure"
+   ],
+   "benign": false
+  },
+  "SRV-07": {
+   "primary": "mechanical_resonance",
+   "alternates": [
+    "electrical_position_pi_detune",
+    "electrical_resolution_quantization"
+   ],
+   "benign": false
+  }
+ },
+ "legacy_rules": {
+  "SRV-01": {
+   "ax_rules": [
+    "R-14"
+   ],
+   "severity": "中",
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "",
+    "note": "本工具没有仿真器，改进量不给数字，只给方向；具体动作见该结论的「怎么验证」"
+   },
+   "next_data": [
+    {
+     "ask": "看伺服是否处于高增益区；对照实机整定表确认环路增益",
+     "why": "超调偏大通常来自位置环增益偏高或阻尼不足，需要整定表才能定量",
+     "unlocks": [
+      "R-14"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "signal": "overshoot_pct",
+     "op": ">",
+     "threshold_key": "overshoot_high_pct",
+     "feature": "servo.step.overshoot_pct",
+     "note": "实测超调量"
+    },
+    {
+     "signal": "zeta_from_overshoot",
+     "op": "<",
+     "threshold_key": "overshoot_zeta_ref_max",
+     "feature": "servo.step.zeta_from_overshoot",
+     "note": "由同一实测超调反推的阻尼比（与超调同源）",
+     "n_ref": 1
+    }
+   ]
+  },
+  "SRV-02": {
+   "ax_rules": [
+    "R-03",
+    "R-09"
+   ],
+   "severity": "高",
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "",
+    "note": "本工具没有仿真器，改进量不给数字，只给方向；具体动作见该结论的「怎么验证」"
+   },
+   "next_data": [
+    {
+     "ask": "在伺服软件里查该频率是否接近某机械传动的固有频率（联轴器/丝杆/皮带）",
+     "why": "谐振归因必须由扫频确认，否则只是「频率落在可疑区间」",
+     "unlocks": [
+      "R-03",
+      "R-09"
+     ]
+    },
+    {
+     "ask": "补采带电流/转矩通道 cur_q 的同一段波形",
+     "why": "缺共振主通道时无法用转矩-速度相干性把结构模态与控制环自激分开",
+     "unlocks": [
+      "R-03a 相干 ≥ 0.7"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "signal": "ringing_freq_hz",
+     "op": ">=",
+     "threshold_key": "osc_freq_min_hz",
+     "feature": "servo.step.ringing_freq_hz",
+     "note": "过零法振铃频率",
+     "band_check": true
+    },
+    {
+     "signal": "ringing_freq_hz",
+     "op": "<=",
+     "threshold_key": "osc_freq_max_hz",
+     "feature": "servo.step.ringing_freq_hz",
+     "note": "落在疑似机械谐振频带",
+     "band_check": true
+    }
+   ]
+  },
+  "SRV-03": {
+   "ax_rules": [
+    "R-15"
+   ],
+   "severity": "高",
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "",
+    "note": "本工具没有仿真器，改进量不给数字，只给方向；具体动作见该结论的「怎么验证」"
+   },
+   "next_data": [
+    {
+     "ask": "核对速度前馈是否开启、前馈系数是否按负载惯量比整定",
+     "why": "实测远大于理论说明等效模型没覆盖真实行为，前馈与惯量比是两个候选解释",
+     "unlocks": [
+      "R-15"
+     ]
+    },
+    {
+     "ask": "用扫频实测带宽校正等效模型后再复测",
+     "why": "等效二阶的 ωn 是估计值，误差预算随它线性变化",
+     "unlocks": [
+      "R-15 的 kff 分支判定"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "signal": "follow_err_ratio",
+     "op": ">",
+     "threshold_key": "follow_err_ratio_high",
+     "feature": "servo.model.follow_err_ratio",
+     "note": "实测/理论跟随误差比"
+    },
+    {
+     "signal": "accel_window_samples",
+     "op": ">=",
+     "threshold_key": "accel_window_min_samples",
+     "feature": "servo.model.accel_window_samples",
+     "note": "恒加速度窗样本数（对照窗口有效性）"
+    }
+   ]
+  },
+  "SRV-04": {
+   "ax_rules": [
+    "R-15"
+   ],
+   "severity": "低",
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "",
+    "note": "本工具没有仿真器，改进量不给数字，只给方向；具体动作见该结论的「怎么验证」"
+   },
+   "next_data": [
+    {
+     "ask": "用扫频实测带宽校正等效模型后再复测",
+     "why": "实测小于理论也可能是等效 ωn 估偏大，先校正模型再谈结论",
+     "unlocks": [
+      "R-15"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "signal": "follow_err_ratio",
+     "op": "<",
+     "threshold_key": "follow_err_ratio_low",
+     "feature": "servo.model.follow_err_ratio",
+     "note": "实测/理论跟随误差比"
+    },
+    {
+     "signal": "accel_window_samples",
+     "op": ">=",
+     "threshold_key": "accel_window_min_samples",
+     "feature": "servo.model.accel_window_samples",
+     "note": "恒加速度窗样本数（对照窗口有效性）"
+    }
+   ]
+  },
+  "SRV-05": {
+   "ax_rules": [
+    "R-15"
+   ],
+   "severity": "高",
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "",
+    "note": "本工具没有仿真器，改进量不给数字，只给方向；具体动作见该结论的「怎么验证」"
+   },
+   "next_data": [
+    {
+     "ask": "确认伺服的速度前馈增益是否开启并按惯量比整定",
+     "why": "type-1（无速度前馈）时 e≈a/ωn² 不适用，误差随速度线性增长且不收敛",
+     "unlocks": [
+      "R-15 的 kff 分支判定"
+     ]
+    },
+    {
+     "ask": "开前馈后重采一段波形，用本工具复测（这是可验证的闭环）",
+     "why": "只有复测能确认前馈是不是真的原因",
+     "unlocks": [
+      "R-15"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "signal": "vel_corr",
+     "op": ">",
+     "threshold_key": "type1_vel_corr_min",
+     "feature": "servo.error.vel_corr",
+     "note": "误差-速度相关系数"
+    },
+    {
+     "signal": "vel_ratio_cv",
+     "op": "<",
+     "threshold_key": "type1_vel_ratio_cv_max",
+     "feature": "servo.error.vel_ratio_cv",
+     "note": "误差/速度比值波动（比值恒定 ⟹ type-1）"
+    }
+   ]
+  },
+  "SRV-06": {
+   "ax_rules": [
+    "R-13"
+   ],
+   "severity": "中",
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "",
+    "note": "本工具没有仿真器，改进量不给数字，只给方向；具体动作见该结论的「怎么验证」"
+   },
+   "next_data": [
+    {
+     "ask": "实测扫频带宽与伺服设定带宽对比",
+     "why": "实际带宽低于设定值是跟随误差变差的主因，但等效二阶给的带宽只是估计值",
+     "unlocks": [
+      "R-13 的相位裕度判据"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "signal": "settle_ratio",
+     "op": ">",
+     "threshold_key": "settle_ratio_high",
+     "feature": "servo.model.settle_ratio",
+     "note": "实测/理论整定时间比"
+    },
+    {
+     "signal": "zeta_theory",
+     "op": ">=",
+     "threshold_key": "zero_threshold",
+     "feature": "servo.second_order.zeta",
+     "note": "阻尼比可辨识（ζ>0），二阶理论整定时间公式成立"
+    }
+   ]
+  },
+  "SRV-07": {
+   "ax_rules": [
+    "R-03",
+    "R-14"
+   ],
+   "severity": "中",
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "",
+    "note": "本工具没有仿真器，改进量不给数字，只给方向；具体动作见该结论的「怎么验证」"
+   },
+   "next_data": [
+    {
+     "ask": "检查机械谐振与编码器安装刚性；必要时做陷波或降低该频段增益",
+     "why": "末段不收敛有结构与控制两种解释，需要频响与安装检查分开",
+     "unlocks": [
+      "R-03",
+      "R-14"
+     ]
+    }
+   ],
+   "evidence": [
+    {
+     "signal": "tail_ripple_ratio",
+     "op": ">",
+     "threshold_key": "tail_ripple_ratio_min",
+     "feature": "servo.error.tail_ripple_ratio",
+     "note": "末段波动/误差峰值"
+    },
+    {
+     "signal": "tail_ripple_freq_hz",
+     "op": ">=",
+     "threshold_key": "spectral_min_freq_hz",
+     "feature": "servo.spectral.tail_ripple_freq_hz",
+     "note": "末段存在可测主频（持续振荡而非一次性冲击）"
+    }
+   ]
+  }
+ },
+ "rules": [
+  {
+   "id": "SRV-08",
+   "fault_mode": "mechanical_resonance",
+   "family": "mechanical",
+   "ax_rules": [
+    "R-02",
+    "R-10"
+   ],
+   "title": "振铃频率与稳态误差谱主频一致 → 结构模态（低频段机械谐振）",
+   "severity": "高",
+   "basis": "rule_heuristic",
+   "requires": [
+    "cmd",
+    "fb",
+    "err"
+   ],
+   "min_samples": 64,
+   "error_dependent": true,
+   "needs_spectrum": true,
+   "needs_real_line": true,
+   "conditions": [
+    {
+     "signal": "ringing_freq_hz",
+     "op": ">=",
+     "threshold_key": "osc_freq_min_hz",
+     "feature": "servo.step.ringing_freq_hz",
+     "note": "过零法振铃频率",
+     "band_check": true
+    },
+    {
+     "signal": "ringing_freq_hz",
+     "op": "<=",
+     "threshold_key": "osc_freq_max_hz",
+     "feature": "servo.step.ringing_freq_hz",
+     "note": "落在疑似结构模态频带",
+     "band_check": true
+    },
+    {
+     "signal": "line_freq_match",
+     "op": "<=",
+     "threshold_key": "resonance_freq_match_max",
+     "feature": "servo.spectral.line_freq_match",
+     "note": "两个独立估计器（过零法 / DFT）频率一致"
+    },
+    {
+     "signal": "line_over_dynamic",
+     "op": ">=",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "feature": "servo.spectral.line_over_dynamic",
+     "note": "谱线绝对幅值相对误差动态量级不可忽略（不用相对突出度）"
+    }
+   ],
+   "contradictions": [
+    {
+     "signal": "asymmetry_signed",
+     "op": ">=",
+     "threshold_key": "ff_asymmetry_min",
+     "feature": "servo.ff.asymmetry_signed",
+     "rule_id": "SRV-12",
+     "note": "加/减速段误差显著不对称：前馈失配的典型形态，削弱「结构模态」归因"
+    },
+    {
+     "signal": "line_at_refresh_harmonic",
+     "op": "==",
+     "threshold_key": "bool_true",
+     "feature": "servo.spectral.line_at_refresh_harmonic",
+     "rule_id": "SRV-21",
+     "note": "谱线与指令刷新率重合：属指令刷新成分，不是被控对象响应"
+    }
+   ],
+   "excludes": [
+    {
+     "slug": "electrical_feedforward_mismatch",
+     "signal": "line_over_dynamic",
+     "op": "<",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "reason": "误差谱没有相对动态量级不可忽略的窄带线，不支持结构模态"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "electrical_feedforward_mismatch",
+    "check": "若实为前馈失配，误差应随加速度成比例且加/减速不对称，而没有窄带谱线",
+    "signal": "asymmetry_signed",
+    "op": ">=",
+    "threshold_key": "ff_asymmetry_min"
+   },
+   "expected_effect": {
+    "basis": "rule_heuristic",
+    "direction": "在该频点加二阶陷波 / ZV 输入整形后，尾段误差谱线幅值与跟随误差 RMS 下降、整定时间缩短"
+   },
+   "next_data": [
+    {
+     "ask": "补采该频段（≥ 8 kHz 采样）的扫频 Bode 或阶跃响应",
+     "why": "当前只有时间域证据，陷波中心与相位裕度未经频响确认",
+     "unlocks": [
+      "R-03d 相位裕度校验",
+      "陷波中心频率"
+     ]
+    },
+    {
+     "ask": "补采带电流/转矩通道 cur_q 的同一段波形",
+     "why": "缺少共振主通道，转矩-速度相干性无法核对",
+     "unlocks": [
+      "R-03a 相干 ≥ 0.7",
+      "R-04 谐振-反谐振配对"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "SRV-09",
+   "fault_mode": "mechanical_backlash",
+   "family": "mechanical",
+   "ax_rules": [
+    "R-08",
+    "R-27"
+   ],
+   "title": "指令换向处出现固定宽度的位置失动（反向间隙）",
+   "severity": "高",
+   "basis": "rule_heuristic",
+   "requires": [
+    "cmd",
+    "fb",
+    "err"
+   ],
+   "min_samples": 64,
+   "error_dependent": true,
+   "conditions": [
+    {
+     "signal": "reversal_count",
+     "op": ">=",
+     "threshold_key": "reversal_min_count",
+     "feature": "servo.motion.reversal_count",
+     "note": "指令换向点数（KB3 R-08 要求含反向的 move ≥ 2）"
+    },
+    {
+     "signal": "backlash_over_rms",
+     "op": ">=",
+     "threshold_key": "backlash_ratio_min",
+     "feature": "servo.backlash.estimate_over_fe_rms",
+     "note": "失动量 ≥ 3×fe_rms（R-08）"
+    },
+    {
+     "signal": "backlash_cv",
+     "op": "<=",
+     "threshold_key": "backlash_cv_max",
+     "feature": "servo.backlash.cv",
+     "note": "跨换向重复性高（随工况变的是摩擦，不是间隙）"
+    },
+    {
+     "signal": "backlash_baseline_ratio",
+     "op": "<=",
+     "threshold_key": "backlash_baseline_ratio_max",
+     "feature": "servo.backlash.baseline_over_estimate",
+     "note": "误差只在换向处出现（平台），非全程分布"
+    }
+   ],
+   "contradictions": [
+    {
+     "signal": "reversal_spike_cv",
+     "op": ">",
+     "threshold_key": "loose_spike_cv_min",
+     "feature": "servo.motion.reversal_spike_cv",
+     "rule_id": "SRV-10",
+     "note": "换向冲击幅值散布大：更像松动冲击而不是固定宽度的死区"
+    }
+   ],
+   "excludes": [
+    {
+     "slug": "mechanical_loose_structure",
+     "signal": "backlash_cv",
+     "op": "<=",
+     "threshold_key": "backlash_cv_max",
+     "reason": "失动量跨换向重复（CV ≤ 0.3）⟹ 是位置侧平台，不是幅值散布大的冲击"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_loose_structure",
+    "check": "若实为松动，换向冲击幅值应跨次散布大（CV > 0.4）",
+    "signal": "reversal_spike_cv",
+    "op": ">",
+    "threshold_key": "loose_spike_cv_min"
+   },
+   "expected_effect": {
+    "basis": "rule_heuristic",
+    "direction": "机械消隙或加反向补偿后，换向处的失动量与重复定位偏差下降"
+   },
+   "next_data": [
+    {
+     "ask": "同一轨迹正反向各重复 5 次",
+     "why": "单次换向无法区分间隙、摩擦与松动",
+     "unlocks": [
+      "R-08 的 CV 判据",
+      "R-02 与 R-08 的仲裁"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "SRV-10",
+   "fault_mode": "mechanical_loose_structure",
+   "family": "mechanical",
+   "ax_rules": [
+    "R-02"
+   ],
+   "title": "换向瞬间反复冲击且幅值散布大（安装/紧固松动）",
+   "severity": "高",
+   "basis": "rule_heuristic",
+   "requires": [
+    "cmd",
+    "fb",
+    "err"
+   ],
+   "min_samples": 64,
+   "error_dependent": true,
+   "conditions": [
+    {
+     "signal": "reversal_count",
+     "op": ">=",
+     "threshold_key": "reversal_min_count",
+     "feature": "servo.motion.reversal_count",
+     "note": "指令换向点数"
+    },
+    {
+     "signal": "fe_p999_over_rms",
+     "op": ">=",
+     "threshold_key": "loose_p999_over_rms_min",
+     "feature": "servo.error.p999_over_rms",
+     "note": "误差分布尖峰化（非高斯）"
+    },
+    {
+     "signal": "reversal_spike_cv",
+     "op": ">",
+     "threshold_key": "loose_spike_cv_min",
+     "feature": "servo.motion.reversal_spike_cv",
+     "note": "冲击幅值跨次散布大（R-02 vs R-08 的区分量）"
+    }
+   ],
+   "contradictions": [
+    {
+     "signal": "backlash_cv",
+     "op": "<=",
+     "threshold_key": "backlash_cv_max",
+     "feature": "servo.backlash.cv",
+     "rule_id": "SRV-09",
+     "note": "换向幅值高度重复：更像固定死区而不是松动冲击"
+    }
+   ],
+   "excludes": [
+    {
+     "slug": "mechanical_backlash",
+     "signal": "reversal_spike_cv",
+     "op": ">",
+     "threshold_key": "loose_spike_cv_min",
+     "reason": "冲击幅值跨次散布大（CV > 0.4）⟹ 不是幅值一致的间隙平台"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_backlash",
+    "check": "若实为间隙，换向偏差应是幅值一致的固定死区",
+    "signal": "backlash_cv",
+    "op": "<=",
+    "threshold_key": "backlash_cv_max"
+   },
+   "expected_effect": {
+    "basis": "rule_heuristic",
+    "direction": "机械复检（顶丝、预压、锁紧面扭矩）后，换向冲击幅值与 fe_p999/fe_rms 比回落"
+   },
+   "next_data": [
+    {
+     "ask": "记录设备近期拆装/紧固记录",
+     "why": "松动的复检清单依赖拆装史，判据本身无法从波形恢复",
+     "unlocks": [
+      "R-02 的机械复检结论"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "SRV-11",
+   "fault_mode": "mechanical_encoder_periodic_error",
+   "family": "mechanical",
+   "ax_rules": [
+    "R-07"
+   ],
+   "title": "误差主频随速度成比例变化（每转周期锁定）",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "cmd",
+    "fb",
+    "err"
+   ],
+   "min_samples": 256,
+   "error_dependent": true,
+   "needs_spectrum": true,
+   "needs_real_line": true,
+   "conditions": [
+    {
+     "signal": "speed_level_count",
+     "op": ">=",
+     "threshold_key": "encoder_min_speed_levels",
+     "feature": "servo.motion.speed_level_count",
+     "note": "至少两档不同速度的恒速段"
+    },
+    {
+     "signal": "freq_speed_rel_err",
+     "op": "<=",
+     "threshold_key": "encoder_freq_speed_tol",
+     "feature": "servo.spectral.freq_speed_rel_err",
+     "note": "f ∝ v（爬行是 f≈常数，这是唯一可靠区分量）"
+    },
+    {
+     "signal": "line_over_dynamic",
+     "op": ">=",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "feature": "servo.spectral.line_over_dynamic",
+     "note": "周期线是真实成分而非可忽略量"
+    }
+   ],
+   "contradictions": [
+    {
+     "signal": "refresh_harmonic_offset",
+     "op": ">=",
+     "threshold_key": "refresh_harmonic_tol",
+     "feature": "servo.spectral.refresh_harmonic_offset",
+     "rule_id": "SRV-21",
+     "note": "谱线频率与指令刷新率（含谐波）相对差过大，不锁定每转周期"
+    }
+   ],
+   "excludes": [
+    {
+     "slug": "mechanical_crawling",
+     "signal": "freq_speed_rel_err",
+     "op": "<=",
+     "threshold_key": "encoder_freq_speed_tol",
+     "reason": "误差主频随速度成比例（爬行为近等周期，与速度无关）"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_crawling",
+    "check": "若实为粘滑爬行，主频应几乎不随速度变化",
+    "signal": "freq_speed_rel_err",
+    "op": ">",
+    "threshold_key": "encoder_freq_speed_tol"
+   },
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "启用周期误差/插值误差补偿后，每转周期分量的幅值下降"
+   },
+   "next_data": [
+    {
+     "ask": "提供电机每转 counts（CPR）或编码器线数，并采 ≥2 整转的匀速段",
+     "why": "没有 CPR 就无法确认主阶次 k 是整数，判据只能停在 f∝v 这一层",
+     "unlocks": [
+      "R-07 主阶次与 CPR 的整分数关系",
+      "per_rev_amplitude_counts"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "SRV-12",
+   "fault_mode": "electrical_feedforward_mismatch",
+   "family": "electrical",
+   "ax_rules": [
+    "R-15",
+    "R-26"
+   ],
+   "title": "加/减速段跟随误差不对称（加速度前馈失配）",
+   "severity": "高",
+   "basis": "rule_heuristic",
+   "requires": [
+    "cmd",
+    "fb",
+    "err"
+   ],
+   "min_samples": 64,
+   "error_dependent": true,
+   "conditions": [
+    {
+     "signal": "asymmetry_signed",
+     "op": ">=",
+     "threshold_key": "ff_asymmetry_min",
+     "feature": "servo.ff.asymmetry_signed",
+     "note": "分支①欠补偿：加速段误差占优（A-26 镜像，另一支对称）"
+    },
+    {
+     "signal": "asymmetry_signed",
+     "op": "<=",
+     "threshold_key": "ff_asymmetry_min_neg",
+     "feature": "servo.ff.asymmetry_signed",
+     "note": "分支②过补偿：减速段误差占优"
+    },
+    {
+     "signal": "fe_vs_accel_corr",
+     "op": ">=",
+     "threshold_key": "ff_accel_corr_min",
+     "feature": "servo.ff.fe_vs_accel_corr",
+     "note": "误差与指令加速度强相关"
+    },
+    {
+     "signal": "accel_rms",
+     "op": ">",
+     "threshold_key": "zero_threshold",
+     "feature": "servo.ff.accel_regime_rms",
+     "note": "加速段有样本"
+    },
+    {
+     "signal": "decel_rms",
+     "op": ">",
+     "threshold_key": "zero_threshold",
+     "feature": "servo.ff.decel_regime_rms",
+     "note": "减速段有样本"
+    }
+   ],
+   "any_of": [
+    0,
+    1
+   ],
+   "contradictions": [
+    {
+     "signal": "line_over_dynamic",
+     "op": ">=",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "feature": "servo.spectral.line_over_dynamic",
+     "rule_id": "SRV-08",
+     "note": "同时存在窄带谱线：谐振与前馈失配是头号混淆对，两者须并列呈现（R-26）"
+    }
+   ],
+   "excludes": [
+    {
+     "slug": "mechanical_resonance",
+     "signal": "line_over_dynamic",
+     "op": "<",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "reason": "误差谱没有窄带线，不支持结构模态解释"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_resonance",
+    "check": "若实为结构模态，误差应呈窄带谱线而非随加速度成比例",
+    "signal": "line_over_dynamic",
+    "op": ">=",
+    "threshold_key": "spectral_line_over_dynamic_min"
+   },
+   "expected_effect": {
+    "basis": "rule_heuristic",
+    "direction": "按 A_s 的符号调整加速度前馈增益后，asymmetry_ratio → 1，fe_rms 下降"
+   },
+   "next_data": [
+    {
+     "ask": "同一轨迹、同一方向重复 5 次，另加 5 次反向",
+     "why": "单次轨迹的方向性与工艺相关性分不开",
+     "unlocks": [
+      "R-15 的 kff 分支判定",
+      "R-08 间隙的分离"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "SRV-13",
+   "fault_mode": "electrical_position_pi_detune",
+   "family": "electrical",
+   "ax_rules": [
+    "R-14"
+   ],
+   "title": "保持段出现窄带极限环（位置环增益过高自激）",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "cmd",
+    "fb",
+    "err"
+   ],
+   "min_samples": 128,
+   "error_dependent": true,
+   "needs_spectrum": true,
+   "needs_real_line": true,
+   "conditions": [
+    {
+     "signal": "dwell_samples",
+     "op": ">=",
+     "threshold_key": "dwell_min_samples",
+     "feature": "servo.motion.dwell_samples",
+     "note": "存在保持段（静止）才有 hunting 语境"
+    },
+    {
+     "signal": "limit_cycle_freq_hz",
+     "op": ">=",
+     "threshold_key": "limit_cycle_freq_min",
+     "feature": "servo.spectral.limit_cycle_freq_hz",
+     "note": "极限环频率（>20 Hz，区别于 <2 Hz 爬行）",
+     "band_check": true
+    },
+    {
+     "signal": "limit_cycle_freq_hz",
+     "op": "<=",
+     "threshold_key": "reliable_band_hz",
+     "feature": "servo.spectral.limit_cycle_freq_hz",
+     "note": "落在可靠频带内",
+     "band_check": true
+    },
+    {
+     "signal": "limit_cycle_over_band",
+     "op": ">=",
+     "threshold_key": "limit_cycle_over_band_min",
+     "feature": "servo.spectral.limit_cycle_over_band",
+     "note": "极限环幅值 ≥ 0.5×整定带（相对量化噪声要够大）"
+    },
+    {
+     "signal": "limit_cycle_sustain_ratio",
+     "op": ">=",
+     "threshold_key": "limit_cycle_sustain_min",
+     "feature": "servo.spectral.limit_cycle_sustain_ratio",
+     "note": "保持段后 1/4 段的振荡幅值不小于前 1/4 段（AX R-14：静止时也持续、幅值收敛于极限环）—— 欠阻尼阶跃的衰减振铃不是极限环"
+    },
+    {
+     "signal": "line_over_dynamic",
+     "op": ">=",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "feature": "servo.spectral.line_over_dynamic",
+     "note": "窄带线是真实成分"
+    }
+   ],
+   "contradictions": [
+    {
+     "signal": "line_at_refresh_harmonic",
+     "op": "==",
+     "threshold_key": "bool_true",
+     "feature": "servo.spectral.line_at_refresh_harmonic",
+     "rule_id": "SRV-21",
+     "note": "谱线与指令刷新率重合，不是对象响应"
+    }
+   ],
+   "excludes": [
+    {
+     "slug": "electrical_resolution_quantization",
+     "signal": "limit_cycle_over_band",
+     "op": "<",
+     "threshold_key": "limit_cycle_over_band_min",
+     "reason": "极限环幅值不到整定带的一半：更像量化噪声而非自激"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "electrical_resolution_quantization",
+    "check": "若实为量化主导，极限环幅值应与量化台阶同量级",
+    "signal": "limit_cycle_over_band",
+    "op": "<",
+    "threshold_key": "limit_cycle_over_band_min"
+   },
+   "expected_effect": {
+    "basis": "unverified",
+    "direction": "降低位置环增益/刚性等级后，极限环幅值与 fe_p999/fe_rms 比下降"
+   },
+   "next_data": [
+    {
+     "ask": "补 0–2×带宽的扫频 Bode（实测交越频率与相位裕度）",
+     "why": "本条用的是等效模型估出来的带宽（CAP-1 封顶 0.6），不能作为调增益的唯一依据",
+     "unlocks": [
+      "R-14 的 |f_lc/f_pos − 1| ≤ 0.5 判据",
+      "R-13 的相位裕度判据"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "SRV-14",
+   "fault_mode": "electrical_resolution_quantization",
+   "family": "electrical",
+   "ax_rules": [
+    "R-17"
+   ],
+   "title": "反馈量化台阶相对容差过大（分辨率主导）",
+   "severity": "中",
+   "basis": "rule_heuristic",
+   "requires": [
+    "fb",
+    "err"
+   ],
+   "min_samples": 64,
+   "error_dependent": true,
+   "needs_spectrum": true,
+   "conditions": [
+    {
+     "signal": "quant_step_over_band",
+     "op": ">=",
+     "threshold_key": "quant_step_over_band_min",
+     "feature": "servo.quant.step_over_settle_band",
+     "note": "量化台阶 ≥ 0.3×整定带（R-17）"
+    },
+    {
+     "signal": "fe_sign_change_rate_hz",
+     "op": ">=",
+     "threshold_key": "quant_sign_change_rate_min",
+     "feature": "servo.error.sign_change_rate_hz",
+     "note": "误差近零乱翻（≥0.25×fs）⟹ 白噪声型抖动"
+    },
+    {
+     "signal": "line_over_dynamic",
+     "op": "<=",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "feature": "servo.spectral.line_over_dynamic",
+     "note": "谱不集中（无主导窄带线），与 R-17 的谱平坦条件同向"
+    }
+   ],
+   "contradictions": [
+    {
+     "signal": "line_over_dynamic",
+     "op": ">",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "feature": "servo.spectral.line_over_dynamic",
+     "rule_id": "SRV-08",
+     "note": "存在主导窄带线：不支持「谱平坦」这一支"
+    }
+   ],
+   "excludes": [
+    {
+     "slug": "mechanical_resonance",
+     "signal": "line_over_dynamic",
+     "op": "<=",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "reason": "误差谱没有主导窄带线，不支持结构模态"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_resonance",
+    "check": "若实为结构模态，误差谱应有明显窄带线",
+    "signal": "line_over_dynamic",
+    "op": ">",
+    "threshold_key": "spectral_line_over_dynamic_min"
+   },
+   "expected_effect": {
+    "basis": "rule_heuristic",
+    "direction": "提高分辨率/电子细分后，量化台阶与误差 RMS 下降；放宽到位判据只改判定不改物理精度"
+   },
+   "next_data": [
+    {
+     "ask": "提供编码器线数/电子细分档位与 counts_per_mm",
+     "why": "没有定标就只能说「量化台阶占整定带的比例」，不能换算成物理尺寸",
+     "unlocks": [
+      "R-17 的 position_quantum_mm 口径"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "SRV-15",
+   "fault_mode": "mechanical_friction_stiction",
+   "family": "mechanical",
+   "ax_rules": [
+    "R-06"
+   ],
+   "title": "静摩擦突破（stiction）与预载相关摩擦",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "torque"
+   ],
+   "blocked_by": "absent_torque_channel",
+   "missing": "需要电流/转矩通道 cur_q：突破转矩与稳态摩擦的比值只能在电流侧算",
+   "unlocks": [
+    "SRV-15",
+    "R-06"
+   ],
+   "needs_spectrum": false,
+   "conditions": [
+    {
+     "signal": "tq_breakaway_ratio",
+     "op": ">=",
+     "threshold_key": "stiction_breakaway_ratio_min",
+     "feature": "servo.torque.breakaway_ratio",
+     "note": "恒速段起动沿 ±50 ms 内 |cur_q| 峰 ÷ 该段中部稳态 |cur_q| 中位数；静摩擦突破时该比值显著大于 1。只报「比值大」，不区分静摩擦与预载摩擦 —— 那需要正反两个方向分段"
+    }
+   ],
+   "next_data": [
+    {
+     "ask": "补采正、反两个方向的单次起动波形（同一段 cur_q 通道）",
+     "why": "只看起动比值分不清静摩擦与预载摩擦：预载摩擦在正反向都大且接近，静摩擦的突破峰在反向会换符号",
+     "unlocks": [
+      "R-06 静摩擦/预载摩擦分辨"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_crawling",
+    "check": "若实为低速爬行，恒速段里应有粘滑交替（速度反复掉到近零），而不只是起动瞬间峰值大",
+    "signal": "crawl_stall_count",
+    "op": ">=",
+    "threshold_key": "crawl_stall_count_min"
+   }
+  },
+  {
+   "id": "SRV-16",
+   "fault_mode": "mechanical_crawling",
+   "family": "mechanical",
+   "ax_rules": [
+    "R-05"
+   ],
+   "title": "低速爬行（粘滑极限环）",
+   "severity": "高",
+   "basis": "unverified",
+   "requires": [
+    "vel_fb",
+    "torque"
+   ],
+   "blocked_by": "absent_torque_channel",
+   "missing": "需要编码器速度反馈 vel_fb（CSV 里的 vel 可能是指令速度）与电流通道 cur_q",
+   "unlocks": [
+    "SRV-16",
+    "R-05"
+   ],
+   "needs_spectrum": false,
+   "conditions": [
+    {
+     "signal": "crawl_stall_count",
+     "op": ">=",
+     "threshold_key": "crawl_stall_count_min",
+     "feature": "servo.crawl.stall_count",
+     "note": "恒速段里 |v_fb|（fb 差分派生）掉到 0.2×vmax 以下的粘滞段次数"
+    },
+    {
+     "signal": "crawl_stall_time_ratio",
+     "op": ">=",
+     "threshold_key": "crawl_stall_time_ratio_min",
+     "feature": "servo.crawl.stall_time_ratio",
+     "note": "粘滞时间占恒速段时间比；速度由 fb 差分派生会平滑掉瞬间，判据按 CAP-10 封顶 0.7"
+    }
+   ],
+   "next_data": [
+    {
+     "ask": "补电机每转 counts（CPR/编码器线数）并采第二个速度档",
+     "why": "爬行的粘滑频率与速度无关，每转周期误差的频率随速度成比例移动；没有 cpr 与第二速度档，两者分不开",
+     "unlocks": [
+      "R-05 爬行 vs 每转周期误差"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_resonance",
+    "check": "若实为谐振类振荡，误差主频应随速度成比例移动（f∝v）；爬行的粘滑频率基本不随速度变",
+    "signal": "freq_speed_rel_err",
+    "op": "<=",
+    "threshold_key": "encoder_freq_speed_tol"
+   }
+  },
+  {
+   "id": "SRV-17",
+   "fault_mode": "electrical_torque_ripple",
+   "family": "electrical",
+   "ax_rules": [
+    "R-11"
+   ],
+   "title": "转矩纹波（窄带峰与谐波阶次结构）",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "torque"
+   ],
+   "blocked_by": "absent_torque_channel",
+   "missing": "需要电流/转矩通道 cur_q：谐波阶次结构只能在电流谱上判",
+   "unlocks": [
+    "SRV-17",
+    "R-11"
+   ],
+   "needs_spectrum": true,
+   "conditions": [
+    {
+     "signal": "tq_ripple_over_dynamic",
+     "op": ">=",
+     "threshold_key": "spectral_line_over_dynamic_min",
+     "feature": "servo.torque.ripple_over_dynamic",
+     "note": "转矩谱最窄带线的绝对幅值 ÷ 该窗转矩动态 std（同误差谱口径，不用相对突出度）。落在指令刷新谐波上同样按「指令刷新成分」挡下；归因为电气纹波需要每转电频率：有 axis.json 侧车（pole_pairs+screw_pitch_mm）时自动给阶次归因（hypothesis.attribution：6× 电频率=逆变器/死区特征，每转整数阶=机械周期误差）；没有侧车就只报「存在窄带成分」+ 频率——缺位即「未做归因」，不拿猜测冒充"
+    }
+   ],
+   "next_data": [
+    {
+     "ask": "补电机每转 counts（CPR）与稳定转速档的电流采样（已随波形提供 axis.json 侧车时，此项视为已满足）",
+     "why": "转矩纹波的归因靠谐波阶次结构（1×、6× 转频），阶次 = 谱线频率 ÷ 电频率，电频率要从转速与极对数推",
+     "unlocks": [
+      "R-11 阶次结构核对"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_resonance",
+    "check": "若转矩窄带线实为机械谐振在被激励，误差谱应在同一频率有配对峰；配对成立则两种解释并存，只能给到未分辨",
+    "signal": "ti_pair_ratio",
+    "op": ">=",
+    "threshold_key": "ti_pair_ratio_min"
+   },
+   "attribution_signal": "tq_ripple_order_best"
+  },
+  {
+   "id": "SRV-18",
+   "fault_mode": "electrical_current_loop_bandwidth",
+   "family": "electrical",
+   "ax_rules": [
+    "R-12"
+   ],
+   "title": "电流环带宽不足",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "torque",
+    "drive_params"
+   ],
+   "blocked_by": "absent_torque_channel",
+   "missing": "需要电流/转矩通道 cur_q 与驱动器参数侧车 drive_params.json（current_loop_bandwidth_hz，来自驱动器手册/调试软件导出；C6 契约没有 drive_params 对象，走文件入口，等上游把 axis.drive_params 版本化后再收编）",
+   "unlocks": [
+    "SRV-18",
+    "R-12"
+   ],
+   "blocked_by_map": {
+    "torque": "absent_torque_channel",
+    "drive_params": "absent_drive_params"
+   },
+   "conditions": [
+    {
+     "signal": "res_over_curloop_ratio",
+     "op": ">=",
+     "threshold_key": "curloop_res_ratio_min",
+     "feature": "servo.drive.res_over_curloop",
+     "note": "转矩-误差配对出的谐振频率 ÷ 电流环带宽。谐振落在电流环带宽之外 ⟹ 电流环压不住，属带宽限制（先陷波/降刚度，换机械）"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_resonance",
+    "signal": "res_over_curloop_ratio",
+    "op": "<=",
+    "threshold_key": "curloop_res_ratio_comp_max",
+    "note": "谐振远在电流环带宽之内 ⟹ 环有裕量，纯机械谐振解释更省，本条存疑"
+   },
+   "next_data": [
+    {
+     "ask": "补陷波器现况表与谐振频率随预载/温度的变化",
+     "why": "区分「电流环带宽限制」与「机械改需求」：谐振频率随预载漂移是机械特征",
+     "unlocks": [
+      "R-12 陷波策略定案"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "SRV-19",
+   "fault_mode": "electrical_velocity_pi_detune",
+   "family": "electrical",
+   "ax_rules": [
+    "R-13"
+   ],
+   "title": "速度环 PI 失谐",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "sweep"
+   ],
+   "blocked_by": "absent_frequency_response",
+   "missing": "需要 cmd 为扫频/chirp 激励的波形（自动检测）：闭环带宽与相干性无法从阶跃时域可靠读出。闭环扫频给不了开环相位裕度——结论只到「带宽实测 + 与 ωn 估计比值」，不冒充裕度",
+   "unlocks": [
+    "SRV-19",
+    "R-13"
+   ],
+   "conditions": [
+    {
+     "signal": "sweep_bw_hz",
+     "op": ">=",
+     "threshold_key": "sweep_bw_valid_min_hz",
+     "feature": "servo.sweep.closed_loop_bw_hz",
+     "note": "相干 H1 估计的闭环带宽（|G| 跌破低频平台 0.707 的最高有效频率；γ²<0.8 的 bin 不参与读数）"
+    },
+    {
+     "signal": "sweep_bw_wn_ratio",
+     "op": "<=",
+     "threshold_key": "sweep_bw_wn_ratio_max",
+     "feature": "servo.sweep.bw_over_wn",
+     "note": "实测带宽 < 0.5×等效二阶 ωn ⟹ 速度环增益余量不足（PI 失整定的可执行口径）。没有 ωn 估计（波形里无阶跃段）时本条不可评"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_resonance",
+    "signal": "sweep_dip_ratio",
+    "op": ">=",
+    "threshold_key": "sweep_dip_min",
+    "note": "有效频带内 |G| 有深凹陷 ⟹ 谐振结构污染带宽读数，「带宽低」可能是反谐振坑，不是 PI 增益低"
+   },
+   "next_data": [
+    {
+     "ask": "补一段含明显阶跃（或振荡）的波形，使 ωn 可辨识",
+     "why": "「带宽偏低」要有 ωn 对照才成立；扫频段本身给不出参考",
+     "unlocks": [
+      "R-13 带宽-ωn 对照"
+     ]
+    }
+   ],
+   "blocked_by_map": {
+    "sweep": "absent_sweep_recording"
+   }
+  },
+  {
+   "id": "SRV-20",
+   "fault_mode": "mechanical_double_inertia",
+   "family": "mechanical",
+   "ax_rules": [
+    "R-09"
+   ],
+   "title": "低频传动链双惯性（皮带/绳/减速器）",
+   "severity": "高",
+   "basis": "unverified",
+   "requires": [
+    "torque"
+   ],
+   "blocked_by": "absent_torque_channel",
+   "missing": "需要电流/转矩通道 cur_q：谐振-反谐振配对要靠转矩-速度相干性判定",
+   "unlocks": [
+    "SRV-20",
+    "R-09",
+    "R-04"
+   ],
+   "needs_spectrum": true,
+   "conditions": [
+    {
+     "signal": "ti_res_freq_hz",
+     "op": ">=",
+     "threshold_key": "ti_res_freq_min_hz",
+     "feature": "servo.two_inertia.res_freq_hz",
+     "note": "转矩谱谐振峰频率（恒速段）"
+    },
+    {
+     "signal": "ti_pair_ratio",
+     "op": ">=",
+     "threshold_key": "ti_pair_ratio_min",
+     "feature": "servo.two_inertia.pair_ratio",
+     "note": "转矩谐振峰 ÷ 误差谱峰；反谐振在位置误差上表现为谷，两峰频率应接近"
+    },
+    {
+     "signal": "ti_pair_ratio",
+     "op": "<=",
+     "threshold_key": "ti_pair_ratio_max",
+     "feature": "servo.two_inertia.pair_ratio",
+     "note": "配对容差上限"
+    }
+   ],
+   "feature_blocked_by": {
+    "ti_pair_ratio": "spectral_line_blocked_or_absent"
+   },
+   "next_data": [
+    {
+     "ask": "补扫频频响（或至少变速度/变预载两档波形）",
+     "why": "双惯量的判命特性是谐振-反谐振配对与相位翻转，定速段时间窗只能看到频率配对，看不到相位",
+     "unlocks": [
+      "R-09 相位翻转核对",
+      "R-04 谐振-反谐振配对"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_resonance",
+    "check": "若误差主频随速度成比例移动（f∝v），「固定谐振」的解释不成立，更可能是每转周期误差；频率不随速度动才支持谐振族解释",
+    "signal": "freq_speed_rel_err",
+    "op": "<=",
+    "threshold_key": "encoder_freq_speed_tol"
+   }
+  },
+  {
+   "id": "SRV-21",
+   "fault_mode": "mechanical_thermal_drift",
+   "family": "mechanical",
+   "ax_rules": [
+    "R-01"
+   ],
+   "title": "热漂移（闭环保持位置随温度单调漂移）",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "temp"
+   ],
+   "blocked_by": "absent_temp_channel",
+   "missing": "需要 CSV 带温度列（temp/temperature/电机温度）。单段记录给「误差慢趋势-温度相关 + 每 K 漂移率」；冷/热机同轨迹配对要两段波形，本工具一次只读一段",
+   "unlocks": [
+    "SRV-21",
+    "R-01"
+   ],
+   "conditions": [
+    {
+     "signal": "temp_span_k",
+     "op": ">=",
+     "threshold_key": "thermal_span_k_min",
+     "feature": "servo.thermal.temp_span_k",
+     "note": "温度跨度不足 2 K，相关和斜率都没有说服力"
+    },
+    {
+     "signal": "err_temp_corr",
+     "op": ">=",
+     "threshold_key": "thermal_corr_min",
+     "feature": "servo.thermal.err_temp_corr",
+     "note": "1 s 块中位数序列上误差慢趋势与温度的相关"
+    },
+    {
+     "signal": "err_drift_per_k",
+     "op": ">=",
+     "threshold_key": "thermal_err_per_k_min",
+     "feature": "servo.thermal.err_drift_per_k",
+     "note": "回归斜率：每 K 漂移 ≥2 µm（钢件热膨胀量级）才算真漂移"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_backlash",
+    "signal": "backlash_over_rms",
+    "op": ">=",
+    "threshold_key": "backlash_over_rms_min",
+    "note": "换向瞬间有背隙量级的双边跳变 ⟹ 「漂移」可能是背隙被块中位数平滑后的伪趋势，本条存疑"
+   },
+   "next_data": [
+    {
+     "ask": "补冷机/热机同轨迹两段波形（同程序同负载）",
+     "why": "单段记录给不了「冷热差」；配对才能把热变形从装配应力里分出来",
+     "unlocks": [
+      "R-01 冷热机差异核对"
+     ]
+    }
+   ],
+   "blocked_by_map": {
+    "temp": "absent_temp_channel"
+   }
+  },
+  {
+   "id": "SRV-22",
+   "fault_mode": "electrical_motor_heating",
+   "family": "electrical",
+   "ax_rules": [
+    "R-16"
+   ],
+   "title": "电机发热 / 转矩常数漂移",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "temp",
+    "torque"
+   ],
+   "blocked_by": "absent_temp_channel",
+   "missing": "需要 CSV 带温度列与电流/转矩通道 cur_q：温升要能对上负载（温度跟随转矩 RMS）才能归到电机损耗，否则可能只是环境",
+   "unlocks": [
+    "SRV-22",
+    "R-16"
+   ],
+   "conditions": [
+    {
+     "signal": "temp_rise_k_per_min",
+     "op": ">=",
+     "threshold_key": "motor_heat_rate_min",
+     "feature": "servo.thermal.temp_rise_k_per_min",
+     "note": "持续升温 ≥0.3 K/min（降温为负，不触发）"
+    },
+    {
+     "signal": "temp_tq_corr",
+     "op": ">=",
+     "threshold_key": "motor_heat_corr_min",
+     "feature": "servo.thermal.temp_tq_corr",
+     "note": "温度与转矩 RMS 的块级相关：温度跟着负载走才是电机自发热"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_friction_stiction",
+    "signal": "tq_breakaway_ratio",
+    "op": ">=",
+    "threshold_key": "stiction_breakaway_ratio_min",
+    "note": "起动突破比 ≥2× ⟹ 摩擦大本身足以发热，热源未必是电机损耗"
+   },
+   "next_data": [
+    {
+     "ask": "补绕组温度（非机壳/环境）与额定电流对照",
+     "why": "机壳温度混环境；归因到电机损耗要绕组温度和额定电流百分数",
+     "unlocks": [
+      "R-16 发热归因"
+     ]
+    }
+   ],
+   "blocked_by_map": {
+    "temp": "absent_temp_channel",
+    "torque": "absent_torque_channel"
+   }
+  },
+  {
+   "id": "SRV-23",
+   "fault_mode": "software_induced_host_thread_jitter",
+   "family": "software_induced",
+   "ax_rules": [
+    "R-18"
+   ],
+   "title": "上位机线程调度抖动造成跟随误差尖峰",
+   "severity": "高",
+   "basis": "unverified",
+   "requires": [
+    "events"
+   ],
+   "blocked_by": "absent_events_jsonl",
+   "missing": "需要上位机/控制器事件流 events.jsonl（source=host）与时钟对齐证据",
+   "unlocks": [
+    "SRV-23",
+    "R-18",
+    "R-28"
+   ],
+   "needs_spectrum": false,
+   "conditions": [
+    {
+     "signal": "ev_host_pause_count",
+     "op": ">=",
+     "threshold_key": "host_pause_count_min",
+     "feature": "events.host.pause_count",
+     "note": "source=host 且 code 含 pause 的事件数"
+    },
+    {
+     "signal": "ev_host_pause_max_ms",
+     "op": ">=",
+     "threshold_key": "host_pause_max_ms",
+     "feature": "events.host.pause_max_ms",
+     "note": "最长暂停时长（detail.duration_ms）；无时长的事件不参与"
+    },
+    {
+     "signal": "ev_host_err_aligned_ratio",
+     "op": ">=",
+     "threshold_key": "host_err_aligned_ratio_min",
+     "feature": "events.host.err_aligned_ratio",
+     "note": "暂停 ±30 ms 窗内误差峰值 ≥ 3×局部环基线（±150 ms 去中心窗内的最大波动）；基线取环内最大值而不是全局量级或环内中位数——前者会被暴力段抬上天，后者会被「大部分时间贴零的刷新梳齿」拉低。这一条是因果链，需要事件-波形同步验证"
+    }
+   ],
+   "feature_blocked_by": {
+    "ev_host_err_aligned_ratio": "events_sync_unverified"
+   },
+   "next_data": [
+    {
+     "ask": "补带同步锚点的事件流（host 暂停事件与波形触发沿同源时钟），或直接记录对齐残差",
+     "why": "「暂停导致误差尖峰」是因果措辞，只在残差 ≤ 时钟不确定度时允许；缺锚点时本判据整条拒答",
+     "unlocks": [
+      "SRV-23 因果条件",
+      "R-28 因果分级"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_loose_structure",
+    "check": "若实为机械松动，误差应是稀疏大尖峰形态（p999/RMS 大），且与 host 暂停无时间相关性",
+    "signal": "fe_p999_over_rms",
+    "op": ">=",
+    "threshold_key": "loose_p999_over_rms_min",
+    "note": "（v5 修正：竞争 slug 原写成 mechanical_loose_mechanical，枚举里没有）"
+   }
+  },
+  {
+   "id": "SRV-24",
+   "fault_mode": "software_induced_interp_buffer_underrun",
+   "family": "software_induced",
+   "ax_rules": [
+    "R-19"
+   ],
+   "title": "插补缓冲区欠载",
+   "severity": "高",
+   "basis": "unverified",
+   "requires": [
+    "events"
+   ],
+   "blocked_by": "absent_events_jsonl",
+   "missing": "需要事件流 events.jsonl（source=interp，含 buffer_level/lookahead_ms）",
+   "unlocks": [
+    "SRV-24",
+    "R-19",
+    "R-28"
+   ],
+   "needs_spectrum": false,
+   "conditions": [
+    {
+     "signal": "ev_underrun_count",
+     "op": ">=",
+     "threshold_key": "underrun_count_min",
+     "feature": "events.interp.underrun_count",
+     "note": "source=interp 且 code 含 underrun 的事件数；「路径期间」的条数与最小 lookahead 在报告里另列 （用 motion started→done 括号判定，不需要事件-波形对齐）"
+    }
+   ],
+   "next_data": [
+    {
+     "ask": "补插补器 buffer_level 连续水位记录（而非仅欠载事件）",
+     "why": "事件只能给「欠了几次」；水位曲线才能给欠载深度与恢复时间，影响评估（是否掉步）需要深度",
+     "unlocks": [
+      "R-19 欠载深度分级"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "software_induced_host_thread_jitter",
+    "check": "若 host 侧同时存在 ≥10 ms 的暂停，欠载可能只是调度抖动的下游表现，两种解释并存",
+    "signal": "ev_host_pause_max_ms",
+    "op": ">=",
+    "threshold_key": "host_pause_max_ms"
+   }
+  },
+  {
+   "id": "SRV-25",
+   "fault_mode": "software_induced_bus_cycle_miss",
+   "family": "software_induced",
+   "ax_rules": [
+    "R-20"
+   ],
+   "title": "现场总线丢周期 / WKC 异常",
+   "severity": "高",
+   "basis": "unverified",
+   "requires": [
+    "events"
+   ],
+   "blocked_by": "absent_events_jsonl",
+   "missing": "需要事件流 events.jsonl（source=network）与驱动器侧 WKC 计数通道",
+   "unlocks": [
+    "SRV-25",
+    "R-20",
+    "R-28"
+   ],
+   "needs_spectrum": false,
+   "conditions": [
+    {
+     "signal": "ev_wkc_count",
+     "op": ">=",
+     "threshold_key": "wkc_count_min",
+     "feature": "events.network.wkc_count",
+     "note": "source=network 且 code 含 wkc/cycle/drop 的事件数；WKC 短计数是 EtherCAT 丢周期/丢帧的直接证据。事件侧计数不需要对齐；「与误差尖峰同步」的因果链本工具不评（需要驱动器侧 WKC 逐周期通道）"
+    }
+   ],
+   "next_data": [
+    {
+     "ask": "补驱动器侧 WKC 逐周期计数通道（或总线诊断寄存器轮询）",
+     "why": "上位机只能看到自家报的 wkc_error 事件；驱动器侧计数才能区分「丢帧在上游」还是「驱动器应答慢」",
+     "unlocks": [
+      "R-20 丢帧定位"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "software_induced_interp_buffer_underrun",
+    "check": "若路径期间同时存在插补欠载，误差尖峰可能来自欠载而非丢周期，两种解释并存",
+    "signal": "ev_underrun_during_path",
+    "op": ">=",
+    "threshold_key": "underrun_count_min"
+   }
+  },
+  {
+   "id": "SRV-26",
+   "fault_mode": "software_induced_late_vision_result",
+   "family": "software_induced",
+   "ax_rules": [
+    "R-21"
+   ],
+   "title": "视觉测量结果迟到",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "events"
+   ],
+   "blocked_by": "absent_events_jsonl",
+   "missing": "需要事件流 events.jsonl（source=vision，含 latency_ms）与视觉通道",
+   "unlocks": [
+    "SRV-26",
+    "R-21"
+   ],
+   "needs_spectrum": false,
+   "conditions": [
+    {
+     "signal": "ev_vision_count",
+     "op": ">=",
+     "threshold_key": "vision_count_min",
+     "feature": "events.vision.count",
+     "note": "带 latency_ms 的视觉结果事件数；样本不足时 p95 不可信"
+    },
+    {
+     "signal": "ev_vision_latency_p95_ms",
+     "op": ">=",
+     "threshold_key": "vision_latency_p95_max_ms",
+     "feature": "events.vision.latency_p95_ms",
+     "note": "延迟 p95（detail.latency_ms）；阈值按视觉引导闭环的常见预算，须按工序节拍校准"
+    }
+   ],
+   "next_data": [
+    {
+     "ask": "补视觉时间戳里的曝光时刻与处理完成时刻（分开采集延迟与处理延迟）",
+     "why": "latency_ms 只有总延迟；优化动作完全不同（换光源 vs 换算力）",
+     "unlocks": [
+      "R-21 延迟分解"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "software_induced_polling_latency",
+    "check": "若 motion 事件中位间隔 ≥20 ms（轮询稀疏），误差里同样有滞后成分，视觉迟到的独立贡献被稀释，两种解释并存",
+    "signal": "ev_motion_interval_median_ms",
+    "op": ">=",
+    "threshold_key": "polling_interval_max_ms"
+   }
+  },
+  {
+   "id": "SRV-27",
+   "fault_mode": "software_induced_pulse_eq_overwritten",
+   "family": "software_induced",
+   "ax_rules": [
+    "R-22",
+    "R-27"
+   ],
+   "title": "换型流程覆盖脉冲当量 / 标定系数",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "recipe"
+   ],
+   "blocked_by": "absent_recipe_context",
+   "missing": "需要事件流里埋 recipe_change 事件（source=recipe|host，C6 契约本来就定义了配方对齐特征）。事件边界切段后位移比例（Σ|Δfb|/Σ|Δcmd|）在边界跳变 ≥5% 才判当量改写；不打算埋点则本判据转介 SPC（配方语境是它的活）",
+   "unlocks": [
+    "SRV-27",
+    "R-22",
+    "R-27"
+   ],
+   "conditions": [
+    {
+     "signal": "ev_recipe_change_count",
+     "op": ">=",
+     "threshold_key": "recipe_change_count_min",
+     "feature": "servo.recipe.change_count",
+     "note": "记录内至少出现一次配方切换"
+    },
+    {
+     "signal": "recipe_scale_step_ratio_max",
+     "op": ">=",
+     "threshold_key": "recipe_scale_step_min",
+     "feature": "servo.recipe.scale_step_ratio_max",
+     "note": "相邻段的位移比例相对差：当量被改写 ⟹ 比例在边界上跳变"
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_thermal_drift",
+    "signal": "recipe_scale_drift_within_max",
+    "op": ">=",
+    "threshold_key": "recipe_scale_step_min",
+    "note": "段内比例漂移和边界跳变一样大 ⟹ 是缓变（热/装配），不是配方阶跃，本条存疑"
+   },
+   "next_data": [
+    {
+     "ask": "补 recipe 版本号与对应当量参数的变更记录",
+     "why": "跳变方向和当量变更记录对上才算闭环（机器上下文契约 C6 的step_labels/recipe 字段）",
+     "unlocks": [
+      "R-22 当量改写闭环",
+      "R-27"
+     ]
+    }
+   ],
+   "blocked_by_map": {
+    "recipe": "absent_recipe_events"
+   }
+  },
+  {
+   "id": "SRV-28",
+   "fault_mode": "software_induced_settle_window_too_short",
+   "family": "software_induced",
+   "ax_rules": [
+    "R-23"
+   ],
+   "title": "到位判定窗口过短",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "events"
+   ],
+   "blocked_by": "absent_events_jsonl",
+   "missing": "需要工序事件（move_started/move_done）才能比较判定窗口与实际整定时间",
+   "unlocks": [
+    "SRV-28",
+    "R-23"
+   ],
+   "needs_spectrum": false,
+   "conditions": [
+    {
+     "signal": "ev_move_done_count",
+     "op": ">=",
+     "threshold_key": "move_count_min",
+     "feature": "events.motion.move_done_count",
+     "note": "move_done 事件数；单次到位谈不上「窗口过短」"
+    },
+    {
+     "signal": "ev_settle_err_ratio",
+     "op": ">=",
+     "threshold_key": "settle_err_ratio_max",
+     "feature": "events.motion.settle_err_ratio",
+     "note": "各次 done 后 40 ms 窗内平均 |err| ÷ 其它 done 的中位数（自参照基线），取最大；≥3 ⟹ 有到位判定明显过早。这一条把事件对到了波形上，需要事件-波形同步验证"
+    }
+   ],
+   "feature_blocked_by": {
+    "ev_settle_err_ratio": "events_sync_unverified"
+   },
+   "next_data": [
+    {
+     "ask": "补工序节拍表（每步额定整定时间）与驱动器 in-position 窗口参数",
+     "why": "「窗口过短」的判定要与额定整定时间对照；没有节拍表只能判「没整定就走了下一步」，给不出该改多少",
+     "unlocks": [
+      "R-23 窗口参数核对"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "mechanical_friction_stiction",
+    "check": "若起动突破转矩比 ≥2×，误差收敛慢可能是摩擦 stall 而非窗口短，两种解释并存",
+    "signal": "tq_breakaway_ratio",
+    "op": ">=",
+    "threshold_key": "stiction_breakaway_ratio_min"
+   }
+  },
+  {
+   "id": "SRV-29",
+   "fault_mode": "software_induced_polling_latency",
+   "family": "software_induced",
+   "ax_rules": [
+    "R-24"
+   ],
+   "title": "到位判定靠轮询带来的叠加误差",
+   "severity": "中",
+   "basis": "unverified",
+   "requires": [
+    "events"
+   ],
+   "blocked_by": "absent_events_jsonl",
+   "missing": "需要事件流 events.jsonl（source=motion 密度足够）才能测出轮询周期与到位散布",
+   "unlocks": [
+    "SRV-29",
+    "R-24"
+   ],
+   "needs_spectrum": false,
+   "conditions": [
+    {
+     "signal": "ev_motion_interval_median_ms",
+     "op": ">=",
+     "threshold_key": "polling_interval_max_ms",
+     "feature": "events.motion.interval_median_ms",
+     "note": "motion 事件中位间隔 ≥20 ms ⟹ 到位判定靠轮询，误差评估滞后半个轮询周期起"
+    },
+    {
+     "signal": "ev_motion_interval_cv",
+     "op": "<=",
+     "threshold_key": "polling_regular_cv_max",
+     "feature": "events.motion.interval_cv",
+     "note": "间隔变异系数小才像规整轮询；乱事件流不构成轮询证据"
+    }
+   ],
+   "next_data": [
+    {
+     "ask": "补控制器伺服周期与上位机发令周期（名义值）",
+     "why": "轮询间隔要跟伺服周期对照才知道叠加了多少滞后；只有实测间隔没有名义值，定量归因做不了",
+     "unlocks": [
+      "R-24 滞后定量"
+     ]
+    }
+   ],
+   "counterfactual": {
+    "competitor": "software_induced_host_thread_jitter",
+    "check": "若 motion 事件间隔忽大忽小（cv 大于规整阈值），那是调度抖动不是稳态轮询，两种解释并存",
+    "signal": "ev_motion_interval_cv",
+    "op": ">=",
+    "threshold_key": "polling_regular_cv_max"
+   }
+  }
+ ],
+ "bands": {
+  "resonance_khz_floor_hz": 2000.0,
+  "reliable_band_divisor": 1.25
+ },
+ "not_evaluable_notes": {
+  "band_gate_fs_1k": "可靠频带内看不到 kHz 级结构模态（奈奎斯特限制）。看不见 ≠ 没有。",
+  "spectral_line_at_command_refresh_rate": "谱线与指令刷新率（含谐波）重合，属指令刷新成分，不是被控对象响应。",
+  "no_steady_segment": "频谱窗口必须落在稳态段；本波形没有可用的稳态窗，频域判据不适用。",
+  "offset_dominated_error": "误差以常数偏置为主（疑似两通道不同轴），动态量不可用于频域判据。",
+  "events_sync_unverified": "事件流在，但事件时钟与波形时钟的对齐未验证（残差超预算或锚点不足）。事件侧统计（计数/时长/延迟分布）仍有效并已入报告；「事件导致了误差尖峰」这类因果措辞被禁用 —— 没算出残差不等于残差合格。",
+  "spectral_line_blocked_or_absent": "配对所需的另一侧谱线被门禁挡下（指令刷新成分/幅值低于动态地板）或不存在，谐振-反谐振配对无从谈起。这不是「没看到谐振」，是「这一侧不可观测」。"
+ },
+ "not_evaluable_asks": {
+  "absent_torque_channel": {
+   "ask": "补电流/转矩通道 cur_q（同一段波形的 cur_q 列）",
+   "why": "突破转矩、谐波阶次、双惯性相干都只能在电流侧算；没有这一列，相关判据整族不可评估",
+   "unlocks": [
+    "SRV-15",
+    "SRV-16",
+    "SRV-17",
+    "SRV-18",
+    "SRV-20"
+   ]
+  },
+  "absent_temp_channel": {
+   "ask": "补温度通道，并采冷机/热机两次成对比对",
+   "why": "热漂移与电机发热只能靠「同位移、不同温度」的电流/位置差分判定",
+   "unlocks": [
+    "SRV-21",
+    "SRV-22"
+   ]
+  },
+  "absent_events_jsonl": {
+   "ask": "补事件流 jsonl（move_started / move_done / 插补欠载 / 总线 WKC），并与波形时钟对齐",
+   "why": "软件诱导族的所有结论都要求「误差形态与某个事件对齐」，没有事件流就整族不可评估",
+   "unlocks": [
+    "SRV-23",
+    "SRV-24",
+    "SRV-25",
+    "SRV-26",
+    "SRV-28",
+    "SRV-29"
+   ]
+  },
+  "absent_recipe_context": {
+   "ask": "补 recipe / 工序上下文（换型时覆盖了哪些标定系数）",
+   "why": "换型覆盖系数只能靠「同一运动在不同 recipe 下的比例性偏差」判定",
+   "unlocks": [
+    "SRV-27"
+   ]
+  },
+  "absent_frequency_response": {
+   "ask": "补实测扫频 Bode（交越频率与相位裕度）",
+   "why": "速度环 PI 失谐的判据是相位裕度，时域阶跃响应给不出相位裕度",
+   "unlocks": [
+    "SRV-19",
+    "R-13",
+    "R-14 的 |f_lc/f_pos − 1| 判据"
+   ]
+  },
+  "absent_feedback_channel": {
+   "ask": "补位置反馈通道（fb_pos）",
+   "why": "没有反馈就没有跟随误差，所有误差类判据都无从谈起",
+   "unlocks": [
+    "SRV-01",
+    "SRV-02",
+    "SRV-03",
+    "SRV-05",
+    "SRV-07"
+   ]
+  },
+  "band_gate_fs_1k": {
+   "ask": "用 ≥ 8 kHz 采样重采同一段动作（可靠频带要覆盖 2 kHz 以上）",
+   "why": "kHz 级结构模态在 1 kHz 采样下物理不可观测；低频分支已评估，kHz 分支只能换采样率",
+   "unlocks": [
+    "R-03",
+    "R-04",
+    "R-10-kHz",
+    "R-11#switching_freq"
+   ]
+  },
+  "spectral_line_at_command_refresh_rate": {
+   "ask": "换一条不含指令刷新成分的观测口径（更高采样率，或在指令静止段做频谱）",
+   "why": "当前谱线与指令刷新率重合，无法区分「对象响应」与「指令刷新成分」",
+   "unlocks": [
+    "SRV-08",
+    "SRV-11",
+    "SRV-13"
+   ]
+  },
+  "spectral_line_below_dynamic_floor": {
+   "ask": "提高采样率或让误差动态量级相对噪声更大（否则谱线幅值不可判）",
+   "why": "谱线绝对幅值相对误差动态量级低于阈值，无法作为物理现象登记",
+   "unlocks": [
+    "SRV-08",
+    "SRV-11",
+    "SRV-13"
+   ]
+  },
+  "no_steady_segment": {
+   "ask": "补一段含保持段（指令静止 ≥ 0.5 s）的轨迹",
+   "why": "频谱窗口必须落在稳态段，否则频域判据不适用",
+   "unlocks": [
+    "SRV-08",
+    "SRV-11",
+    "SRV-13",
+    "SRV-14"
+   ]
+  },
+  "offset_dominated_error": {
+   "ask": "核对 cmd 与 fb 是否同轴同零点（当前误差被常数偏置主导）",
+   "why": "常数偏置主导的 cmd−fb 不是跟随误差（常见于跨轴错配），不能作为跟随误差读",
+   "unlocks": [
+    "SRV-08",
+    "SRV-09",
+    "SRV-10",
+    "SRV-11",
+    "SRV-12",
+    "SRV-13",
+    "SRV-14"
+   ]
+  },
+  "events_sync_unverified": {
+   "ask": "补事件流与波形的时钟对齐证据（同一触发沿的锚点对，或带 uncertainty 的同步清单）",
+   "why": "causal_claims_permitted 只有在「残差 ≤ 时钟不确定度」时才为真；没有它，软件诱导族只能给事件侧统计，不能归因",
+   "unlocks": [
+    "SRV-23",
+    "SRV-28"
+   ]
+  },
+  "absent_drive_params": {
+   "ask": "补驱动器参数（速度环增益、电流环带宽、陷波表；机器上下文 C6 的 drive 块）",
+   "why": "电流环带宽判据需要把实测响应跟驱动器标称带宽对照，没有参数时连「该有多快」都不知道",
+   "unlocks": [
+    "SRV-18"
+   ]
+  },
+  "absent_sweep_recording": {
+   "ask": "采一段 cmd 为扫频/chirp 的波形（频率从低扫到 ≥20 Hz）",
+   "why": "闭环带宽与相干性从阶跃时域读不出来，扫频是唯一来源"
+  },
+  "absent_recipe_events": {
+   "ask": "在事件流里埋 recipe_change 事件（t/source=recipe/code/detail.recipe）",
+   "why": "脉冲当量被改写以「配方切换瞬间比例跳变」为关键判据，没有配方边界只能进 considered"
+  }
+ }
+}

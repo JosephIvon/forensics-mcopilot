@@ -1,0 +1,114 @@
+{
+  "version": 1,
+  "note": "实时运动上位机代码规则包。宁可少报也不误报 —— 误报一次，工程师就再也不看这个工具的输出了。",
+  "rules": [
+    {
+      "id": "RT-001",
+      "level": "高",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "\\bThread\\.Sleep\\s*\\(",
+      "message": "线程阻塞休眠（Thread.Sleep）",
+      "why": "在运动/采集/UI 线程里 Sleep 会直接占住执行流：UI 卡死、状态轮询周期被拉长、指令下发延迟，直接推高跟随误差与到位时延。",
+      "fix": "改成 await Task.Delay(...)（异步线程）或用事件/定时器驱动；绝不要在运动回调里 Sleep 等「到位」。",
+      "requirement": "Q-03 / R-04"
+    },
+    {
+      "id": "RT-002",
+      "level": "高",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "catch\\s*(\\([^)]*\\))?\\s*\\{\\s*(?://[^\\n]*\\s*|/\\*[\\s\\S]*?\\*/\\s*)*\\}",
+      "multiline": true,
+      "message": "空 catch 块，异常被完全吞掉",
+      "why": "运动指令下发失败、报警未清除、IO 写失败都会被静默吞掉，现场表现为「机器不动但软件没报错」，排查成本极高。",
+      "fix": "至少记录异常并置错误状态；涉及运动安全的异常必须向上抛，不能吞。",
+      "requirement": "R-10 / R-09"
+    },
+    {
+      "id": "RT-003",
+      "level": "高",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "while\\s*\\(\\s*!\\s*[^)]*(?:done|Done|finished|Finished|completed|Completed|moving|Moving|Reached|reached|到达|完成)[^)]*\\)",
+      "message": "无超时的「等待完成」死循环",
+      "why": "轴不动作/通信断开时永久阻塞，上位机界面假死，且无法区分「卡住」与「正常等待」，是现场最常见的挂死来源。",
+      "fix": "所有等待必须带超时与超时原因分类；超时后置错误状态并记录当时轴位置与停止原因。",
+      "requirement": "R-04 / Q-03"
+    },
+    {
+      "id": "RT-004",
+      "level": "高",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "(?:dmc_[a-z_0-9]+|ZAux_Direct_[A-Za-z_0-9]+|nmc_[a-z_0-9]+)\\s*\\([^)]*\\b(?:mm|Mm|MM|um|Um|UM)\\b[^)]*\\)",
+      "message": "疑似漏乘脉冲当量（把 mm 直接传给了以脉冲为单位的运动接口）",
+      "why": "指令单位与反馈单位口径不一致，是「偶发定位偏差」和「换品牌卡后整体偏移」最常见的根因；也解释了为什么现场表现会随品牌不同而不同。",
+      "fix": "统一在适配层做单位换算，业务层只传 mm；换算后加一次回读校验（指令位置 vs 反馈位置）。",
+      "requirement": "Q-04 / R-09 / Q-05",
+      "needs_pulse_constant": true,
+      "dataflow_check": "unit_consistency"
+    },
+    {
+      "id": "RT-005",
+      "level": "中",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b",
+      "message": "硬编码 IP 地址",
+      "why": "换设备/换网段时漏改一处就全线连不上；同一份代码在不同产线的行为不可控。",
+      "fix": "统一走配置（config/配方/设备参数表），并在启动时打印最终生效配置。",
+      "requirement": "R-10 / Q-09"
+    },
+    {
+      "id": "RT-006",
+      "level": "中",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "\\b(?:pos|Pos|position|Position|target|Target|dest|Dest|dis|Dis|dist|Dist|vel|Vel|speed|Speed|acc|Acc|force|Force|temp|Temp|pressure|Pressure)\\w*\\s*=\\s*-?\\d+(?:\\.\\d+)?\\s*(?:f|F)?\\s*;",
+      "message": "位置/速度/压力等工艺参数使用魔法数字",
+      "kind": "hint",
+      "why": "参数散落在代码里，换型时无法统一调整，工艺工程师拿不到参数入口，标定与补偿结果也无法沉淀。",
+      "fix": "提到具名常量或设备参数表；配合配方(recipe)机制下发，使参数可追溯到批次。",
+      "requirement": "R-10 / R-02"
+    },
+    {
+      "id": "RT-007",
+      "level": "中",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "(?:==|!=)\\s*-?\\d+\\.\\d+f?\\b",
+      "message": "浮点等值比较",
+      "why": "浮点误差让等值比较极不可靠，运动到位判定、位置区间判定会时灵时不灵。",
+      "fix": "改用容差比较（差值 < 1e-6 之类），并把容差做成参数而不是魔数。",
+      "requirement": "Q-03"
+    },
+    {
+      "id": "RT-008",
+      "level": "中",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "\\.Result\\b|GetAwaiter\\(\\)\\.GetResult\\(\\)|\\.Wait\\(\\s*\\)",
+      "message": "同步阻塞等待异步结果（.Result / .Wait）",
+      "why": "在 UI 线程或运动线程上阻塞等待，容易造成死锁与界面假死；上位机常见「界面卡住 + 运动停了」的组合故障。",
+      "fix": "改成 await；需要跨线程同步时用 TaskCompletionSource + 超时。",
+      "requirement": "Q-03"
+    },
+    {
+      "id": "RT-009",
+      "level": "中",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "(?i)\\b(?:lock|Monitor\\.Enter|mutex)\\b[^\\n]{0,40}\\n(?:[^\\n]*\\n){0,6}?[^\\n]*\\b(?:lock|Monitor\\.Enter)\\b",
+      "multiline": true,
+      "message": "存在嵌套锁的写法",
+      "why": "运动线程与 UI 线程互相等锁会造成偶发假死，且极难复现。",
+      "fix": "统一锁顺序；运动状态用无锁快照或单一状态源，不要用锁保护跨线程共享的实时状态。",
+      "requirement": "Q-03 / R-09"
+    },
+    {
+      "id": "RT-010",
+      "level": "低",
+      "langs": ["cs", "cpp", "h", "hpp"],
+      "pattern": "(?i)\\b(?:stop_reason|StopReason|error_code|ErrorCode|alarm|Alarm)\\b",
+      "message": "存在停止原因/报警码字段",
+      "why": "这是正向提示：确认实现是否在到位后读取了停止原因与报警码。读取并记录它们，是把「偶发偏差」变成可诊断问题的前提。",
+      "fix": "到位判定后必须读取停止原因；非正常停止原因要单独分类上报。",
+      "requirement": "R-09 / Q-05",
+      "is_positive": true
+    }
+  ],
+  "scan_extensions": [".cs", ".cpp", ".cxx", ".cc", ".h", ".hpp", ".c"],
+  "pulse_constant_pattern": "(?:PulseRatio|PulsePerMm|PulsesPerMm|PulsePerMM|CountsPerMm|CountsPerMM|PulsePerUnit|EncoderScale|Resolution)"
+}

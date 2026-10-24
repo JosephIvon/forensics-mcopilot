@@ -1,0 +1,1269 @@
+{
+  "vendor": "固高",
+  "vendor_en": "Googol",
+  "model": "GTS-400 / GTS-800 系列（PCIe 插卡脉冲型运动控制器）",
+  "interface": "PCIe 插卡 + gts.dll（单卡库；本文件按单卡库绑定）",
+  "dll": "gts.dll",
+  "namespace": "Motion.Adapters.Googol",
+  "class_name": "GoogolMotionController",
+  "card_type": "0",
+  "axis_count": 4,
+  "calling_convention": "StdCall",
+  "verified": "official-binding",
+  "source": "固高官网 SDK 包《固高GTS运动控制卡SDK_gts.dll_含头文件与驱动.zip》（2026-10-20 取得）：官方 C# 绑定 gts.cs（473 条 DllImport / 30 个结构体）+ 官方 C 头文件 gts.h（535 条 GT_API 声明）+ 4 个 gts.dll 的 PE 导出表 + 《GTS-400-PCIe 系列运动控制器 用户手册 R1.0》《编程手册-基本功能 R1.5_2021》等 14 本官方手册",
+  "sources": [
+    "**官方 C# 绑定 gts.cs（02_CSharp封装/64bit_single_card/）**：本文件的 34 条 P/Invoke 与 3 个结构体**逐条对齐这份官方绑定**（函数名、参数个数、参数类型、ref/out 修饰、字段顺序与字节偏移），已导出为 knowledge/sdks/official_api/gts.csv 与 gts_structs.csv，回归测试逐条比对。",
+    "**官方 C 头文件 gts.h（01_动态链接库_VC/64bit_single_card/）**：第 3 行 `#define GT_API extern \"C\" short __stdcall` → **调用约定 = stdcall**（不再靠手册推测）；535 条 GT_API 声明已导出为 gts_hdr.csv。",
+    "**PE 导出表**：4 个 SDK 的 gts.dll（32/64 位 × 单卡/多卡）各导出 782 个符号，**导出名完全一致**；03_Demo工具_MCT2008/ 里另有一份 gts.dll 只有 569 个导出（少 214 个）。",
+    "**手册 PDF p15（第 2 章 函数库的使用）**：动态链接库文件名为 gts.dll；SDK 按 VC / C# × 32bit / 64bit × single_card / multi_card 分目录；单卡库与多卡库函数同名，多卡库多一个 cardNum 参数（第一张卡卡号为 0）。",
+    "**手册 PDF p18（表 3-1《运动控制器指令返回值定义》）**：0 成功 / 1 指令执行错误 / 2 license 不支持 / 7 指令参数错误 / 8 固件不支持 / -1~-5 通讯失败 / -6 打开控制器失败 / -7 无响应 / -8 多线程资源忙。",
+    "**手册 PDF p60-62（例程 5-1 轴状态字）**：0x2 伺服报警 / 0x10 跟随误差越限 / 0x20 正限位 / 0x40 负限位 / 0x80 平滑停止 / 0x100 急停 / 0x200 伺服使能 / 0x400 规划器运动。",
+    "**手册 PDF p191 / p218（GT_GetDi / GT_SetDo / GT_SetDoBit）**：IO 是「类型枚举 + 位图」模型，diType 取 MC_LIMIT_POSITIVE=0 / MC_LIMIT_NEGATIVE=1 / MC_ALARM=2 / MC_HOME=3 / MC_GPI=4 / MC_ARRIVE=5 / MC_MPG=6；doType 取 MC_ENABLE=10 / MC_CLEAR=11 / MC_GPO=12；MC_GPO 索引 1~16。",
+    "**手册 PDF p175-177（位置比较输出）**：走 HSIO 通道（只有 2 个），GT_CompareData 的位置是相对调用时当前位置的偏移，最多 4096 点，source 必须与配置文件的「脉冲计数源」一致。",
+    "**手册 PDF p214（GT_SetCaptureMode / GT_SetCaptureSense）**：位置锁存 = 编码器捕获，捕获源只有 CAPTURE_HOME=1 / CAPTURE_INDEX=2 / CAPTURE_PROBE=3 / CAPTURE_HSIO0=6 / CAPTURE_HSIO1=7 —— 没有普通 DI 捕获。",
+    "**手册 PDF p204-205（THomePrm 结构体与回原点宏）**：回原点方式 HOME_MODE_LIMIT=10 / LIMIT_HOME=11 / LIMIT_INDEX=12 / LIMIT_HOME_INDEX=13 / HOME=20 / HOME_INDEX=22 / INDEX=30 / FORCED_HOME=40 / FORCED_HOME_INDEX=41；保留位语义见下面的 notes。",
+    "**《GTS-400-PCIe 系列运动控制器 用户手册 R1.0》p8-9（型号说明 + 选型表）**：主卡 GTS-400-PX-PCIe-00，X=G 脉冲量输出 / X=V 模拟量或脉冲量输出；端子板 GT2-400-ACC2-VB-G（四轴开环）/ -V（四轴闭环），加 -A 后缀带 12 位 AD 与非轴 DA。",
+    "**《GTS-400-PCIe 系列运动控制器 用户手册 R1.0》第 3 章 p22-32（端子板接口定义）**：轴信号 CN1~CN4、通用 IO 与原点/限位 CN9-1/CN9-2、辅助编码器 CN12/CN13、高速 IO CN14、模拟量输入 CN19、手轮 CN20 —— 已抄成 knowledge/sdks/official_api/gts_io_terminals.csv（121 行，逐行标页码）。",
+    "**手册 PDF p232-238（第 14 章 指令索引）**：GTS 单卡库共 167 条指令全表，已导出为 knowledge/sdks/official_api/gts_manual_index.csv（序号 / 函数名 / 手册页码 / PDF 页码）。"
+  ],
+  "notes": [
+    "**固高已从「手册级真值」升级为「官方绑定级真值」**（2026-10-20 取得固高官网 SDK 包）：本文件的 34 条 P/Invoke 与官方 gts.cs **逐条比对过函数名、参数个数、参数类型、ref/out 修饰**，与官方 gts.h 的 C 原型参数个数也全部一致，并且 **5 个 gts.dll 的 PE 导出表里这 34 个函数全部导得出**。真值已落库：gts.csv（473 条官方 C# 绑定）/ gts_hdr.csv（535 条官方 C 原型）/ gts_structs.csv（30 个官方结构体的字段与字节偏移）/ gts_io_terminals.csv（121 行端子表），回归测试拿它们当外部真值逐条比对 —— 不再是「手册看着像」。",
+    "**调用约定不再是「未知」**：官方 gts.h 第 3 行 `#define GT_API extern \"C\" short __stdcall` → 本文件的 CallingConvention.StdCall 与官方一致，**x86 目标进程也安全**（上一版标成待确认，是因为手册全文检索 stdcall / cdecl / WINAPI 零命中，只能靠猜）。注意依据是 C 头文件而不是 gts.cs：官方 gts.cs 本身没写 CallingConvention。",
+    "**GEN 的 GTN_ 不在这个 SDK 包里**（2026-10-20 实测）：官方 gts.h 535 条声明、官方 gts.cs 473 条声明、4 个 SDK 的 gts.dll（每个 782 个导出）、MCT2008 自带的 gts.dll（569 个导出）—— **GTN_ 符号一个都没有**。GEN 手册《GEN 系列运动控制器编程手册-高级功能 R1.2》前言写明它配套《GEN 系列运动控制器用户手册》《GEN 系列运动控制器编程手册之基本功能》《GEN 扩展功能》，是**独立产品线 + 独立手册体系**；它例程里的 `#include \"gts.h\"` 只是**同名文件**（GEN 自己 SDK 包里的头文件也叫 gts.h），**不能当作「GEN 与 GTS 共用 DLL」的证据** —— 这正是雷赛 nmc_/dmc_ 同在 LTDMC.dll 那个坑的翻版。**要接 GEN 必须单独要 GEN 的 SDK 包。**",
+    "**SDK 包里有 5 个 gts.dll，只有 4 个能当程序依赖**：4 个 SDK 的（32/64 位 × 单卡/多卡）**导出表完全相同（各 782 个符号）**，单卡库与多卡库的区别只是多一个 cardNum 参数、导出名一样；第 5 个是 **03_Demo工具_MCT2008/ 目录下自带的 gts.dll，只有 569 个导出、少了 214 个**（含 GT_StopCapture / GT_GetDllVersion / GT_GetProfileScale / GT_SetProfileScale 等）。**拷错 DLL 不会立刻崩，但会缺一整套功能** —— 部署时只拷 02_CSharp封装/<位数>_single_card/ 这一份，别把 MCT2008 目录里的拷进程序目录。",
+    "**官方两个件自己就对不齐**：gts.h（535 条）比 gts.cs（473 条）**多 67 条指令**（激光控制、智能切割、二维比较、导程螺杆补偿、合并轴、中断、正交/垂直度变换、Move 模式等），gts.cs 另有 5 条 gts.h 没有（GT_GantryHoming、GT_Set/GetAxisPrfVelFilter、GT_Set/GetAxisEncVelFilter）。要接这些新功能得照 gts.h 自己补声明，不能照抄 gts.cs。本文件只覆盖手册级基础指令，不受影响。",
+    "**GtsHomePrm 必须按官方 C# 绑定的 88 字节实现，不能按 C 头文件的 80 字节**：官方 gts.cs 的 THomePrm 是 23 个字段（pad1_1/2/3、pad2_1/2/3、pad3_1/2/3），顺序布局总长 88 字节；官方 gts.h 的 C 写法是 `long pad3[2]`，总长 80 字节 —— **厂商自己的两个件差 8 字节**。适配器的回零流程是「先 GT_GetHomePrm 读回再改字段」（手册示例做法），**DLL 会把 88 字节写进我们的结构体**，按 80 字节实现就是内存越界写。本文件按 88 字节实现（宁可大不小：缓冲区比 DLL 预期大最多被多写几字节，反之是越界）。",
+    "**手册用 0 基、官方 C# 绑定用 1 基，保留位要自己对齐**：手册《编程手册-基本功能 R1.5》p204 写的是 `short pad1[3]` 里 **pad1[0]** 表示「捕获到 Home 后到最终位置用 velHigh 还是 velLow」、`short pad2[3]` 里 **pad2[1]** 表示「电机启动回零时是否检测机械处于限位或原点位置」；官方 C# 绑定把同样的三格叫 pad1_1/pad1_2/pad1_3 与 pad2_1/pad2_2/pad2_3。**对应关系：手册 pad1[0] = 官方 pad1_1（偏移 10）、手册 pad2[1] = 官方 pad2_2（偏移 52）**。本文件的 GtsHomePrm 按偏移对齐，detectStartPosition 放在第二格（偏移 52），不是第一格。",
+    "**PG / PV 的区别查到了**（GTS-400-PCIe 用户手册 R1.0 p8 型号说明）：主卡型号 GTS-400-**PX**-PCIe-00，**X=G = 脉冲量输出、X=V = 模拟量或脉冲量输出**；标准版 PV/PG（伺服控制周期 125us、无 PID+前馈滤波器），增强版 VT/GT（无 125us 伺服周期、有 PID+速度前馈+加速度前馈、带龙门/5 轴/PSO 功能）。所以 **-PG 是纯脉冲输出型、-PV 带模拟量轴输出**。",
+    "**官方 gts.cs 里有 1 个函数、随包 DLL 根本没导出**：GT_GantryHoming（龙门回零）在官方 C# 绑定里声明，但 4 个 SDK 的 gts.dll 导出表里**没有**它（官方 gts.h 里也没有）→ **照抄官方绑定就会 EntryPointNotFound**。本项目没绑它，但这条正好说明「官方绑定 + 官方头文件都声明了，还得再看一层 DLL 导出表」这条规矩是必要的（同类案例：正运动的 ZAux_Direct_GetNtype）。",
+    "**端子板另有型号，而且主卡和端子板的 G/V 含义不一样**（同手册 p8-9）：主卡 G=脉冲量输出、V=模拟量或脉冲量输出；端子板 **GT2-400-ACC2-VB-G = 四轴开环**端子板（配 -PG 主卡）、**GT2-400-ACC2-VB-V = 四轴闭环**端子板（配 -PV 主卡），加 **-A** 后缀 = 带 12 位 AD 功能和非轴 DA 功能；配套屏蔽电缆 **CN17-ACC3-T1-0680X1X2**（X1X2 = 03/10/15/30 → 0.3/1.0/1.5/3.0 m）。**现场换端子板必须报这个完整型号**，只说「GTS-400 的板子」对不上货。",
+    "**IO 端子表已从官方手册抄出**（GTS-400-PCIe 用户手册 R1.0 第 3 章，121 行 → knowledge/sdks/official_api/gts_io_terminals.csv）：通用输入 **EXI0~EXI15**（CN9-1 的 17~24 脚 + CN9-2 的 1~8 脚，**EXI0 兼作探针输入**）、通用输出 **EXO0~EXO15**（CN9-2 的 9~24 脚）、原点输入 **HOME0~HOME3**、限位输入 **LIMIT0±~LIMIT3±**（**都是专用端子，不在通用 IO 位图里**）、位置比较输出 **HSIO_A±/HSIO_B±**（CN14，**只有 2 通道差分**）、辅助编码器 CN12/CN13（**手册明确「辅编不能用以捕获功能」**）、模拟量输入 CN19（8 路，后 4 路与轴模拟量输入复用、同一时刻只能接一路）、手轮 CN20（1 路 5V 差分编码器 + 7 路 MPGI 数字量输入，默认 24V 电平、**低电平输入有效**）。",
+    "**捕获源要接对端子**：功能列表（表 1-3）确认硬件捕获支持「编码器零位信号 / 原点信号 / 探针信号」，而探针在端子板上就是 **EXI0**。所以要接普通 DI 做锁存，只能占用 EXI0 或走 HSIO —— EXI1~EXI15 都不能做捕获。",
+    "**固高没有 SetPulsePerMm / GetPulsePerMm**：当量是 GT_ProfileScale(axis, alpha, beta) / GT_EncScale(axis, alpha, beta) 的**分数比**，且手册只给了取值范围 (-32767,0)∪(0,32767) 与「alpha 的绝对值要大于 beta 的绝对值」，**没有给出变换公式与 alpha/beta 的方向**。所以本适配器**不下发任何当量变换指令**，要求控制器保持默认 1:1 当量（手册 PDF p60 原文：「默认情况下，规划器位置的当量与轴的规划位置的当量之比是 1:1」），**脉冲当量（脉冲/mm）由现场提供、在软件侧换算**。若现场用 MCT2008 改过当量，所有 mm↔pulse 换算都会整体偏一个比例 —— 这是必须现场确认的第一件事。",
+    "**轴号是 1 基**：手册所有指令的 axis / profile 参数都是「正整数」（4 轴卡取值 [1,4]，8 轴卡 [1,8]）。适配器对外是 0 基，**内部一律 +1**；位掩码参数（GT_Update / GT_Stop）同样是 bit0 = 轴1。",
+    "**速度与加速度单位是 pulse/ms 和 pulse/ms²，不是 pulse/s**（手册 PDF p228 GT_SetVel、p227 GT_SetTrapPrm）。换算：速度 ×ppm÷1000，加速度 ×ppm÷1e6。**照抄 pulse/s 的数会慢 1000 倍，而且控制器不报错。**",
+    "**固高没有厂商停止原因码**：手册只有 32 位轴状态字（GT_GetSts）和指令返回值表（表 3-1），没有「这次为什么停」的独立码。所以本适配器的 GetStopReason 是**本工具按状态字位推导的自定义编码**（0 正常 / 1 伺服报警 / 2 跟随误差越限 / 3 正限位 / 4 负限位 / 5 平滑停止 / 6 急停 / 7 伺服未使能 / 8 仍在运动），**不是固高厂商码**，别拿去跟别家的码表对照。",
+    "**IO 是「类型 + 位图」模型，不是物理通道号**：GT_GetDi(diType, &value) 的 diType 是 IO 类型枚举，返回值是**该类型的位图**。通用输入是 MC_GPI=4，DI 1~16 对应 bit0~bit15（端子表里就是 EXI0~EXI15）。限位 / 驱动报警 / 原点 / 到位是**另外 4 种 IO 类型**，不在通用口里。适配器的 ReadInput/WriteOutput 只映射 **MC_GPI / MC_GPO 的 1~16**。",
+    "**读到的电平受「输入取反」配置影响**：GT_GetDi 读的是取反后的逻辑电平（reverse=1 时 1 表示低电平），GT_GetDiRaw 才是原始电平。接线是常闭还是常开决定了要不要在配置里取反 —— 取反设错，限位判断会整个反过来。",
+    "**写输出会因「挂接轴」被拒**：GT_SetDoBit 若该 do 挂接了轴（伺服使能 do 默认就挂接轴）会返回 1，不能直接输出。",
+    "**位置比较输出只有 HSIO 两个通道**（HSIO_A / HSIO_B，端子 CN14），且 GT_CompareData 的位置是**相对调用时当前位置的偏移**、最多 4096 点、必须单调。**source（0=内部脉冲计数器 / 1=外部编码器）必须与 MCT2008 配置里的「脉冲计数源」一致**，不一致则比较点落在错的计数上，飞拍会整体偏。",
+    "**位置锁存 = 编码器捕获**，捕获源只有 HOME / INDEX / PROBE / HSIO0 / HSIO1 —— **普通 DI 不能做捕获**（探针要用 EXI0 这个专用脚）。",
+    "**插补走坐标系，映射是站点配置**：TCrdPrm.profile[8] 决定哪个规划轴对应坐标系的 X/Y/Z/A，且「不允许多个规划轴映射到相同坐标系的相同坐标轴」。这个映射只有现场知道 → 本版 MoveLinear / MoveArc **显式抛 NotSupportedException**，不做近似。",
+    "**GTS 只有一个库名 gts.dll，但分单卡/多卡两个版本**：本文件按**单卡库**（无 cardNum 参数）绑定。工控机插多张卡时要么改用多卡库（多一个卡号参数），要么每张卡用一次 GT_SetCardNo 切换。",
+    "**辅助编码器是 9~11 号**：GT_GetEncPos 的 encoder 取值在 4 轴卡上含 [9,11]（第 9、10 轴是两路辅助编码器，第 11 轴是手轮专用编码器）。本适配器只操作 1~N 主轴，不碰辅助编码器。",
+    "**本文件没有绑定的、但原型已核对的指令**（接口层暂时用不到，索引表里有页码可查）：GT_SetSoftLimit / GT_GetSoftLimit（软限位）、GT_ProfileScale / GT_EncScale（当量变换）、GT_LmtsOn / GT_LmtsOff（限位有效/无效）、GT_EncOn / GT_EncOff（编码器计数源）、GT_GetPrfMode（运动模式）、GT_SetCrdPrm / GT_LnXY / GT_ArcXYC / GT_CrdStart（坐标系插补）、GT_GetHomeStatus（回零阶段与错误）、GT_CaptureStatus 系列",
+    "**脉冲输出最高 1MHz、编码器输入最高 2MHz**（GTS-400-PCIe 用户手册 R1.0 p60-61 表 6-5 / 表 6-7，RS-422 差分）：手册给的是「AB 相正交四倍频**之前**的脉冲频率」→ 换算成编码器线数时要除以 4。**这是固高第一次给出频率上限，这条不用再问厂商了。**",
+    "**通用输出是 OC（集电极开路）输出，只能输出低电平和高阻**（同手册 p62 表 6-11）：写 do = 拉低，不是输出高低电平 → 现场接继电器/电磁阀必须外接上拉（24V）或用合适的驱动；单路 sink 电流 ≤500mA、16 路总功率 ≤8A、最大开关频率 1kHz。",
+    "**通用输入 9~19V 是不确定区**（同手册 p62 表 6-10）：逻辑 1 要 >19V、逻辑 0 要 <9V，**9~19V 控制器无法准确判定电平** → 现场接 5V 信号会落在不确定区，必须用 24V 或加电平转换。驱动报警 / 到位是光耦输入、**低电平有效** → 常闭还是常开要在 MCT2008 里配「输入反转」。",
+    "**控制周期与供电**（同手册 p58 表 6-1 / 表 6-2）：插补周期 250us、PID 控制与编码器反馈采样 125us、模拟量输出刷新 125us；端子板供电 24±10%，启动电流 2A、工作电流 2A。"
+  ],
+  "pinvoke": [
+    {
+      "fn": "GT_Open",
+      "ret": "short",
+      "args": [
+        {
+          "name": "channel",
+          "type": "short"
+        },
+        {
+          "name": "param",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "打开运动控制器。手册 PDF p211 原文：short GT_Open(short channel=0, short param=1)。channel 0=正常打开，1=内部调试（用户不可用）；param 仅 channel=1 时有效。**同一控制器不能被两个进程同时打开（返回 -6）**",
+      "page": 211,
+      "proto": "short GT_Open(short channel=0, short param=1)"
+    },
+    {
+      "fn": "GT_Close",
+      "ret": "short",
+      "args": [],
+      "verified": "official-binding",
+      "doc": "关闭运动控制器。手册 PDF p174 原文：short GT_Close()。**不要在程序里反复 Open/Close**，初始化开一次、退出关一次",
+      "page": 174,
+      "proto": "short GT_Close()"
+    },
+    {
+      "fn": "GT_Reset",
+      "ret": "short",
+      "args": [],
+      "verified": "official-binding",
+      "doc": "复位运动控制器。手册 PDF p212 原文：short GT_Reset()。手册启动序列是 Open → Reset → (LoadConfig) → ClrSts",
+      "page": 212,
+      "proto": "short GT_Reset()"
+    },
+    {
+      "fn": "GT_LoadConfig",
+      "ret": "short",
+      "args": [
+        {
+          "name": "filePath",
+          "type": "string"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "下载配置信息到控制器。手册 PDF p210 原文：short GT_LoadConfig(char *pFile)。配置文件由 MCT2008 生成（*.cfg）；**调用后必须再调 GT_ClrSts 才生效**。⚠ 路径含非 ASCII 字符时按 ANSI 传递可能乱码，配置文件路径请用纯 ASCII",
+      "page": 210,
+      "proto": "short GT_LoadConfig(char *pFile)"
+    },
+    {
+      "fn": "GT_ClrSts",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        },
+        {
+          "name": "count",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "清除驱动器报警标志、跟随误差越限标志、限位触发标志。手册 PDF p174 原文：short GT_ClrSts(short axis, short count=1)。⚠ 手册明确：只有驱动器没报警才能清报警位；只有跟随误差正常才能清越限位；只有离开限位才能清限位位",
+      "page": 174,
+      "proto": "short GT_ClrSts(short axis, short count=1)"
+    },
+    {
+      "fn": "GT_AxisOn",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "打开驱动器使能。手册 PDF p169 原文：short GT_AxisOn(short axis)。返回 1 的三个原因：驱动器报警 / 轴在规划运动 / 闭环模式下配置未关联",
+      "page": 169,
+      "proto": "short GT_AxisOn(short axis)"
+    },
+    {
+      "fn": "GT_AxisOff",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "关闭驱动器使能。手册 PDF p169 原文：short GT_AxisOff(short axis)",
+      "page": 169,
+      "proto": "short GT_AxisOff(short axis)"
+    },
+    {
+      "fn": "GT_GetSts",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        },
+        {
+          "name": "pSts",
+          "type": "int",
+          "is_ref": true
+        },
+        {
+          "name": "count",
+          "type": "short"
+        },
+        {
+          "name": "pClock",
+          "type": "IntPtr"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取 32 位轴状态字。手册 PDF p201 原文：short GT_GetSts(short axis, long *pSts, short count=1, unsigned long *pClock=NULL)。位定义（PDF p60-62 例程 5-1）：0x2 伺服报警 / 0x10 跟随误差越限 / 0x20 正限位 / 0x40 负限位 / 0x80 平滑停止 / 0x100 急停 / 0x200 伺服使能 / 0x400 规划器运动",
+      "page": 201,
+      "proto": "short GT_GetSts(short axis, long *pSts, short count=1, unsigned long *pClock=NULL)"
+    },
+    {
+      "fn": "GT_GetPrfMode",
+      "ret": "short",
+      "args": [
+        {
+          "name": "profile",
+          "type": "short"
+        },
+        {
+          "name": "pValue",
+          "type": "int",
+          "is_ref": true
+        },
+        {
+          "name": "count",
+          "type": "short"
+        },
+        {
+          "name": "pClock",
+          "type": "IntPtr"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取轴运动模式。手册 PDF p199 原文：short GT_GetPrfMode(short profile, long *pValue, short count=1, unsigned long *pClock=NULL)。0 点位 / 1 Jog / 2 PT / 3 电子齿轮 / 4 Follow / 5 插补 / 6 PVT",
+      "page": 199,
+      "proto": "short GT_GetPrfMode(short profile, long *pValue, short count=1, unsigned long *pClock=NULL)"
+    },
+    {
+      "fn": "GT_GetPrfPos",
+      "ret": "short",
+      "args": [
+        {
+          "name": "profile",
+          "type": "short"
+        },
+        {
+          "name": "pValue",
+          "type": "double",
+          "is_ref": true
+        },
+        {
+          "name": "count",
+          "type": "short"
+        },
+        {
+          "name": "pClock",
+          "type": "IntPtr"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取规划器位置（未经当量变换）。手册 PDF p199 原文：short GT_GetPrfPos(short profile, double *pValue, short count=1, unsigned long *pClock=NULL)。单位：pulse",
+      "page": 199,
+      "proto": "short GT_GetPrfPos(short profile, double *pValue, short count=1, unsigned long *pClock=NULL)"
+    },
+    {
+      "fn": "GT_GetAxisPrfPos",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        },
+        {
+          "name": "pValue",
+          "type": "double",
+          "is_ref": true
+        },
+        {
+          "name": "count",
+          "type": "short"
+        },
+        {
+          "name": "pClock",
+          "type": "IntPtr"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取轴的规划位置（**当量变换之后**）。手册 PDF p185 原文：short GT_GetAxisPrfPos(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)。单位：pulse。本适配器取默认 1:1 当量 → 该值即原始脉冲",
+      "page": 185,
+      "proto": "short GT_GetAxisPrfPos(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)"
+    },
+    {
+      "fn": "GT_GetAxisEncPos",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        },
+        {
+          "name": "pValue",
+          "type": "double",
+          "is_ref": true
+        },
+        {
+          "name": "count",
+          "type": "short"
+        },
+        {
+          "name": "pClock",
+          "type": "IntPtr"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取轴的编码器位置（**当量变换之后**）。手册 PDF p184 原文：short GT_GetAxisEncPos(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)。⚠ 该通道可能是外部编码器、也可能是内部脉冲计数器（GT_EncOn / GT_EncOff 切换）—— 后者就是指令脉冲的副本 = 假反馈",
+      "page": 184,
+      "proto": "short GT_GetAxisEncPos(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)"
+    },
+    {
+      "fn": "GT_GetAxisError",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        },
+        {
+          "name": "pValue",
+          "type": "double",
+          "is_ref": true
+        },
+        {
+          "name": "count",
+          "type": "short"
+        },
+        {
+          "name": "pClock",
+          "type": "IntPtr"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取轴的规划位置与编码器位置之差（跟随误差）。手册 PDF p184 原文：short GT_GetAxisError(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)。单位：pulse",
+      "page": 184,
+      "proto": "short GT_GetAxisError(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)"
+    },
+    {
+      "fn": "GT_PrfTrap",
+      "ret": "short",
+      "args": [
+        {
+          "name": "profile",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置指定轴为点位运动模式。手册 PDF p212 原文：short GT_PrfTrap(short profile)。**返回 1 = 该轴在规划运动**，要先 GT_Stop。GT_SetPos / GT_SetVel / GT_SetTrapPrm 都要求轴先处于 Trap 模式",
+      "page": 212,
+      "proto": "short GT_PrfTrap(short profile)"
+    },
+    {
+      "fn": "GT_SetTrapPrm",
+      "ret": "short",
+      "args": [
+        {
+          "name": "profile",
+          "type": "short"
+        },
+        {
+          "name": "pPrm",
+          "type": "GtsTrapPrm",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置点位运动模式的运动参数。手册 PDF p226-227 原文：short GT_SetTrapPrm(short profile, TTrapPrm *pPrm)。结构体 TTrapPrm = { double acc; double dec; double velStart; short smoothTime; }，acc/dec 单位 pulse/ms²，velStart 单位 pulse/ms，smoothTime 单位 ms 取值 0~50",
+      "page": 226,
+      "proto": "short GT_SetTrapPrm(short profile, TTrapPrm *pPrm)"
+    },
+    {
+      "fn": "GT_SetPos",
+      "ret": "short",
+      "args": [
+        {
+          "name": "profile",
+          "type": "short"
+        },
+        {
+          "name": "pos",
+          "type": "int"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置目标位置。手册 PDF p224 原文：short GT_SetPos(short profile, long pos)。单位：pulse，取值 [-1073741823, 1073741823]。⚠ **固高只有绝对定位，没有相对模式** —— 相对位移必须读当前位置再换算（读-改-写有竞态，调用前轴须已停止）",
+      "page": 224,
+      "proto": "short GT_SetPos(short profile, long pos)"
+    },
+    {
+      "fn": "GT_SetVel",
+      "ret": "short",
+      "args": [
+        {
+          "name": "profile",
+          "type": "short"
+        },
+        {
+          "name": "vel",
+          "type": "double"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置目标速度。手册 PDF p228 原文：short GT_SetVel(short profile, double vel)。**单位：pulse/ms（不是 pulse/s）**。手册未写负值语义，负向点动的符号约定需实机确认",
+      "page": 228,
+      "proto": "short GT_SetVel(short profile, double vel)"
+    },
+    {
+      "fn": "GT_Update",
+      "ret": "short",
+      "args": [
+        {
+          "name": "mask",
+          "type": "int"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "启动点位运动或 Jog 运动。手册 PDF p231 原文：short GT_Update(long mask)。mask 按位标识轴号，**bit0 = 轴1、bit1 = 轴2**",
+      "page": 231,
+      "proto": "short GT_Update(long mask)"
+    },
+    {
+      "fn": "GT_PrfJog",
+      "ret": "short",
+      "args": [
+        {
+          "name": "profile",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置指定轴为 Jog 运动模式。手册 PDF p212 原文：short GT_PrfJog(short profile)。返回 1 = 该轴在规划运动",
+      "page": 212,
+      "proto": "short GT_PrfJog(short profile)"
+    },
+    {
+      "fn": "GT_SetJogPrm",
+      "ret": "short",
+      "args": [
+        {
+          "name": "profile",
+          "type": "short"
+        },
+        {
+          "name": "pPrm",
+          "type": "GtsJogPrm",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置 Jog 运动模式的运动参数。手册 PDF p222 原文：short GT_SetJogPrm(short profile, TJogPrm *pPrm)。结构体 TJogPrm = { double acc; double dec; double smooth; }，acc/dec 单位 pulse/ms²，smooth 取值 [0,1)",
+      "page": 222,
+      "proto": "short GT_SetJogPrm(short profile, TJogPrm *pPrm)"
+    },
+    {
+      "fn": "GT_Stop",
+      "ret": "short",
+      "args": [
+        {
+          "name": "mask",
+          "type": "int"
+        },
+        {
+          "name": "option",
+          "type": "int"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "停止一个或多个轴的规划运动、停止坐标系运动。手册 PDF p229 原文：short GT_Stop(long mask, long option)。mask 按位指示要停的轴（bit0=轴1）；option 按位指示停止方式：**该位为 0 = 平滑停止，为 1 = 急停**",
+      "page": 229,
+      "proto": "short GT_Stop(long mask, long option)"
+    },
+    {
+      "fn": "GT_ZeroPos",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        },
+        {
+          "name": "count",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "清零规划位置和实际位置，并做零漂补偿。手册 PDF p231 原文：short GT_ZeroPos(short axis, short count)。⚠ 这是**写位置**，回零前调用它等于把当前机械位置当成零点",
+      "page": 231,
+      "proto": "short GT_ZeroPos(short axis, short count)"
+    },
+    {
+      "fn": "GT_GoHome",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        },
+        {
+          "name": "pHomePrm",
+          "type": "GtsHomePrm",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "启动 Smart Home 回原点。手册 PDF p204 原文：short GT_GoHome(short axis, THomePrm *pHomePrm)。**前提：轴必须处于点位(Trap)模式且已使能**，否则回零状态报 HOME_ERROR_NOT_TRAP_MODE / HOME_ERROR_DISABLE",
+      "page": 204,
+      "proto": "short GT_GoHome(short axis, THomePrm *pHomePrm)"
+    },
+    {
+      "fn": "GT_GetHomePrm",
+      "ret": "short",
+      "args": [
+        {
+          "name": "axis",
+          "type": "short"
+        },
+        {
+          "name": "pHomePrm",
+          "type": "GtsHomePrm",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取控制器里保存的 Smart Home 回原点参数。手册 PDF p195 原文：short GT_GetHomePrm(short axis, THomePrm *pHomePrm)。手册示例（PDF p162）的做法是**先读回再改字段**，本适配器照此实现",
+      "page": 195,
+      "proto": "short GT_GetHomePrm(short axis, THomePrm *pHomePrm)"
+    },
+    {
+      "fn": "GT_GetDi",
+      "ret": "short",
+      "args": [
+        {
+          "name": "diType",
+          "type": "short"
+        },
+        {
+          "name": "pValue",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取数字 IO 输入状态（按类型取位图）。手册 PDF p191 原文：short GT_GetDi(short diType, long *pValue)。diType 是**类型枚举**不是通道号：MC_LIMIT_POSITIVE=0 / MC_LIMIT_NEGATIVE=1 / MC_ALARM=2 / MC_HOME=3 / MC_GPI=4 / MC_ARRIVE=5 / MC_MPG=6。返回值按位表示电平，**受配置里的输入取反影响**",
+      "page": 191,
+      "proto": "short GT_GetDi(short diType, long *pValue)"
+    },
+    {
+      "fn": "GT_GetDo",
+      "ret": "short",
+      "args": [
+        {
+          "name": "doType",
+          "type": "short"
+        },
+        {
+          "name": "pValue",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取数字 IO 输出状态。手册 PDF p193 原文：short GT_GetDo(short doType, long *pValue)。doType：MC_ENABLE=10 / MC_CLEAR=11 / MC_GPO=12",
+      "page": 193,
+      "proto": "short GT_GetDo(short doType, long *pValue)"
+    },
+    {
+      "fn": "GT_SetDo",
+      "ret": "short",
+      "args": [
+        {
+          "name": "doType",
+          "type": "short"
+        },
+        {
+          "name": "value",
+          "type": "int"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置数字 IO 输出状态（整类位图）。手册 PDF p218 原文：short GT_SetDo(short doType, long value)。⚠ **若该 do 挂接了轴则不能直接输出**（伺服使能 do 默认挂接轴）",
+      "page": 218,
+      "proto": "short GT_SetDo(short doType, long value)"
+    },
+    {
+      "fn": "GT_SetDoBit",
+      "ret": "short",
+      "args": [
+        {
+          "name": "doType",
+          "type": "short"
+        },
+        {
+          "name": "doIndex",
+          "type": "short"
+        },
+        {
+          "name": "value",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "按位设置数字 IO 输出状态。手册 PDF p219 原文：short GT_SetDoBit(short doType, short doIndex, short value)。doIndex 取值：MC_ENABLE [1,8] / MC_CLEAR [1,8] / **MC_GPO [1,16]**。value 1=高电平 0=低电平。挂接轴的 do 输出会返回 1",
+      "page": 219,
+      "proto": "short GT_SetDoBit(short doType, short doIndex, short value)"
+    },
+    {
+      "fn": "GT_CompareData",
+      "ret": "short",
+      "args": [
+        {
+          "name": "encoder",
+          "type": "short"
+        },
+        {
+          "name": "source",
+          "type": "short"
+        },
+        {
+          "name": "pulseType",
+          "type": "short"
+        },
+        {
+          "name": "startLevel",
+          "type": "short"
+        },
+        {
+          "name": "time",
+          "type": "short"
+        },
+        {
+          "name": "pBuf1",
+          "type": "IntPtr"
+        },
+        {
+          "name": "count1",
+          "type": "short"
+        },
+        {
+          "name": "pBuf2",
+          "type": "IntPtr"
+        },
+        {
+          "name": "count2",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置位置比较参数并启动位置比较输出。手册 PDF p175-176 原文：short GT_CompareData(short encoder, short source, short pulseType, short startLevel, short time, long *pBuf1, short count1, long *pBuf2, short count2)。encoder=参与比较的编码器轴号；source 0=内部脉冲计数器 1=外部编码器（**必须与配置文件「脉冲计数源」一致**）；pulseType 0=输出脉冲 1=输出电平；time=脉冲宽度(us，取值 1~32767)；pBuf1→HSIO0(通道1)、pBuf2→HSIO1(通道2)，每边最多 4096 点；**位置是相对调用时当前位置的偏移，必须单调**；返回 7 = 位置数组非单调",
+      "page": 175,
+      "proto": "short GT_CompareData(short encoder, short source, short pulseType, short startLevel, short time, long *pBuf1, short count1, long *pBuf2, short count2)"
+    },
+    {
+      "fn": "GT_CompareStop",
+      "ret": "short",
+      "args": [],
+      "verified": "official-binding",
+      "doc": "取消位置比较输出。手册 PDF p178 原文：short GT_CompareStop()。设置新的比较点前应先调用它，否则比较输出进行中无法再用 HSIO 输出脉冲/电平",
+      "page": 178,
+      "proto": "short GT_CompareStop()"
+    },
+    {
+      "fn": "GT_SetCaptureMode",
+      "ret": "short",
+      "args": [
+        {
+          "name": "encoder",
+          "type": "short"
+        },
+        {
+          "name": "mode",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置编码器捕获方式并启动捕获。手册 PDF p214 原文：short GT_SetCaptureMode(short encoder, short mode)。mode：CAPTURE_HOME=1 / CAPTURE_INDEX=2 / CAPTURE_PROBE=3 / CAPTURE_HSIO0=6 / CAPTURE_HSIO1=7。**普通 DI 不能做捕获，只有 HSIO 口可以**",
+      "page": 214,
+      "proto": "short GT_SetCaptureMode(short encoder, short mode)"
+    },
+    {
+      "fn": "GT_SetCaptureSense",
+      "ret": "short",
+      "args": [
+        {
+          "name": "encoder",
+          "type": "short"
+        },
+        {
+          "name": "mode",
+          "type": "short"
+        },
+        {
+          "name": "sense",
+          "type": "short"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置捕获电平。手册 PDF p215 原文：short GT_SetCaptureSense(short encoder, short mode, short sense)。sense：**0=下降沿触发，1=上升沿触发**",
+      "page": 215,
+      "proto": "short GT_SetCaptureSense(short encoder, short mode, short sense)"
+    },
+    {
+      "fn": "GT_GetCaptureStatus",
+      "ret": "short",
+      "args": [
+        {
+          "name": "encoder",
+          "type": "short"
+        },
+        {
+          "name": "pStatus",
+          "type": "short",
+          "is_ref": true
+        },
+        {
+          "name": "pValue",
+          "type": "int",
+          "is_ref": true
+        },
+        {
+          "name": "count",
+          "type": "short"
+        },
+        {
+          "name": "pClock",
+          "type": "IntPtr"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取编码器捕获状态与捕获值。手册 PDF p187 原文：short GT_GetCaptureStatus(short encoder, short *pStatus, long *pValue, short count=1, unsigned long *pClock=NULL)。pStatus 为 1 表示对应轴捕获触发；捕获触发时 pValue 自动更新为捕获到的位置",
+      "page": 187,
+      "proto": "short GT_GetCaptureStatus(short encoder, short *pStatus, long *pValue, short count=1, unsigned long *pClock=NULL)"
+    },
+    {
+      "fn": "GT_GetVersion",
+      "ret": "short",
+      "args": [
+        {
+          "name": "pVersion",
+          "type": "IntPtr",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取运动控制器固件版本号。手册 PDF p203 原文：short GT_GetVersion(char **pVersion)。返回的是控制器内部分配的字符串指针，**不能 free**。本适配器在 Open 时读一次存进 FirmwareVersion 属性，供现场对版本矩阵",
+      "page": 203,
+      "proto": "short GT_GetVersion(char **pVersion)"
+    }
+  ],
+  "bodies": {
+    "Open": [
+      "if (_isOpen) return;",
+      "// 手册启动序列（PDF p15 与例程 3-1 / 6-1）：Open → Reset → (LoadConfig) → ClrSts",
+      "var err = Native.GT_Open(0, 1);   // channel=0 正常打开；param 仅 channel=1（内部调试）时有效",
+      "if (err != 0) throw new MotionException($\"固高 GT_Open 失败，错误码 {err}{GtsErrorText(err)}\"",
+      "    + \"请确认：① 已安装固高控制卡驱动；② 进程位数与 gts.dll（32bit / 64bit）一致；③ 同一控制器没有被别的进程打开（错误码 -6）。\");",
+      "err = Native.GT_Reset();",
+      "if (err != 0) throw new MotionException($\"GT_Reset 失败，错误码 {err}{GtsErrorText(err)}\");",
+      "// 配置文件由 MCT2008 生成（*.cfg）。手册明确：LoadConfig 之后必须再调 GT_ClrSts 才生效。",
+      "if (!string.IsNullOrEmpty(ConfigFilePath))",
+      "{",
+      "    err = Native.GT_LoadConfig(ConfigFilePath);",
+      "    if (err != 0) throw new MotionException($\"GT_LoadConfig({ConfigFilePath}) 失败，错误码 {err}{GtsErrorText(err)}\");",
+      "}",
+      "err = Native.GT_ClrSts(1, (short)AxisCountValue);",
+      "if (err != 0) throw new MotionException($\"GT_ClrSts 失败，错误码 {err}{GtsErrorText(err)}\");",
+      "ReadFirmwareVersion();",
+      "_isOpen = true;"
+    ],
+    "Close": [
+      "if (!_isOpen) return;",
+      "Native.GT_Close();",
+      "// 比较点缓冲由本适配器持有，控制器取走之前不能释放 —— 这里一并回收。",
+      "if (_vendorBuffer != IntPtr.Zero)",
+      "{",
+      "    Marshal.FreeHGlobal(_vendorBuffer);",
+      "    _vendorBuffer = IntPtr.Zero;",
+      "}",
+      "_isOpen = false;"
+    ],
+    "Enable": [
+      "if (on)",
+      "{",
+      "    var err = Native.GT_AxisOn((short)(axis + 1));",
+      "    if (err != 0) throw new MotionException($\"轴 {axis} 伺服使能打开失败，错误码 {err}{GtsErrorText(err)}\");",
+      "}",
+      "else",
+      "{",
+      "    var err = Native.GT_AxisOff((short)(axis + 1));",
+      "    if (err != 0) throw new MotionException($\"轴 {axis} 伺服使能关闭失败，错误码 {err}{GtsErrorText(err)}\");",
+      "}"
+    ],
+    "IsEnabled": [
+      "// 状态字 0x200 = 伺服使能标志（手册 PDF p62 例程 5-1）",
+      "return (ReadStatusWord(axis) & 0x200) != 0;"
+    ],
+    "MoveAbs": [
+      "var ppm = GetPulsePerMm(axis);",
+      "var gAxis = (short)(axis + 1);",
+      "var pulses = (int)Math.Round(posMm * ppm);",
+      "// 固高没有相对/绝对参数：GT_SetPos 只能设绝对目标位置。",
+      "var err = Native.GT_PrfTrap(gAxis);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置点位运动模式失败，错误码 {err}{GtsErrorText(err)}\");",
+      "var prm = BuildTrapPrm(profile, ppm);",
+      "err = Native.GT_SetTrapPrm(gAxis, ref prm);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置点位运动参数失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_SetPos(gAxis, pulses);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置目标位置失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_SetVel(gAxis, ToPulsePerMs(profile.VelocityMmS, ppm));",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置目标速度失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_Update(1 << axis);   // bit0 = 轴1",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 启动运动失败，错误码 {err}{GtsErrorText(err)}\");"
+    ],
+    "MoveRel": [
+      "var ppm = GetPulsePerMm(axis);",
+      "var gAxis = (short)(axis + 1);",
+      "// 固高只有绝对定位：相对位移 = 当前规划位置 + 增量。",
+      "// ⚠ 读-改-写有竞态 —— 调用前该轴必须处于停止状态。",
+      "var target = ReadAxisPrfPosPulse(axis) + (long)Math.Round(distMm * ppm);",
+      "var err = Native.GT_PrfTrap(gAxis);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置点位运动模式失败，错误码 {err}{GtsErrorText(err)}\");",
+      "var prm = BuildTrapPrm(profile, ppm);",
+      "err = Native.GT_SetTrapPrm(gAxis, ref prm);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置点位运动参数失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_SetPos(gAxis, (int)target);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置目标位置失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_SetVel(gAxis, ToPulsePerMs(profile.VelocityMmS, ppm));",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置目标速度失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_Update(1 << axis);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 启动运动失败，错误码 {err}{GtsErrorText(err)}\");"
+    ],
+    "MoveLinear": [
+      "throw new NotSupportedException(\"固高多轴插补走**坐标系**（TCrdPrm + GT_SetCrdPrm + GT_LnXY + GT_CrdStart），\"",
+      "    + \"而坐标系到规划轴的映射（TCrdPrm.profile[8]）是**站点配置**，手册只给规则不给本项目的值；\"",
+      "    + \"映射错了会让轴走到错误坐标。当前请逐轴用 MoveAbs 下发，\"",
+      "    + \"或确认坐标系映射后补齐本方法。原型见 knowledge/sdks/official_api/gts_manual_index.csv。\");"
+    ],
+    "MoveArc": [
+      "throw new NotSupportedException(\"固高圆弧插补走坐标系（GT_ArcXYC，10 参数，含坐标系号、圆心、方向、合成速度/加速度），\"",
+      "    + \"坐标系映射与圆弧方向语义（circleDir 0=顺时针 / 1=逆时针，半径符号决定 ≤180° 还是 >180°）均需按现场确认；\"",
+      "    + \"当前请用 MoveAbs 逐点下发，别用近似实现顶替 —— 圆弧错了会撞机构。\");"
+    ],
+    "Jog": [
+      "var ppm = GetPulsePerMm(axis);",
+      "var gAxis = (short)(axis + 1);",
+      "if (Math.Abs(speedMmS) < 1e-9) throw new MotionException(\"点动速度为 0：固高 GT_SetVel 传 0 会变成「不运动」，现场看起来就是卡死。\");",
+      "var err = Native.GT_PrfJog(gAxis);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置 Jog 运动模式失败，错误码 {err}{GtsErrorText(err)}\");",
+      "var prm = new GtsJogPrm",
+      "{",
+      "    acc = ToPulsePerMs2(JogAccelMmS2, ppm),",
+      "    dec = ToPulsePerMs2(JogAccelMmS2, ppm),",
+      "    smooth = 0.0",
+      "};",
+      "err = Native.GT_SetJogPrm(gAxis, ref prm);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置 Jog 参数失败，错误码 {err}{GtsErrorText(err)}\");",
+      "// ⚠ 手册未写 GT_SetVel 的负值语义（负向点动 = 传负速度），首次上机请低速验证方向。",
+      "err = Native.GT_SetVel(gAxis, ToPulsePerMs(speedMmS, ppm));",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置点动速度失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_Update(1 << axis);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 启动点动失败，错误码 {err}{GtsErrorText(err)}\");"
+    ],
+    "Stop": [
+      "var mask = 1 << axis;                                  // bit0 = 轴1",
+      "var option = mode == StopMode.Immediate ? mask : 0;    // 该位 0=平滑停止，1=急停",
+      "var err = Native.GT_Stop(mask, option);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 停止失败，错误码 {err}{GtsErrorText(err)}\");"
+    ],
+    "Home": [
+      "var ppm = GetPulsePerMm(axis);",
+      "var gAxis = (short)(axis + 1);",
+      "// 回零方向没有「安全默认」：固高 Smart Home 的 moveDir 决定搜索原点的运动方向，猜错就是朝机构外跑。",
+      "if (HomeDirection == GtsHomeDir.Unconfigured)",
+      "    throw new MotionException(\"回零方向未配置：请显式设置 HomeDirection（Positive / Negative）。\"",
+      "        + \"固高 Smart Home 用 moveDir 决定搜索原点的运动方向，方向猜错会让轴朝机构外跑；\"",
+      "        + \"先用低速点动确认原点开关在哪一侧，再填这一项。\");",
+      "// Smart Home 要求轴处于点位(Trap)模式，否则回零状态会报 HOME_ERROR_NOT_TRAP_MODE。",
+      "var err = Native.GT_PrfTrap(gAxis);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 设置点位运动模式失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_ClrSts(gAxis, 1);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 清状态失败，错误码 {err}{GtsErrorText(err)}\");",
+      "// 手册示例（PDF p162）的做法：先读回控制器里存的参数，再改要改的字段。",
+      "var p = new GtsHomePrm();",
+      "err = Native.GT_GetHomePrm(gAxis, ref p);",
+      "if (err != 0) throw new MotionException($\"读取轴 {axis} 回原点参数失败，错误码 {err}{GtsErrorText(err)}\");",
+      "p.mode = (short)HomeMode;",
+      "p.moveDir = HomeDirection == GtsHomeDir.Positive ? (short)1 : (short)-1;",
+      "p.indexDir = p.moveDir;",
+      "p.edge = HomeEdge;                                     // 0=下降沿 1=上升沿",
+      "p.velHigh = ToPulsePerMs(HomeFastSpeedMmS, ppm);",
+      "p.velLow = ToPulsePerMs(HomeSpeedMmS, ppm);",
+      "p.acc = ToPulsePerMs2(HomeAccMmS2, ppm);",
+      "p.dec = ToPulsePerMs2(HomeAccMmS2, ppm);",
+      "p.smoothTime = 0;",
+      "p.homeOffset = (int)Math.Round(HomeOffsetMm * ppm);",
+      "// 搜索距离 0 表示用控制器默认（手册：显示为 805306368）",
+      "var search = HomeSearchDistanceMm <= 0 ? 0 : (int)Math.Round(HomeSearchDistanceMm * ppm);",
+      "p.searchHomeDistance = search;",
+      "p.searchIndexDistance = search;",
+      "// 手册 p204：启用「启动时检测限位/原点」（THomePrm 的 pad2[1]）时，escapeStep 不能为 0，",
+      "// 否则控制器无法执行回退动作、回零必然失败 —— 这里提前说清楚，别让人对着错误码猜。",
+      "if (p.detectStartPosition != 0 && p.escapeStep == 0)",
+      "    throw new MotionException($\"轴 {axis} 的回零参数启用了「启动时检测限位/原点」但 escapeStep = 0：\"",
+      "        + \"控制器无法执行回退动作，回零会失败。请在 MCT2008 或回零参数里设置 escapeStep（脱离限位的步长）。\");",
+      "err = Native.GT_GoHome(gAxis, ref p);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 启动回零失败，错误码 {err}{GtsErrorText(err)}\");"
+    ],
+    "GetPositionMm": [
+      "// GT_GetAxisPrfPos 读的是「当量变换之后」的规划位置；本适配器要求控制器保持默认 1:1 当量 → 该值即原始脉冲。",
+      "return ReadAxisPrfPosPulse(axis) / GetPulsePerMm(axis);"
+    ],
+    "GetFeedbackMm": [
+      "// GT_GetAxisEncPos 读的是「当量变换之后」的编码器位置。",
+      "return ReadAxisEncPosPulse(axis) / GetPulsePerMm(axis);"
+    ],
+    "HasRealFeedback": [
+      "// 固高的「编码器」通道可能是外部编码器，也可能是内部脉冲计数器（GT_EncOn / GT_EncOff 切换）。",
+      "// 脉冲计数器模式下它就是指令脉冲的副本 = 假反馈 → 真伪由现场接线/配置决定，不由代码猜。",
+      "// 没接编码器时它会跟着指令脉冲走，看起来「有反馈」但跟随误差恒为 0。",
+      "return EncoderFeedbackWired;"
+    ],
+    "IsMoving": [
+      "// 状态字 0x400 = 规划器正在运动（手册 PDF p62）",
+      "return (ReadStatusWord(axis) & 0x400) != 0;"
+    ],
+    "IsMotionDone": [
+      "return (ReadStatusWord(axis) & 0x400) == 0;"
+    ],
+    "GetStopReason": [
+      "// ⚠ 固高**没有**厂商停止原因码（手册只有状态字 + 指令返回值表）。",
+      "// 下面是本工具按状态字位推导的自定义编码，不是固高厂商码，详见 knowledge/sdks/gts.json 的 notes。",
+      "var sts = ReadStatusWord(axis);",
+      "if ((sts & 0x100) != 0) return 6;   // 急停",
+      "if ((sts & 0x2) != 0) return 1;     // 伺服报警",
+      "if ((sts & 0x10) != 0) return 2;    // 跟随误差越限",
+      "if ((sts & 0x20) != 0) return 3;    // 正限位",
+      "if ((sts & 0x40) != 0) return 4;    // 负限位",
+      "if ((sts & 0x80) != 0) return 5;    // 平滑停止",
+      "if ((sts & 0x400) != 0) return 8;   // 规划器仍在运动",
+      "if ((sts & 0x200) == 0) return 7;   // 伺服未使能",
+      "return 0;"
+    ],
+    "GetStopReasonText": [
+      "switch (GetStopReason(axis))",
+      "{",
+      "    case 0: return \"（正常停止：轴状态字无异常位）\";",
+      "    case 1: return \"（伺服报警：状态字 0x2）\";",
+      "    case 2: return \"（跟随误差越限：状态字 0x10）\";",
+      "    case 3: return \"（正限位触发：状态字 0x20）\";",
+      "    case 4: return \"（负限位触发：状态字 0x40）\";",
+      "    case 5: return \"（平滑停止触发：状态字 0x80）\";",
+      "    case 6: return \"（急停触发：状态字 0x100）\";",
+      "    case 7: return \"（伺服未使能：状态字 0x200 未置位）\";",
+      "    case 8: return \"（规划器仍在运动，请等到位后再读停止原因）\";",
+      "    default: return \"（未知停止状态）\";",
+      "}"
+    ],
+    "GetState": [
+      "// 固高没有雷赛那样的轴状态机指令，这里按状态字映射到统一枚举（本工具自定义）。",
+      "var sts = ReadStatusWord(axis);",
+      "if ((sts & 0x100) != 0 || (sts & 0x2) != 0) return AxisState.Error;",
+      "if ((sts & 0x20) != 0 || (sts & 0x40) != 0) return AxisState.ErrorTrigger;",
+      "if ((sts & 0x400) != 0) return AxisState.Started;",
+      "if ((sts & 0x200) != 0) return AxisState.ServoOn;",
+      "return AxisState.Stopped;"
+    ],
+    "ReadInput": [
+      "if (port < 1 || port > 16) throw new ArgumentOutOfRangeException(nameof(port),",
+      "    $\"固高通用输入只有 DI 1~16（MC_GPI），收到 {port}。限位 / 报警 / 原点 / 到位是另外 4 种 IO 类型，不在通用口里。\");",
+      "int bits = 0;",
+      "var err = Native.GT_GetDi(DiTypeGpi, ref bits);",
+      "if (err != 0) throw new MotionException($\"读取通用输入失败，错误码 {err}{GtsErrorText(err)}\");",
+      "// 手册 PDF p205（GT_GpiSns 说明）：DI 1~16 对应 bit0~bit15",
+      "return ((bits >> (port - 1)) & 1) != 0;"
+    ],
+    "WriteOutput": [
+      "if (port < 1 || port > 16) throw new ArgumentOutOfRangeException(nameof(port),",
+      "    $\"固高通用输出只有 DO 1~16（MC_GPO），收到 {port}。伺服使能 / 报警清除是另外 2 种 IO 类型。\");",
+      "var err = Native.GT_SetDoBit(DoTypeGpo, (short)port, on ? (short)1 : (short)0);",
+      "if (err != 0) throw new MotionException($\"写通用输出 {port} 失败，错误码 {err}{GtsErrorText(err)}\"",
+      "    + \"（手册：若该 do 挂接了轴则不能直接输出）。\");"
+    ],
+    "SetCompareOutput": [
+      "if (outPort != 1 && outPort != 2) throw new MotionException(",
+      "    $\"固高位置比较输出只有 HSIO 两个通道（1=HSIO0，2=HSIO1），收到 {outPort}。\");",
+      "var ppm = GetPulsePerMm(axis);",
+      "var gAxis = (short)(axis + 1);",
+      "// GT_CompareData 的位置是**相对调用时当前位置的偏移**，必须先读当前位置。",
+      "var cur = ReadAxisEncPosPulse(axis);",
+      "var offset = (int)(Math.Round(posMm * ppm) - cur);",
+      "// 上一次比较要先取消，否则比较输出进行中不能再用 HSIO 出脉冲/电平。",
+      "var err = Native.GT_CompareStop();",
+      "if (err != 0) throw new MotionException($\"取消上一次位置比较失败，错误码 {err}{GtsErrorText(err)}\");",
+      "// 比较点缓冲由适配器持有：控制器取走之前不能释放，否则就是野指针。",
+      "if (_vendorBuffer != IntPtr.Zero)",
+      "{",
+      "    Marshal.FreeHGlobal(_vendorBuffer);",
+      "    _vendorBuffer = IntPtr.Zero;",
+      "}",
+      "var buf = Marshal.AllocHGlobal(sizeof(int));",
+      "Marshal.WriteInt32(buf, offset);",
+      "_vendorBuffer = buf;",
+      "// pBuf1 → HSIO0（通道 1），pBuf2 → HSIO1（通道 2）",
+      "IntPtr p1, p2;",
+      "short c1, c2;",
+      "if (outPort == 1) { p1 = buf; c1 = 1; p2 = IntPtr.Zero; c2 = 0; }",
+      "else { p1 = IntPtr.Zero; c1 = 0; p2 = buf; c2 = 1; }",
+      "err = Native.GT_CompareData(gAxis, (short)CompareSource, (short)ComparePulseType, 0,",
+      "    ComparePulseWidthUs, p1, c1, p2, c2);",
+      "if (err != 0) throw new MotionException($\"设置位置比较输出失败，错误码 {err}{GtsErrorText(err)}\"",
+      "    + \"（错误码 7 = 位置数组非单调；source 必须与配置文件里的「脉冲计数源」一致）。\");"
+    ],
+    "SetLatch": [
+      "// 固高的「位置锁存」= 编码器捕获（GT_SetCaptureMode），捕获源只有 HOME / INDEX / PROBE / HSIO0 / HSIO1 ——",
+      "// **普通 DI 不能做捕获**，要接普通输入点做锁存，硬件上得走 HSIO 口。",
+      "if (inPort != 1 && inPort != 2) throw new MotionException(",
+      "    $\"固高位置锁存的捕获源只有 HSIO 通道 1 / 2（CAPTURE_HSIO0 / CAPTURE_HSIO1），收到输入口 {inPort}。普通 DI 不能做捕获。\");",
+      "var gAxis = (short)(axis + 1);",
+      "var mode = inPort == 1 ? GtsCaptureMode.Hsio0 : GtsCaptureMode.Hsio1;",
+      "var err = Native.GT_SetCaptureSense(gAxis, (short)mode, LatchEdge);   // 0=下降沿 1=上升沿",
+      "if (err != 0) throw new MotionException($\"设置捕获电平失败，错误码 {err}{GtsErrorText(err)}\");",
+      "err = Native.GT_SetCaptureMode(gAxis, (short)mode);",
+      "if (err != 0) throw new MotionException($\"启动位置捕获失败，错误码 {err}{GtsErrorText(err)}\");"
+    ],
+    "SetPulsePerMm": [
+      "// 固高**没有** SetPulsePerMm / GetPulsePerMm：当量是 GT_ProfileScale(axis, alpha, beta) 的分数比，",
+      "// 而手册只给了取值范围、没给变换公式与 alpha/beta 方向 → 这里**不下发**任何当量变换指令。",
+      "// 要求：控制器保持默认 1:1 当量（手册 PDF p60）；脉冲当量（脉冲/mm）由现场提供，适配器在软件侧换算。",
+      "// ⚠ 若现场用 MCT2008 改过当量，所有 mm↔pulse 换算都会整体偏一个比例。",
+      "if (pulsePerMm <= 0) throw new ArgumentOutOfRangeException(nameof(pulsePerMm), \"脉冲当量必须为正\");",
+      "_pulsePerMm[axis] = pulsePerMm;"
+    ],
+    "GetPulsePerMm": [
+      "return _pulsePerMm[axis];"
+    ]
+  },
+  "helpers": {
+    "GtsStructs": [
+      "/// <summary>点位运动参数（手册 PDF p226-227 的 TTrapPrm）。</summary>",
+      "/// <remarks>字段顺序与 C 结构体逐字一致，C# 顺序布局下各字段偏移与 MSVC 相同（acc@0, dec@8, velStart@16, smoothTime@24，总长 32 字节）。</remarks>",
+      "/// <summary>点位运动参数（官方 gts.cs 的 TTrapPrm，32 字节）。</summary>",
+      "/// <remarks>字段顺序与官方 gts.cs 逐字段一致（acc@0, dec@8, velStart@16, smoothTime@24，总长 32 字节）。</remarks>",
+      "[StructLayout(LayoutKind.Sequential)]",
+      "public struct GtsTrapPrm",
+      "{",
+      "    public double acc;        // 加速度，单位 pulse/ms²",
+      "    public double dec;        // 减速度，单位 pulse/ms²",
+      "    public double velStart;   // 起跳速度，单位 pulse/ms",
+      "    public short smoothTime;  // 平滑时间，单位 ms，取值 0~50",
+      "}",
+      "",
+      "/// <summary>Jog 运动参数（手册 PDF p222 的 TJogPrm）。</summary>",
+      "/// <summary>Jog 运动参数（官方 gts.cs 的 TJogPrm，24 字节）。</summary>",
+      "/// <remarks>字段顺序与官方 gts.cs 逐字段一致（acc@0, dec@8, smooth@16，总长 24 字节）。</remarks>",
+      "[StructLayout(LayoutKind.Sequential)]",
+      "public struct GtsJogPrm",
+      "{",
+      "    public double acc;      // 加速度，单位 pulse/ms²",
+      "    public double dec;      // 减速度，单位 pulse/ms²",
+      "    public double smooth;   // 平滑系数，取值 [0,1)",
+      "}",
+      "",
+      "/// <summary>Smart Home 回原点参数（手册 PDF p203-204 的 THomePrm）。</summary>",
+      "/// <remarks>",
+      "/// 手册原文的 pad1[3] / pad2[3] / pad3[2] 是保留字段，但 pad1[0] 与 pad2[1] 有实际含义，这里保留了它们的位置。",
+      "/// 顺序布局下各字段偏移与 MSVC 一致（mode@0 … velHigh@16 … smoothTime@48 … homeOffset@56 … escapeStep@68，总长 80 字节）。",
+      "/// </remarks>",
+      "/// <summary>Smart Home 回原点参数（官方 gts.cs 的 THomePrm）。</summary>",
+      "/// <remarks>",
+      "/// 字段顺序、类型与字节偏移与官方 C# 绑定 gts.cs 的 THomePrm **逐字段一致**（顺序布局，总长 88 字节，",
+      "/// 偏移见 knowledge/sdks/official_api/gts_structs.csv）。",
+      "/// 手册《编程手册-基本功能 R1.5》p204 的 C 写法是 pad1[3] / pad2[3] / pad3[2]（总长 80 字节），",
+      "/// 官方 C# 绑定把 pad3 也拆成 3 个 int（pad3_1/pad3_2/pad3_3）→ 总长 88 字节，厂商两个件差 8 字节。",
+      "/// **必须按 88 字节实现**：GT_GetHomePrm 会把控制器里的参数整块写回这个结构体，按 80 字节实现就是越界写。",
+      "/// 手册用 0 基下标（pad1[0]、pad2[1]），官方 C# 绑定用 1 基命名（pad1_1、pad2_2）：手册 pad1[0] = pad1_1、手册 pad2[1] = pad2_2。",
+      "/// </remarks>",
+      "[StructLayout(LayoutKind.Sequential)]",
+      "public struct GtsHomePrm",
+      "{",
+      "    public short mode;              // 回原点方式，见 GtsHomeMode",
+      "    public short moveDir;           // 搜索原点的运动方向：-1 负 / 1 正",
+      "    public short indexDir;          // 搜索 Index 的运动方向：-1 负 / 1 正",
+      "    public short edge;              // 捕获沿：0 下降沿 / 1 上升沿",
+      "    public short triggerIndex;      // 触发索引，默认与回零轴号一致",
+      "    public short useVelHighForOffset; // 手册 pad1[0]（= 官方 pad1_1）：0 或其它=用 velLow，1=用 velHigh",
+      "    public short pad1_2;            // 手册 pad1[1]，保留",
+      "    public short pad1_3;            // 手册 pad1[2]，保留",
+      "    public double velHigh;          // 回零高速，单位 pulse/ms",
+      "    public double velLow;           // 回零低速，单位 pulse/ms",
+      "    public double acc;              // 回零加速度，单位 pulse/ms²",
+      "    public double dec;              // 回零减速度，单位 pulse/ms²",
+      "    public short smoothTime;        // 平滑时间，单位 ms，取值 0~50",
+      "    public short pad2_1;            // 手册 pad2[0]，保留",
+      "    public short detectStartPosition; // 手册 pad2[1]（= 官方 pad2_2）：0 或其它=启动时不检测限位/原点，1=检测",
+      "    public short pad2_3;            // 手册 pad2[2]，保留",
+      "    public int homeOffset;          // 最终停止位置相对原点的偏移，单位 pulse",
+      "    public int searchHomeDistance;  // 搜索 Home 的范围，单位 pulse；0 = 用控制器默认",
+      "    public int searchIndexDistance; // 搜索 Index 的范围，单位 pulse；0 = 用控制器默认",
+      "    public int escapeStep;          // 限位回零时脱离限位的步长，单位 pulse",
+      "    public int pad3_1;              // 手册 pad3[0]，保留",
+      "    public int pad3_2;              // 手册 pad3[1]，保留",
+      "    public int pad3_3;              // 官方 C# 绑定多出的第 3 个保留字（C 头文件里 pad3 只有 2 个）",
+      "}",
+      ""
+    ],
+    "GtsEnums": [
+      "/// <summary>固高回原点方式（手册 PDF p204 的回原点模式宏定义）。</summary>",
+      "public enum GtsHomeMode : short",
+      "{",
+      "    Limit = 10,          // 限位回原点",
+      "    LimitHome = 11,      // 限位 + Home 回原点",
+      "    LimitIndex = 12,     // 限位 + Index 回原点",
+      "    LimitHomeIndex = 13, // 限位 + Home + Index 回原点",
+      "    Home = 20,           // Home 回原点",
+      "    HomeIndex = 22,      // Home + Index 回原点",
+      "    Index = 30,          // Index 回原点",
+      "    ForcedHome = 40,     // 强制 Home 回原点",
+      "    ForcedHomeIndex = 41 // 强制 Home + Index 回原点",
+      "}",
+      "",
+      "/// <summary>回零方向。对应 THomePrm.moveDir。</summary>",
+      "/// <remarks>Unconfigured = 还没指定：回零会直接抛异常，不猜方向（方向错 = 朝机构外跑）。</remarks>",
+      "public enum GtsHomeDir : short { Negative = -1, Positive = 1, Unconfigured = 0 }",
+      "",
+      "/// <summary>位置比较的数据源（GT_CompareData 的 source 参数）。</summary>",
+      "/// <remarks>必须与 MCT2008 配置里的「脉冲计数源」一致，否则比较点会落在错的计数上。</remarks>",
+      "public enum GtsCompareSource : short { PulseCounter = 0, ExternalEncoder = 1 }",
+      "",
+      "/// <summary>位置比较的 HSIO 输出方式（GT_CompareData 的 pulseType 参数）。</summary>",
+      "public enum GtsComparePulseType : short { Pulse = 0, Level = 1 }",
+      "",
+      "/// <summary>编码器捕获方式（GT_SetCaptureMode 的 mode 参数，手册 PDF p214）。</summary>",
+      "public enum GtsCaptureMode : short { Home = 1, Index = 2, Probe = 3, Hsio0 = 6, Hsio1 = 7 }"
+    ],
+    "GtsConfig": [
+      "/// <summary>控制器配置文件（*.cfg，由 MCT2008 生成）。</summary>",
+      "/// <remarks>为空表示不下发配置文件。手册明确：GT_LoadConfig 之后必须再调 GT_ClrSts 才生效。</remarks>",
+      "public string ConfigFilePath { get; set; } = string.Empty;",
+      "",
+      "/// <summary>轴上是否真的接了编码器（且计数随动）。</summary>",
+      "/// <remarks>",
+      "/// 固高的编码器通道可能是外部编码器，也可能是内部脉冲计数器（GT_EncOn / GT_EncOff 切换）。",
+      "/// 后者就是指令脉冲的副本 = 假反馈。**没接就保持 false** —— 此时 GetFeedbackMm 跟着指令走，",
+      "/// 拿它算跟随误差会得到恒为 0 的假结论。",
+      "/// </remarks>",
+      "public bool EncoderFeedbackWired { get; set; } = false;",
+      "",
+      "/// <summary>位置比较的数据源。必须与控制器配置里的「脉冲计数源」一致。</summary>",
+      "public GtsCompareSource CompareSource { get; set; } = GtsCompareSource.PulseCounter;",
+      "",
+      "/// <summary>位置比较的 HSIO 输出方式：脉冲还是电平。</summary>",
+      "public GtsComparePulseType ComparePulseType { get; set; } = GtsComparePulseType.Pulse;",
+      "",
+      "/// <summary>位置比较的脉冲宽度（单位 us，手册取值 1~32767）。</summary>",
+      "/// <remarks>ComparePulseType 为电平输出时该值无效。</remarks>",
+      "public short ComparePulseWidthUs { get; set; } = 1;",
+      "",
+      "/// <summary>位置捕获的触发沿：0=下降沿，1=上升沿（手册 PDF p215）。</summary>",
+      "public short LatchEdge { get; set; } = 0;",
+      "",
+      "/// <summary>回原点方式。默认 Home 回原点。</summary>",
+      "public GtsHomeMode HomeMode { get; set; } = GtsHomeMode.Home;",
+      "",
+      "/// <summary>回零方向。**默认不配置**（Unconfigured）—— 回零会抛异常，必须显式指定。</summary>",
+      "public GtsHomeDir HomeDirection { get; set; } = GtsHomeDir.Unconfigured;",
+      "",
+      "/// <summary>回零捕获沿：0=下降沿，1=上升沿。</summary>",
+      "public short HomeEdge { get; set; } = 0;",
+      "",
+      "/// <summary>回零低速（mm/s，THomePrm.velLow）。</summary>",
+      "public double HomeSpeedMmS { get; set; } = 20.0;",
+      "",
+      "/// <summary>回零高速（mm/s，THomePrm.velHigh）。</summary>",
+      "public double HomeFastSpeedMmS { get; set; } = 100.0;",
+      "",
+      "/// <summary>回零加速度（mm/s²）。</summary>",
+      "public double HomeAccMmS2 { get; set; } = 1000.0;",
+      "",
+      "/// <summary>回零搜索范围（mm）。0 = 用控制器默认（手册：显示为 805306368）。</summary>",
+      "public double HomeSearchDistanceMm { get; set; } = 0.0;",
+      "",
+      "/// <summary>回零最终停止位置相对原点的偏移（mm，THomePrm.homeOffset）。</summary>",
+      "public double HomeOffsetMm { get; set; } = 0.0;",
+      "",
+      "/// <summary>点动加速度（mm/s²）。</summary>",
+      "public double JogAccelMmS2 { get; set; } = 1000.0;",
+      "",
+      "/// <summary>控制器固件版本（Open 时读一次）。</summary>",
+      "public string FirmwareVersion { get; private set; } = string.Empty;"
+    ],
+    "GtsIoConsts": [
+      "// 手册 PDF p191 / p218 的 IO 类型枚举。IO 是「类型 + 位图」模型，不是物理通道号。",
+      "private const short DiTypeGpi = 4;    // MC_GPI 通用输入（DI 1~16 ↔ bit0~bit15）",
+      "private const short DoTypeGpo = 12;   // MC_GPO 通用输出（索引 1~16）"
+    ],
+    "GtsInternal": [
+      "/// <summary>读取轴状态字（32 位）。</summary>",
+      "private int ReadStatusWord(int axis)",
+      "{",
+      "    int sts = 0;",
+      "    var err = Native.GT_GetSts((short)(axis + 1), ref sts, 1, IntPtr.Zero);",
+      "    if (err != 0) throw new MotionException($\"读取轴 {axis} 状态失败，错误码 {err}{GtsErrorText(err)}\");",
+      "    return sts;",
+      "}",
+      "",
+      "/// <summary>读取轴的规划位置（原始脉冲）。</summary>",
+      "private long ReadAxisPrfPosPulse(int axis)",
+      "{",
+      "    double v = 0;",
+      "    var err = Native.GT_GetAxisPrfPos((short)(axis + 1), ref v, 1, IntPtr.Zero);",
+      "    if (err != 0) throw new MotionException($\"读取轴 {axis} 规划位置失败，错误码 {err}{GtsErrorText(err)}\");",
+      "    return (long)Math.Round(v);",
+      "}",
+      "",
+      "/// <summary>读取轴的编码器位置（原始脉冲）。</summary>",
+      "private long ReadAxisEncPosPulse(int axis)",
+      "{",
+      "    double v = 0;",
+      "    var err = Native.GT_GetAxisEncPos((short)(axis + 1), ref v, 1, IntPtr.Zero);",
+      "    if (err != 0) throw new MotionException($\"读取轴 {axis} 编码器位置失败，错误码 {err}{GtsErrorText(err)}\");",
+      "    return (long)Math.Round(v);",
+      "}",
+      "",
+      "/// <summary>mm/s → pulse/ms（固高速度单位是 pulse/ms，**不是** pulse/s）。</summary>",
+      "private static double ToPulsePerMs(double mmPerSec, double ppm) => mmPerSec * ppm / 1000.0;",
+      "",
+      "/// <summary>mm/s² → pulse/ms²。</summary>",
+      "private static double ToPulsePerMs2(double mmPerSec2, double ppm) => mmPerSec2 * ppm / 1000000.0;",
+      "",
+      "/// <summary>按统一的运动参数生成固高点位运动参数。</summary>",
+      "private static GtsTrapPrm BuildTrapPrm(Motion.MotionProfile profile, double ppm)",
+      "{",
+      "    var acc = profile.AccelMmS2 > 0 ? profile.AccelMmS2 : 1000.0;",
+      "    // smoothTime 单位是毫秒（手册 PDF p227，取值 0~50）。",
+      "    // 由 jerk 反算是**近似关系**，精确对应需实机标定 —— 故夹在 [0, 50]。",
+      "    var smooth = profile.JerkMmS3 > 0 ? profile.VelocityMmS / profile.JerkMmS3 * 1000.0 : 0.0;",
+      "    if (smooth < 0) smooth = 0;",
+      "    if (smooth > 50) smooth = 50;",
+      "    return new GtsTrapPrm",
+      "    {",
+      "        acc = ToPulsePerMs2(acc, ppm),",
+      "        dec = ToPulsePerMs2(acc, ppm),",
+      "        velStart = 0,",
+      "        smoothTime = (short)Math.Round(smooth)",
+      "    };",
+      "}",
+      "",
+      "/// <summary>读一次固件版本号（控制器内部分配的字符串，不能 free）。</summary>",
+      "private void ReadFirmwareVersion()",
+      "{",
+      "    IntPtr p = IntPtr.Zero;",
+      "    var err = Native.GT_GetVersion(ref p);",
+      "    if (err == 0 && p != IntPtr.Zero)",
+      "    {",
+      "        var s = Marshal.PtrToStringAnsi(p);",
+      "        if (!string.IsNullOrEmpty(s)) FirmwareVersion = s;",
+      "    }",
+      "}"
+    ],
+    "GtsErrorText": [
+      "/// <summary>指令返回值含义（手册 PDF p18 表 3-1《运动控制器指令返回值定义》）。</summary>",
+      "private static string GtsErrorText(int code)",
+      "{",
+      "    switch (code)",
+      "    {",
+      "        case 0: return \"（成功）\";",
+      "        case 1: return \"（指令执行错误：检查该指令的执行条件是否满足）\";",
+      "        case 2: return \"（license 不支持：需要此功能请联系厂商）\";",
+      "        case 7: return \"（指令参数错误：检查参数取值）\";",
+      "        case 8: return \"（该指令不被当前 DSP 固件支持）\";",
+      "        case -1:",
+      "        case -2:",
+      "        case -3:",
+      "        case -4:",
+      "        case -5: return \"（与运动控制器通讯失败：检查驱动是否安装、卡是否插牢、金手指是否干净）\";",
+      "        case -6: return \"（打开控制器失败：驱动未装 / GT_Open 调了两次 / 别的进程已占用）\";",
+      "        case -7: return \"（运动控制器没有响应）\";",
+      "        case -8: return \"（多线程资源忙：指令在线程里执行超时）\";",
+      "        default: return string.Empty;",
+      "    }",
+      "}"
+    ]
+  },
+  "dll_variant": "64bit_single_card",
+  "dll_variants": [
+    "64bit_single_card",
+    "32bit_single_card"
+  ]
+}

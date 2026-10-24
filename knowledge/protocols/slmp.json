@@ -1,0 +1,189 @@
+{
+  "protocol": "slmp",
+  "schema_version": "slmp_extract/1",
+  "generated": "2026-10-21",
+  "note": "FX5 User's Manual (SLMP) 骨架机械提取；消息图解区 pypdf 列打散不可还原，相关值标 judgment + needs:manual_check（不冒充机械提取）。",
+  "spec_version": {
+    "documents": [
+      {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "doc_short": "FX5-SLMP",
+        "manual_number": "JY997D54401",
+        "pdf_pages": 114,
+        "sha256": "6e273720b435e18e5ccf422929cfbc2d1aa1e1ef0317bbde2ff92b14589a65a5",
+        "source_url": "http://www.atronika.com/Mitsubishi/PLC/MITSUBISHI_manual_plc_fx5_slmp.pdf",
+        "official_entry": "https://www.mitsubishielectric.co.jp/fa/download/search.page?mode=manual",
+        "source_note": "官方下载页为 JS 动态无法直链，经镜像分发；一手件以手册编号+sha256 指纹验证，内容为三菱官方手册原文（首页标题已核对）。"
+      }
+    ]
+  },
+  "entries": [
+    {
+      "id": "SLMP-FRAME-3E",
+      "kind": "frame_format",
+      "name": "3E frame (QnA compatible 3E frame of MC protocol)",
+      "meaning": "SLMP 数据通信帧与 MC 协议 QnA 兼容 3E 帧相同；用于从外部设备访问 CPU 模块全部软元件。支持二进制码/ASCII 码两种数据代码（由 GX Works3 模块参数决定）。",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "2.1",
+        "page": 13,
+        "quote": "The message format is the same as the QnA compatible 3E frame of MC protocol."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-CMD-0401",
+      "kind": "command",
+      "name": "Device Read (Batch)",
+      "command": "0401H",
+      "subcommand": "0001H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.1",
+        "page": 41,
+        "quote": "nt Number of points processed per communication Device Read (Batch) 0401H 0001H"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-CMD-1401",
+      "kind": "command",
+      "name": "Device Write (Batch)",
+      "command": "1401H",
+      "subcommand": "0001H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.1",
+        "page": 41,
+        "quote": "ords (7680 points) BIN: 960 words (15360 points) Device Write (Batch) 1401H 0001H"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-CMD-0403",
+      "kind": "command",
+      "name": "Device Read Random",
+      "command": "0403H",
+      "subcommand": "0000H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.1",
+        "page": 41,
+        "quote": "words (7680 points) BIN: 960 words (15360 points) Device Read Random 0403H 0000H"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-DEV-Input-9C",
+      "kind": "device_code",
+      "name": "Input",
+      "data_type": "Bit",
+      "spec_format": "X***",
+      "ascii_code": "9CH",
+      "binary_code": "9C00H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.2",
+        "page": 46,
+        "quote": "Input Bit X* (X***) 9CH (9C00H) Specify in the range of device numbers of the module to"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-DEV-D*-A8",
+      "kind": "device_code",
+      "name": "D*",
+      "data_type": "Word",
+      "spec_format": "D***",
+      "ascii_code": "A8H",
+      "binary_code": "A800H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.2",
+        "page": 46,
+        "quote": "Word D* (D***) A8H (A800H) Specify in the range of device numbers of the module to acces"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-DEV-Z*-CC",
+      "kind": "device_code",
+      "name": "Z*",
+      "data_type": "Word",
+      "spec_format": "Z***",
+      "ascii_code": "CCH",
+      "binary_code": "CC00H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.2",
+        "page": 47,
+        "quote": "Word Z* (Z***) CCH (CC00H) Specify in the range of device numbers of the module to acces"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-DEV-R*-AF",
+      "kind": "device_code",
+      "name": "R*",
+      "data_type": "Word",
+      "spec_format": "R***",
+      "ascii_code": "AFH",
+      "binary_code": "AF00H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.2",
+        "page": 47,
+        "quote": "Word R* (R***) AFH (AF00H) Decimal  ZR (ZR**) B0H (B000H) Decimal  Link direct device *"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-DEV-X*-9C",
+      "kind": "device_code",
+      "name": "X*",
+      "data_type": "Bit",
+      "spec_format": "X***",
+      "ascii_code": "9CH",
+      "binary_code": "9C00H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.2",
+        "page": 47,
+        "quote": "Bit X* (X***) 9CH (9C00H) Hexade cimal  Link output Y* (Y***) 9DH (9D00H) Hexade cimal "
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-DEV-W*-B4",
+      "kind": "device_code",
+      "name": "W*",
+      "data_type": "Word",
+      "spec_format": "W***",
+      "ascii_code": "B4H",
+      "binary_code": "B400H",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "4.2",
+        "page": 47,
+        "quote": "Word W* (W***) B4H (B400H) Hexade cimal  Link special register SW (SW**) B5H (B500H) Hexa"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "SLMP-SUBHEADER",
+      "kind": "frame_field",
+      "name": "Subheader (request 0x5000 / response 0xD000, 3E binary frame)",
+      "meaning": "3E 帧副头部：请求 0x5000（正常响应 0xD000、错误 0xD4/0xD5+信息——值来自消息图解，pypdf 对图解列打散无法机械还原，须人工核对后再转为 mechanical。",
+      "spec_ref": {
+        "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+        "section": "3.1 Subheader configuration",
+        "page": 19,
+        "quote": "Subheader configuration",
+        "provenance": "judgment",
+        "needs": "manual_check"
+      },
+      "provenance": "judgment",
+      "needs": "manual_check"
+    }
+  ]
+}

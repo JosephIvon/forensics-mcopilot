@@ -1,0 +1,35 @@
+﻿函数名,官方原型,PDF页码,返回类型,核对状态
+GT_Open,"short GT_Open(short channel=0, short param=1)",211,short,needs-manual-check
+GT_Close,short GT_Close(),174,short,needs-manual-check
+GT_Reset,short GT_Reset(),212,short,needs-manual-check
+GT_LoadConfig,short GT_LoadConfig(char *pFile),210,short,needs-manual-check
+GT_ClrSts,"short GT_ClrSts(short axis, short count=1)",174,short,needs-manual-check
+GT_AxisOn,short GT_AxisOn(short axis),169,short,needs-manual-check
+GT_AxisOff,short GT_AxisOff(short axis),169,short,needs-manual-check
+GT_GetSts,"short GT_GetSts(short axis, long *pSts, short count=1, unsigned long *pClock=NULL)",201,short,needs-manual-check
+GT_GetPrfMode,"short GT_GetPrfMode(short profile, long *pValue, short count=1, unsigned long *pClock=NULL)",199,short,needs-manual-check
+GT_GetPrfPos,"short GT_GetPrfPos(short profile, double *pValue, short count=1, unsigned long *pClock=NULL)",199,short,needs-manual-check
+GT_GetAxisPrfPos,"short GT_GetAxisPrfPos(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)",185,short,needs-manual-check
+GT_GetAxisEncPos,"short GT_GetAxisEncPos(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)",184,short,needs-manual-check
+GT_GetAxisError,"short GT_GetAxisError(short axis, double *pValue, short count=1, unsigned long *pClock=NULL)",184,short,needs-manual-check
+GT_PrfTrap,short GT_PrfTrap(short profile),212,short,needs-manual-check
+GT_SetTrapPrm,"short GT_SetTrapPrm(short profile, TTrapPrm *pPrm)",226,short,needs-manual-check
+GT_SetPos,"short GT_SetPos(short profile, long pos)",224,short,needs-manual-check
+GT_SetVel,"short GT_SetVel(short profile, double vel)",228,short,needs-manual-check
+GT_Update,short GT_Update(long mask),231,short,needs-manual-check
+GT_PrfJog,short GT_PrfJog(short profile),212,short,needs-manual-check
+GT_SetJogPrm,"short GT_SetJogPrm(short profile, TJogPrm *pPrm)",222,short,needs-manual-check
+GT_Stop,"short GT_Stop(long mask, long option)",229,short,needs-manual-check
+GT_ZeroPos,"short GT_ZeroPos(short axis, short count)",231,short,needs-manual-check
+GT_GoHome,"short GT_GoHome(short axis, THomePrm *pHomePrm)",204,short,needs-manual-check
+GT_GetHomePrm,"short GT_GetHomePrm(short axis, THomePrm *pHomePrm)",195,short,needs-manual-check
+GT_GetDi,"short GT_GetDi(short diType, long *pValue)",191,short,needs-manual-check
+GT_GetDo,"short GT_GetDo(short doType, long *pValue)",193,short,needs-manual-check
+GT_SetDo,"short GT_SetDo(short doType, long value)",218,short,needs-manual-check
+GT_SetDoBit,"short GT_SetDoBit(short doType, short doIndex, short value)",219,short,needs-manual-check
+GT_CompareData,"short GT_CompareData(short encoder, short source, short pulseType, short startLevel, short time, long *pBuf1, short count1, long *pBuf2, short count2)",175,short,needs-manual-check
+GT_CompareStop,short GT_CompareStop(),178,short,needs-manual-check
+GT_SetCaptureMode,"short GT_SetCaptureMode(short encoder, short mode)",214,short,needs-manual-check
+GT_SetCaptureSense,"short GT_SetCaptureSense(short encoder, short mode, short sense)",215,short,needs-manual-check
+GT_GetCaptureStatus,"short GT_GetCaptureStatus(short encoder, short *pStatus, long *pValue, short count=1, unsigned long *pClock=NULL)",187,short,needs-manual-check
+GT_GetVersion,short GT_GetVersion(char **pVersion),203,short,needs-manual-check

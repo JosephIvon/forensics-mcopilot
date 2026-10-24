@@ -1,0 +1,35 @@
+MIT License
+
+SPDX-License-Identifier: MIT
+
+Copyright (c) 2026 JosephIvon
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+本许可只覆盖**本项目自有的代码与文档**。本仓同时收录/引用了第三方材料
+（厂商与标准原件、真机样本数据集、社区数据等），那些材料**不适用**本许可，
+其权利归各自权利人；逐件状态见 [NOTICE.md](NOTICE.md)。
+
+This license covers **this project's own code and documentation** only. This
+repository also redistributes or references third-party material (vendor and
+standards originals, real-machine sample datasets, community corpora). Those
+materials are **not** covered by this license; their rights remain with their
+respective owners. See [NOTICE.md](NOTICE.md) for the per-item inventory.

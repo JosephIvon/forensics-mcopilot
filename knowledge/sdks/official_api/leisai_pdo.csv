@@ -1,0 +1,24 @@
+主索引(HEX),子索引(HEX),对象名称,数据类型,手册标注的PDO映射,按CiA402惯例应为,是否一致,依据
+603F,00,错误码(Error Code),UINT16,T_PDO,R_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6040,00,控制字(Controlword),UINT16,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6041,00,状态字(Statuword),UINT16,T_PDO,R_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6060,00,操作模式(Modes of operation),INT8,T_PDO,T_PDO,是,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6061,00,操作模式显示(modes of operation display),INT8,R_PDO,R_PDO,是,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6064,00,实际位置(position actual value),INT32,T_PDO,R_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+606C,00,速度实际值(Velocity actual value),INT32,T_PDO,R_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+607A,00,目标位置(Target position),INT32,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+60FD,00,数字输入(Digital inputs),UINT32,T_PDO,R_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+60FE,01,物理输出开启(Physical outputs),UINT32,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+60FE,02,物理输出使能(Bit mask),UINT32,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+607C,00,原点偏移(Home offset),INT32,NO,NO,是,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6098,00,回零方式(Homing method),INT8,NO,NO,是,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6099,01,回零高速(Speed during search for switch),UINT32,NO,NO,是,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6099,02,回零低速(Speed during search for zero),UINT32,NO,NO,是,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+609A,00,回零加速度(Homing acceleration),UINT32,NO,NO,是,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6092,01,每转脉冲数(Feed),UINT32,NO,NO,是,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6071,00,目标转矩(Target touque),INT16,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6072,00,最大转矩(Max touque),UINT16,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6077,00,转矩实际值(Touque actual value),INT16,T_PDO,R_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6080,00,最大电机速度(Max motor speed),UINT32,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+6087,00,转矩变化率(Touque slope),UINT32,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同
+60B2,00,转矩偏移值(Touque offset),INT16,R_PDO,T_PDO,★否★,DMC-E 手册 附录 3 表 F3.0（p335）/ EMC 手册 附录 3 表 F3.0（p258），两本逐行相同

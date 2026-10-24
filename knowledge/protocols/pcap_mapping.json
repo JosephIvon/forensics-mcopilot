@@ -1,0 +1,124 @@
+{
+  "schema": "lemay_to_comm_log/1",
+  "generated": "2026-10-21",
+  "owner": "scripts/lemay_corpus.py（--make-fixtures / --gate-fixtures / --gate-full）",
+  "contract": "knowledge/contracts/comm_log_contract.json（comm_log/1，唯一裁判 scripts/validate_comm_log.py）",
+  "purpose": "Lemay CSET16 真机测试床 Modbus 数据集逐包标注 CSV + pcap → comm_log/1 的映射规则与依据。任务口径：只做 CSV→comm_log→检出→判卷第一切片；检出引擎 src/mcopilot/agents/forensics_comm.py 只读复用、不加规则。",
+  "dataset": {
+    "name": "Modbus_dataset（Lemay et al., CSET'16，antoine-lemay/Modbus_dataset）",
+    "location": "out/_corpus_pcaps/（不入库；缺失则门禁 SKIP）",
+    "acquisition": "真机测试床抓包（6 Modbus/TCP 从站 192.168.1.101-.106 + 主站 192.168.1.100），非仿真",
+    "key_finding": "『预转录带标签 CSV』实际只有两列 packet_index;label——它是逐包攻击窗口标注，不含时间/源目/协议字段；协议字段必须从配对 pcap 提取（本映射用纯 stdlib 解析 classic pcap，无 tshark）。已实测：CSV 行数 == pcap 包数，逐一对齐（polling 58325、fake_command 11166、CnC 1426 等）。",
+    "sha256": {
+      "Modbus_polling_only_6RTU_labeled.csv": "见 docs/项目回顾与收尾_20261021.md 第十一节清单（入库夹具另记 lemay_sample_expected.json meta）",
+      "note": "全量 sha256 清单入 docs 十一节；本文件不重复维护大表，夹具 meta 内记夹具来源两份文件的 sha256。"
+    }
+  },
+  "csv_columns": [
+    {
+      "index": 0,
+      "observed_name": "packet_index",
+      "semantics": "pcap 包序号，1 起、连续、无表头；第 N 行 ↔ pcap 第 N 个包（根契约，实测三份数据集行数=包数逐一对齐）",
+      "maps_to": "不直接映射；用作 label 对齐键与 seq 取值源"
+    },
+    {
+      "index": 1,
+      "observed_name": "label",
+      "semantics": "攻击窗口二元标注：0=正常，1=该包处于攻击窗口（含攻击连接的握手/挥手包）",
+      "maps_to": "扩展字段 label（透传，按帧起始包号对齐）；判卷窗口口径的真值来源"
+    }
+  ],
+  "mapping": [
+    {
+      "target": "schema",
+      "value": "comm_log/1",
+      "rationale": "契约 R1：自报 schema 必须与契约一致"
+    },
+    {
+      "target": "timestamp_utc",
+      "source": "pcap 每包头 ts_sec/ts_usec（本数据集全部为小端 µs classic pcap，magic d4c3b2a1 实测）",
+      "rationale": "抓包时刻即帧时刻；UTC 化 = epoch + ts（抓包机时区不进映射，RFC/pcap 时间戳本就是 epoch 秒）；输出微秒精度 ISO8601 Z 结尾（契约 1-6 位小数口径）"
+    },
+    {
+      "target": "seq",
+      "source": "pcap 包序号（1 起全局计数，同 label 对齐键）",
+      "rationale": "全局序号在任何 (channel, device.host_or_port) 流内都严格递增 → 契约 I1 自动满足；且 seq 可回查原始包号，与 L 行号、标签对齐三位一体"
+    },
+    {
+      "target": "channel",
+      "value": "tcp",
+      "rationale": "本数据集全部 Modbus/TCP（502 端口）；broadcast 仅 RTU 合法（契约 I2），TCP 面不产生 broadcast"
+    },
+    {
+      "target": "direction",
+      "source": "TCP 端口：源端口==502 → resp；否则（目的端口==502）→ req",
+      "rationale": "Modbus/TCP 从站监听 502；响应必从 502 发出。契约 direction 词表 req/resp/broadcast 中 TCP 面只可能前两者"
+    },
+    {
+      "target": "unit_id",
+      "source": "MBAP 头第 7 字节（uid）",
+      "rationale": "Modbus/TCP 事务的从站地址透传。数据集事实：全部帧 uid=1（6 台从站靠 IP 区分，MBAP uid 恒 1）——设备身份以 device.host_or_port 的 IP 表达，不猜改成 IP 末字节"
+    },
+    {
+      "target": "function_code",
+      "source": "MBAP 后 PDU 首字节；若 fc&0x80 → 取 fc&0x7F（基础码），异常性转 exception_code 表达",
+      "rationale": "契约规则：异常响应不把 FC+0x80 填 function_code（AP V1.1b3 §4.5）；实现依据 modbus.json protocols.tcp.mbap_header"
+    },
+    {
+      "target": "exception_code",
+      "source": "异常响应 PDU 第二字节（仅 fc&0x80 时在场）",
+      "rationale": "契约 I3：exception_code 只允许出现在 resp——本映射同时校验方向，req 向出现 FC|0x80 属未知形态不计帧（malformed_leftovers 计数）"
+    },
+    {
+      "target": "device.host_or_port",
+      "source": "从站端点：req=目的 IP、resp=源 IP，恒带 :502",
+      "rationale": "『设备』=被访问的从站；读写双方向统一记从站端点，检出引擎的流键（同设备异常风暴等）才按设备聚合。主站端入扩展字段 client"
+    },
+    {
+      "target": "frame_hex",
+      "source": "PDU 原始字节（仅异常响应携带）",
+      "rationale": "契约 recommended_when：异常帧建议携带原始字节，供归因层区分真异常与解析错误；普通帧省略控文件体量"
+    },
+    {
+      "target": "label（扩展）",
+      "source": "CSV 第 1 列，按帧起始包号对齐",
+      "rationale": "真值透传供判卷；契约允许额外字段。粘包时同段多 PDU 共用该段包号，拆包时 PDU 记起始包号（攻击从哪帧开始的直觉归属）"
+    },
+    {
+      "target": "pcap_index / client / source（扩展）",
+      "source": "包序号 / 主站端点 ip:ephemeral_port / 数据集文件名",
+      "rationale": "可回查性：每条记录能定位回 pcap 原始包与连接"
+    }
+  ],
+  "parsing_rules": {
+    "pcap_format": "classic pcap 4 magic（大小端 × µs/ns），链路层只认 EN10MB；pcapng 拒载",
+    "stream_reassembly": "每条双向 TCP 流（排序四元组分桶）一个顺序携带缓冲：追加载荷 → 贪心吐完整 MBAP+PDU。粘包（一段多 PDU）与拆包（PDU 跨段）同一路径，单遍线性无排序",
+    "malformed": "MBAP 头非法（pid≠0 / len<2）或流尾残字节：计数 stats.malformed_leftovers，不映射成 comm_log 行（契约必填字段填不出来时不造数据）；核心六段实测全部为 0",
+    "order_assumption": "同流字节按包序拼接（顺序到达假设）；捕获级乱序/重传不在本切片建模（边界，见 boundaries）",
+    "non_modbus_packets": "握手/ARP/UDP/SMB 等非 502 包照占包序号（保标签对齐）但不产出帧；逐包构成入报告 packet_kinds"
+  },
+  "segment_registry": {
+    "core_six": "natural_polling_only（自然轮询，全 0 标签）+ attack_fake_command / attack_cnc_uploading / attack_exploit_ms08 / attack_moving_two_files / attack_characterization（五攻击段）",
+    "retained_not_mapped": {
+      "run1_6rtu(1).pcap / run11.pcap": "带正常操作的长时间自然段（含合法 FC5 写，标签全 0）——验证『FC5≠攻击』的天然样本；本切片不映射，避免范围膨胀，数据留存",
+      "4SICS-GeekLounge-151020/151021/151022.pcap": "真实 S7comm 现场流量（~340MB，无逐包标签 CSV）。defer：①契约 scope.out 明确 S7 需另立 schema id，不共用 comm_log/1 词表；②需 TPKT/COTP/S7 解析器切片；③本批已证明的管线与判卷口径可直接复用，接入时另开映射文件。数据已留存 out/_corpus_pcaps"
+    }
+  },
+  "judging": {
+    "natural_fpr": "自然段（polling_only，标签全 0）上检出占比 = 真实分布误报率首测；只报告不设阈值（首测无基线）",
+    "attack_window_coverage": "攻击段：检出证据行覆盖到的标签 1 帧占比；标签 1 全在非 502 端口的场景如实报 n/a（Modbus 面零攻击帧）",
+    "honesty": "标签是攻击窗口二元标注，非 cause 级真值；检出的协议归因（exception_storm 等）不做 cause 级对分，不装能评"
+  },
+  "boundaries": [
+    "TCP RST/FIN 不映射 error=reset：正常四次挥手与异常重置在无状态机上无法区分，硬映射会把每条正常连接关闭都记成链路失败——留给带连接状态机的下一切片",
+    "捕获级乱序/重传/丢包不建模：核心六段实测 malformed_leftovers=0、无重传污染；4SICS 量级（重传率 ~22%）接入时必须先补",
+    "TCP 序列号缺口不检测：段丢失会把后续字节拼进错误边界，本切片以 malformed_leftovers 计数兜底暴露",
+    "攻击窗口含攻击连接握手包：帧级 label1 帧数 < 包级 label1 包数，两数分报不混用"
+  ],
+  "knowledge_refs": [
+    "knowledge/contracts/comm_log_contract.json（字段/不变式 I1-I6/红线 R1-R3）",
+    "knowledge/protocols/modbus.json#protocols.tcp.mbap_header（MBAP 事务标识/协议标识/长度域/单元标识）",
+    "knowledge/protocols/modbus.json#exception_codes（异常码域 1..0x0B）",
+    "Lemay et al., «Attack Scenarios in Industrial Control Systems», CSET'16（数据集出处，out/_corpus_pcaps/README.md）"
+  ]
+}

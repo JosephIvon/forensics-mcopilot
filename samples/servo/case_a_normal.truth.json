@@ -1,0 +1,8 @@
+{
+  "case": "正常二阶伺服",
+  "wn_rad_s": 40.0,
+  "zeta": 0.7,
+  "overshoot_pct": 4.598791026026775,
+  "expect_findings": [],
+  "note": "阻尼充足，无谐振；不应报出高危项"
+}

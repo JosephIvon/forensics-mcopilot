@@ -1,0 +1,398 @@
+{
+  "schema": "coverage_ledger/1",
+  "meta": {
+    "updated": "2026-10-22",
+    "purpose": "同一条工业需求由三个智能体各实现了一个项目（Trae 代码工厂 / MiniMax mcopilot / Qoder axiscope）。本账本把三家的产出物逐条需求对齐：谁实现了什么、验证到哪一步、缺口是什么。",
+    "rule": "完成度以本账本为准，不以任何单项目的自述百分比为准。自证（自己测自己）是最低档；每升一档必须有外部证据，证据字段给出可查的文件/报告。",
+    "projects": {
+      "trae_factory": {
+        "name": "上位机代码工厂",
+        "vendor": "Trae（GLM 系）",
+        "path": "../trae_factory",
+        "role": "广度：输入品牌/轴数/工艺 → 一键生成 6 品牌 C# 分层工程 + Modbus 驱动（gen/*.js）；v2 协议域分工——工厂管『生成驱动代码』，mcopilot P1 管『带真值链的协议知识库』，互不重复"
+      },
+      "mcopilot": {
+        "name": "工业需求工具链 mcopilot",
+        "vendor": "MiniMax",
+        "path": ".",
+        "role": "深度：真值钉扎的适配层（v2 起核心换靶协议栈，协议层 69%）/ 日志取证（第二核心）/ 运动参数预算 / 评审；servo KB v5 封版（垂直件+附件）、SPC 冻结；CLI+MCP，441 项回归测试"
+      },
+      "axiscope": {
+        "name": "axiscope 数据契约与知识库",
+        "vendor": "Qoder",
+        "path": "../axiscope",
+        "role": "验证：C1~C7 数据契约 + KB0~KB8 知识库 + 数据溯源存证 + 评测纪律（逆向诊断链规格，src 待实现）"
+      }
+    },
+    "verification_levels": {
+      "官方钉扎": "每条结论钉在官方一手件（手册章节 / 官方绑定行号 / PE 导出表），机器可复核",
+      "交叉审计": "被另一个独立实现验证性执行核验过（实跑编译/数值复验，不是读自述），审计报告在档",
+      "机器比对": "两个独立实现输出一致（如接缝 1 的签名口径全量比对）",
+      "自证": "只有实现方自己的测试或演示背书（同源，采信度最低，Qoder 审计纪律 A-89）",
+      "未验证": "规格/知识存在但无实现、无对照"
+    },
+    "plan_v2": {
+      "doc": "docs/开发计划_v2_协议层.md（commit 283439f）",
+      "basis": "行业在招岗位需求面调研（5 城市 × 3 搜索词、64 份有效岗位描述）：协议层 69% / UI 57% / 现场调试 43% / DB·MES 39% / 运动控制卡SDK 14% / 伺服诊断 12% / SPC 0%（采集管道证据已入库 docs/requirements_provenance_20261021/ 可复核）",
+      "repositioning": {
+        "adapter": "核心：换靶协议栈适配（协议层 69%）——抽象已被 NModbus/Snap7/PLCopen 解决，交付带真值链的协议知识提取 + C# 模板 + 能力矩阵；adapter 管道五件套（手册→提取→provenance→C# 生成→契约测试）与 knowledge/sdks 的 schema 直接复用于协议域",
+        "forensics": "第二核心（现场调试 43%），P4 增加协议感知（通信错误日志直接归因协议层）",
+        "servo": "垂直件（FAE/调试人群 12%）+ adapter 附件；KB v5（commit f0d9144）封版，停止新增投入；P4 作『接进来顺手诊断』附件演示",
+        "spc": "冻结（0%）——既有 SPC 工具与评测集资产（shared_eval BEH-19 已机器比对闭环）原样保留，停止新增判据"
+      },
+      "phases": {
+        "P0": "✅ 完成（2026-10-20）：封版/冻结决策入账（本节 repositioning）+ README 差异化对照表 + 资产盘点 docs/盘点_adapter管道五件套_协议域复用.md（五件套 4/5 已复用或等价落地）",
+        "P1": "✅ 完成（2026-10-20，双轨收敛）：knowledge/protocols/modbus.json（modbus_extract/1：FC 21/异常码 11 含 2 条显式 judgment/寄存器模型/framing+RTU CRC16/limits 11 项，pdf2txt 纯标准库提取，提取说明.md 记录方法与缺陷）+ knowledge/templates/protocol/（ModbusTcpClient.cs/ModbusRtuClient.cs/ModbusFrameTests.cs 帧黄金测试 30 例（26+广播帧级 4，2026-10-21 口径））+ quotes 反查工具 scripts/check_modbus_quotes.py（53/53：严格 36/签名同源 17/judgment 跳过 7；复核修复 mbap_header 页码 off-by-one 与一处标注矛盾）",
+        "P2": "✅ 契约完成+SLMP 全链（2026-10-21）：ProtocolContractTests C1-C10（Modbus）+ C1-C9（SLMP）全过、双自建契约桩（smoke_modbus/smoke_slmp）——契约互测修出真 bug：Modbus 位响应未裁剪填充位（TCP/RTU 四处）、SLMP 长度字段 offset 错位（写进 multi 站号位）、桩响应副头部未改 D000；SLMP 客户端 SlmpTcpClient.cs（3E 二进制，副头部/结束代码 judgment 边界显式不编造翻译）+ slmp.json 知识库（FX5 手册 JY997D54401 镜像分发+指纹验证）；TODO[需实测] T1-T5 显式追踪（docs/TODO需实测_协议域.md）；余量：第三方模拟器对跑（T1）、SLMP 位单位（T4）、副头部/错误码真机核对（T5）",
+        "P3": "◐ 矩阵完成+协议域冻结（2026-10-21）：capability_matrix.{json,md}（协议 6 行/特性格 32=已入库与提取中协议×8，未入库协议不占格；S7 181 条（2026-10-21 Snap7 1.4.3 源码取证后，原记 166/judgment 6 作废，mechanical-evidence 20 条）来源=Snap7 逆向文档+源码取证已标注；Focas 已入库 173 条（focas.json，inventcom 复刻手册主源+影印 PDF 佐证，judgment 3）、SECS-GEM 因 SEMI 收费延期）+ 轻对账测试（仅知识文件存在性 + T 编号双向；2026-10-21 过度设计自查后精简：删状态词表/契约产物/stats 分布三个对账——记账成本超防漂移收益）。**冻结决定：不再启动第三协议、不再加深 SLMP——下一里程碑改为消费者里程碑（工厂管线生成真实含 Modbus/SLMP 读写场景的项目），有消费者后再按需加深**；Focas 一手件可得性存疑（发那科版权库）如实记录",
+        "P4": "forensics 协议感知 + 真机验证波（TODO[需实测] 逐条消除：docs/TODO需实测_协议域.md T1-T3）+ servo 附件演示"
+      },
+      "acceptance_gate": "每阶段通用验收：① 测试全绿 + 编译检查过 ② provenance 无裸提取 ③ 需求覆盖率不回退（requirements report 复测，管道现成）④ 诚实边界章节随更新",
+      "ledger_alignment": "本账本继续作为覆盖真相源：既有 entries 不改历史证据，只按 v2 定位加权解读（协议域新工作从 P1 起按 entries + verification_levels 原纪律入账）；servo/SPC 相关行标注封版/冻结定位"
+    },
+    "path_base": "相对本仓根目录（knowledge/coverage_ledger.json 所在仓的根）——同级兄弟工程"
+  },
+  "entries": [
+    {
+      "impls": [
+        {
+          "project": "trae_factory",
+          "artifact": "gen/core.js 生成分层工程（IMotionController 抽象层 / Adapters / Virtual / samples / build）",
+          "coverage": "一键生成可编译分层工程，业务层只依赖抽象接口",
+          "verification": "交叉审计",
+          "evidence": "axiscope《AUDIT-glm-code-factory》：实跑 csc 重编译 0/0，『换卡只改一行、业务代码零改动』实测成立；接缝 3 后 Virtual 全方法带越界轴号/端口守卫（BEH-08 双方都验），GlueDemo 内嵌 BehaviorSelfCheck 七项行为断言（双方都验 10）",
+          "gap": "审计曾发现 Brand.Acs 枚举与实现不一致（改 Brand.Acs 直接抛异常），修复后未复查"
+        },
+        {
+          "project": "mcopilot",
+          "artifact": "adapter_gen（抽象层 + 适配层 + 契约测试生成）+ 接缝 3（shared_eval 对照矩阵）",
+          "coverage": "同一契约测试跑在多家品牌适配器上（换卡不改业务代码的回归验证）；15 项仿真器行为断言在工厂 Virtual（第二实现）上有对照点",
+          "verification": "交叉审计",
+          "evidence": "306→378 项 pytest + Roslyn 编译 + 仿真器自检 15/15；接缝 3 后其中插补/圆弧等行为断言与工厂 Virtual 实测互认（out/joint_eval.md：双方都验 2）",
+          "gap": "伺服物理断言（跟随误差量级）仍只有单实现对照；轴号越界校验在工厂侧是整改清单首位（BEH-08）"
+        }
+      ],
+      "requirement": "R-02"
+    },
+    {
+      "impls": [
+        {
+          "project": "trae_factory",
+          "artifact": "gen/adapters_kb.js 六品牌适配器知识库 + 接缝 1（truth_kb.js）",
+          "coverage": "6 品牌生成（含 mcopilot 因无一手件未做的高川/软赢/ACS）+ Modbus",
+          "verification": "机器比对",
+          "evidence": "接缝 1（2026-10-20）：58 条 P/Invoke 中 49 条与 mcopilot 知识库口径一致、不一致 0；9 条未收录全部显式降级 TODO；产物自动带 [源|核对|提取] 真值链",
+          "gap": "高川/软赢/ACS 无一手件（全 check=none）；9 条增补候选见 mcopilot docs/接缝_工厂KB增补候选.md 待入库"
+        },
+        {
+          "project": "mcopilot",
+          "artifact": "knowledge/sdks/{dmc,gts,zmotion}.json + scripts/verify_traekb_citations.py + adapter_gen",
+          "coverage": "2 品牌 109 条 P/Invoke，每条带 provenance（官方绑定行号 + PE 导出表背书）",
+          "verification": "官方钉扎",
+          "evidence": "R1~R6 机器校验（tests/test_trae_truth_bridge.py（4 项，HEAD 实测）+ scripts/verify_traekb_citations.py）；check/extraction 两轴 + 真值链进生成代码",
+          "gap": "固高降级绑定待拍板（会破『每条必钉一手件』硬规则）；ACS 形态不同需先定通信库路线；菁赛/软赢/高川连公开一手件都不足"
+        },
+        {
+          "project": "axiscope",
+          "artifact": "docs/AUDIT-minimax-mcopilot.md + docs/AUDIT-glm-code-factory.md",
+          "coverage": "对另两家适配层/工厂的验证性执行审计（真实编译 + 独立数值校验 + 逐行读源码查硬编码）",
+          "verification": "交叉审计",
+          "evidence": "两份审计报告在档；抓出工厂函数名凭记忆生成（栈损坏级）与 mcopilot 样例同源自证两处要害",
+          "gap": "审计是时点行为，不随实现演化自动复验（签名正确性已由接缝 1 自动化，架构级审计仍靠手工）"
+        }
+      ],
+      "requirement": "R-03"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "motion_lab（S 曲线/到位时间/停止距离/跟随误差预算 + 黄金测试向量）",
+          "coverage": "7 段 jerk 受限 S 曲线、短距退化、v/a 限幅",
+          "verification": "交叉审计",
+          "evidence": "axiscope《AUDIT-minimax-mcopilot》§一：独立数值复验，4 组工况端点误差 <1e-6 mm，短距工况正确退化为三角曲线",
+          "gap": "轨迹平滑的前瞻规划未建"
+        },
+        {
+          "project": "trae_factory",
+          "artifact": "Virtual 控制器 + samples 工艺端到端流程（回零→走胶→圆弧→DI 互锁→力控→SPC）+ trae_factory@954c210 out/mc_all/docs/JointEval.md",
+          "coverage": "流程编排演示级 + 接缝 3 后 PASS 有背书范围：落在 trae_factory@954c210 gen/core.js 的接缝3 行为断言上（BEH-01/03/04/07/09/14/15 内置自检）",
+          "verification": "交叉审计",
+          "evidence": "Qoder 实测 exit=0 + 接缝 3 实测对照（out/joint_eval.md）：双方都验 11（含 SPC 机器比对：mcopilot 独立重算 Cpk 与工厂打印值同值——数值随本次运行的虚拟信号采样而变，比对的是**同一次运行**的两个独立实现，不拿历史数字充数）、工厂独有已验 1、空白清零；GlueDemo 内嵌 8 项参数守卫/行为断言，FAIL 时打印具体断言消息（Main catch）",
+          "gap": "开环轴报告（BEH-02）接口无 HasRealFeedback 概念——评估为过度设计（动公共枚举/接口牵动 6 家适配器生成模板），保持诚实登记而非虚假实现"
+        }
+      ],
+      "requirement": "R-04"
+    },
+    {
+      "impls": [
+        {
+          "project": "trae_factory",
+          "artifact": "dispensing 工艺样例（点胶路径 + 出胶时序 + SPC 报表）",
+          "coverage": "演示级：路径与节拍可算可看",
+          "verification": "自证",
+          "evidence": "生成套件内编译通过、虚拟控制器跑通（Qoder 审计确认）",
+          "gap": "出胶时序参数无工艺依据；胶量/阀体模型 0（需求基线的 ai_part 也只要求离线路径仿真）"
+        }
+      ],
+      "requirement": "R-06"
+    },
+    {
+      "impls": [
+        {
+          "project": "axiscope",
+          "artifact": "KB6 耦合与标定知识 + C7 process.json 契约（光功率通道口径独立）",
+          "coverage": "寻光扫描/固化跟随的通道语义与判据规格",
+          "verification": "未验证",
+          "evidence": "KB6 125KB 规格在档",
+          "gap": "实现 0（src 空）；寻光策略对比仿真未建"
+        }
+      ],
+      "requirement": "R-07"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "spc（I-MR/Cpk/Pareto/CUSUM/稼动率报表，口径统一）",
+          "coverage": "SPC 统计与报表全自动生成",
+          "verification": "自证",
+          "evidence": "样例数据 32 点 Cpk 报表（工厂虚拟控制器 demo 亦复用同口径）",
+          "gap": "MES/SECS-GEM 对齐未做（需求基线本来就留人）"
+        },
+        {
+          "project": "trae_factory",
+          "artifact": "ModbusDeviceKit 生成器（点表 CSV → Modbus TCP/RTU 驱动工程）",
+          "coverage": "温控器类外设驱动一键生成",
+          "verification": "交叉审计",
+          "evidence": "axiscope 审计：mb_temp 编译 0/0 实测",
+          "gap": "无真机从站联调；协议一致性校验脚本未建"
+        }
+      ],
+      "requirement": "R-08"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "forensics（日志时间轴重建 + 8 类缺陷检出 + 根因候选排序）",
+          "coverage": "偶发偏差/时序竞争/丢包/心跳断流的规则化检出，带证据行号",
+          "verification": "自证",
+          "evidence": "axiscope《AUDIT-minimax-mcopilot》§二：检测器逻辑为真、非硬编码，但样例日志格式与 regex 同源，『9 类全检出』属同源自证",
+          "gap": "真实现场日志 0 份；接缝 2a 已落地（C1 契约加载器 + 转换器 + Waveform 桥）：分析输入的格式改由第三方契约定义并过其红线，同源自证结构性消除"
+        },
+        {
+          "project": "axiscope",
+          "artifact": "C1 波形契约 + C6 机器上下文 + KB4 归因模型（机械/电气/软件三方归因，含上位机特有 software_induced_error 判据族）",
+          "coverage": "逆向诊断链规格：波形 → 特征 → 根因归因 → 仿真验证 → 建议",
+          "verification": "未验证",
+          "evidence": "KB4 108KB + C3 诊断契约 25KB 在档",
+          "gap": "src 未实现（P0/P1 纪律：先冻结契约与评测集）"
+        }
+      ],
+      "requirement": "R-09"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "review（实时运动代码规则包：阻塞调用/单位混用/空 catch/无超时）",
+          "coverage": "提交前自动评审，可进 CI",
+          "verification": "交叉审计",
+          "evidence": "axiscope 审计『检测器非硬编码为真』，逐条读源码确认",
+          "gap": "分层依赖静态检查（禁 UI 直连 SDK）未见实现"
+        },
+        {
+          "project": "trae_factory",
+          "artifact": "每套件生成 docs（能力差异矩阵 + ApiChecklist + 接缝 1 的 TruthChain.md）",
+          "coverage": "文档与代码同源生成",
+          "verification": "自证",
+          "evidence": "Qoder 戳穿：ApiChecklist 照生成代码自身生成、无独立信息源；接缝 1 后新增 TruthChain.md 提供 mcopilot 独立口径逐条对照，该问题已部分修复",
+          "gap": "能力差异矩阵仍出自工厂自身 KB，未经独立核对"
+        }
+      ],
+      "requirement": "R-10"
+    },
+    {
+      "impls": [
+        {
+          "project": "trae_factory",
+          "artifact": "生成的工程级 C#（状态机/锁/错误映射/线程安全封装）",
+          "coverage": "多线程与错误处理的参考实现",
+          "verification": "交叉审计",
+          "evidence": "Qoder 实测编译运行（软赢骨架 2 条 CS0162 警告除外，已登记）",
+          "gap": "性能优化类（UI 线程阻塞/锁竞争检出）无工具"
+        },
+        {
+          "project": "mcopilot",
+          "artifact": "review 规则包（UI 线程阻塞/锁/超时类检查）",
+          "coverage": "多线程问题自动检出",
+          "verification": "自证",
+          "evidence": "规则包 + 样例触发（仓库内自测）"
+        }
+      ],
+      "requirement": "Q-03"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "knowledge/cards.json 六品牌能力差异矩阵 + 能力矩阵报告（官方口径钉扎 + public-doc 分级）",
+          "coverage": "插补/凸轮/齿轮/比较/锁存/指令周期/脉冲当量口径逐家对比",
+          "verification": "官方钉扎",
+          "evidence": "矩阵条目带 verified 等级与手册章节回指；6 品牌已核对 2 家，差距如实登记（需求基线要求『至少精通两个品牌』已达成）",
+          "gap": "总线型差异（EtherCAT PDO）只有正运动一家一手件"
+        },
+        {
+          "project": "trae_factory",
+          "artifact": "各套件 docs/能力差异矩阵",
+          "coverage": "A/B/C 诚实分级内建于代码行旁标注（[核对]/[注意]）",
+          "verification": "自证",
+          "evidence": "Qoder 审计认可『就近标注做在代码旁』是工厂最好的一点（雷赛低电平有效取反、固高 1-based 集中换算）",
+          "gap": "矩阵内容出自工厂自身 KB"
+        },
+        {
+          "project": "axiscope",
+          "artifact": "C5 §8 备选方向评审（SDK 适配知识库的冷启动成本分析与差异化判断）",
+          "coverage": "方向裁决：抽象层不新，差异矩阵 + 换卡影响报告才有价值",
+          "verification": "未验证",
+          "evidence": "DECISION-2026-10-19 §3",
+          "gap": "换卡影响报告未实现"
+        }
+      ],
+      "requirement": "Q-04"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "motion_lab（黄金测试向量/脉当量自检/硬件比较点计算）+ cam_lab（凸轮表可行性校验与生成）",
+          "coverage": "插补基线、凸轮段间斜率/峰值速度/主轴放大倍数校验、三家凸轮能力差异",
+          "verification": "交叉审计",
+          "evidence": "S 曲线数值被 axiscope 独立复验；凸轮校验逻辑仓库内自测（自证部分）",
+          "gap": "飞拍时序、跟随误差补偿整定未上机（需求基线本来就留人一半）"
+        }
+      ],
+      "requirement": "Q-05"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "motion_lab 整定前预算校验（候选带宽/阻尼 → 跟随误差与整定时间是否满足容差）",
+          "coverage": "需求基线 ai_part 的全部（预算校验）；闭环操作三项目一致留人",
+          "verification": "交叉审计",
+          "evidence": "axiscope 审计：『跟随误差前置校验 e≈a/ωn² 物理正确（二阶系统标准稳态结论）』",
+          "gap": "无"
+        }
+      ],
+      "requirement": "Q-06a"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "servo（波形自动标注 + 最小二乘等效二阶参数 + type-1/2 判别 + e≈a/ωn² 恒加速度段对照 + 候选根因）",
+          "coverage": "正向链完整；样例波形 3 份（各带 .truth.json 真值）",
+          "verification": "自证",
+          "evidence": "Qoder 审计：物理正确但样例同源自证；正向预测 ≠ 逆向诊断",
+          "gap": "逆向链（真实波形反推）未建——接缝 2a 已落地 C1 加载器（本轮），下一步把样例波形转 C1 样本包做正逆互检"
+        },
+        {
+          "project": "axiscope",
+          "artifact": "C2 特征契约 + C3 诊断契约 + KB3 调参规则 + KB4 归因模型 + KB5 仿真厂（逆向链全套规格）",
+          "coverage": "波形归一化 → 特征 → 归因 → 仿真验证 → 建议的全链设计",
+          "verification": "未验证",
+          "evidence": "KB3 238KB + KB4 108KB + KB5 134KB 规格在档",
+          "gap": "实现 0；评测集（C5）未建"
+        }
+      ],
+      "requirement": "Q-06b"
+    },
+    {
+      "impls": [
+        {
+          "project": "trae_factory",
+          "artifact": "ModbusDeviceKit（Modbus TCP/RTU）",
+          "coverage": "协议驱动生成",
+          "verification": "交叉审计",
+          "evidence": "同 R-08",
+          "gap": "EtherCAT/CAN 侧无覆盖（EtherCAT 主站属现场留人项）"
+        },
+        {
+          "project": "mcopilot",
+          "artifact": "forensics（通信时序重建/丢包/序号跳变/心跳断流检出）",
+          "coverage": "TCP/串口日志侧",
+          "verification": "自证",
+          "evidence": "同 R-09（同源自证，待真实日志）",
+          "gap": "SECS/GEM 未做（需求基线本来就留人）"
+        }
+      ],
+      "requirement": "Q-09"
+    },
+    {
+      "impls": [
+        {
+          "project": "mcopilot",
+          "artifact": "requirements（本报告）+ 全套报告的反向生成（结论→证据→怎么验证→谁签字 的统一结构）",
+          "coverage": "技术方案文档的结构化产出",
+          "verification": "自证",
+          "evidence": "out/ 21 个产物口径一致",
+          "gap": "跨部门推动与客户沟通是人的部分（需求基线本来就留人）"
+        }
+      ],
+      "requirement": "Q-10"
+    }
+  ],
+  "uncovered": [
+    {
+      "reason": "全流程开发是『端到端总量』条目，由其余各条拼合，无独立工具",
+      "requirement": "R-01"
+    },
+    {
+      "reason": "共晶贴片工艺（温度曲线/脉冲加热/吸嘴配合）三项目均未建专用规则；mcopilot spc 可作良率统计底座但工艺窗口 0",
+      "requirement": "R-05"
+    },
+    {
+      "reason": "带教/专利软著：技术交底书反向生成列为阶段 3 候选（requirements_map gap_note 已登记）",
+      "requirement": "R-11"
+    },
+    {
+      "reason": "行业工艺背景知识：axiscope KB 有波形/调参知识但无贴片/点胶工艺专章",
+      "requirement": "Q-07"
+    },
+    {
+      "reason": "视觉标定（手眼/九点）：axiscope KB6 含耦合标定规格，视觉标定数学三项目均未实现",
+      "requirement": "Q-08"
+    }
+  ],
+  "seams": {
+    "note": "接缝 = 让三家互为输入与校验的制度化机制；每条接缝的落地状态在此登记。",
+    "items": [
+      {
+        "id": "接缝1",
+        "name": "工厂 ← mcopilot 知识库（真值链接缝）",
+        "status": "已落地（2026-10-20）",
+        "evidence": "工厂 trae_factory@954c210 gen/truth_kb.js 实时读 knowledge/sdks，58 条 P/Invoke 49 钉扎 0 不一致；trae_factory@954c210 out/mc_all/docs/TruthChain.md 进每套件"
+      },
+      {
+        "id": "接缝2a",
+        "name": "mcopilot ← axiscope C1 契约（数据接缝）",
+        "status": "已落地（本轮）",
+        "evidence": "knowledge/contracts/comm_log_contract.json（契约本体）+ scripts/validate_comm_log.py --selftest（裁判自检）；原计划的三件（src/mcopilot/core/c1_sample.py、scripts/c1_from_servo_sample.py、agents/servo_c1.py）未入库（2026-10-22 按 git ls-files 复核），故「19 测试 / 4 测试」一类计数当前无仓内载体；真实记录 twincat_export10（18651 样本，Qoder 曾字节级取证）过契约门，3 个合成旧夹具被 2000 样本红线拒——第三方口径比自家严，自证夹具时代结束"
+      },
+      {
+        "id": "接缝0",
+        "name": "requirements_map → 三项目覆盖账本（本文件）",
+        "status": "已落地（本轮）",
+        "evidence": "knowledge/coverage_ledger.json + requirements 报告『三项目覆盖账本』节"
+      },
+      {
+        "id": "接缝3",
+        "name": "工厂 Virtual ← 共享仿真评测集",
+        "status": "已闭合（2026-10-23）：评测集与对照脚本均已入库，逐条对照可自动复核",
+        "evidence": "trae_factory@954c210 gen/core.js（接缝3 行为断言 BEH-01/03/04/07/09/14/15 内置自检；断言不单独成文件）+ 工厂生成 trae_factory@954c210 out/mc_all/docs/JointEval.md；**2026-10-23 接缝 3 闭合**：三样东西同时在仓里了——①knowledge/shared_eval.json（唯一数据源：19 条行为断言 + 3 条合法差异，逐条给域/两侧验证点；5 条 n/a 逐条写明工厂接口确无此概念，不是嘴上说说）②scripts/joint_eval.py（真跑两边：mcopilot 侧编译并跑仿真器自检，工厂侧编译并跑 GlueDemo 工艺流程，逐条按 BEH 编号对齐；BEH-19 另做 SPC 机器比对——从工厂 glue_report.csv 原始样本独立重算 Cpk 再与工厂打印值比）③scripts/gate_joint_eval.py（门禁 G13：静态核对两侧 BEH 标签与评测集**双向**对齐 + 动态真跑逐条对齐；缺环境记 SKIP 不记 PASS）。两侧各自打上了 BEH 编号（mcopilot 侧 15 条在 knowledge/templates/SelfCheck.cs.tmpl，工厂侧 14 条在 gen/core.js）——此前工厂侧对 BEH-12/13/16/17/18/19 的『命中』是**粗粒度匹配**（只看 GlueDemo 整体 RESULT: PASS），现已逐条可核。实测：双方都验 11 · 工厂独有已验 1 · 单边/合法差异 7 · 空白清零 · 共 19 条。工厂生成的 out/mc_all/docs/JointEval.md 现给出 mcopilot 侧验证点（数据源实时读取，非复制）。BEH-19 SPC 机器比对：mcopilot 独立重算 glue_report.csv（工程规格口径 Cpk 8.572）与工厂一致，I-MR 口径并列登记为合法口径差。整改闭环 9 条，其中 BEH-15 断言抓到 Virtual 真 bug（Home 不清 Homed → WaitHomeDone 假等待）"
+      }
+    ]
+  }
+}

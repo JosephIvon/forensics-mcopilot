@@ -1,0 +1,108 @@
+{
+  "note": "样例日志中植入的缺陷清单。用于核对检出完整性 —— 但请注意：样例与解析规则同源，只能证明检测逻辑自洽，不能证明对其他团队的日志有效（用 `mcopilot forensics probe` 量化）。",
+  "log": "machine_a.log",
+  "log_lines": 4121,
+  "planted_groups": 8,
+  "expected_detector_types": [
+    "calib_drift",
+    "comm_gap",
+    "concurrent_command",
+    "cycle_jitter",
+    "heartbeat_gap",
+    "param_conflict",
+    "position_deviation",
+    "timeout_burst",
+    "vision_ng_rate"
+  ],
+  "defects": [
+    {
+      "id": "H",
+      "name": "部分节拍明显劣化（节拍抖动）",
+      "expects": [
+        "cycle_jitter"
+      ],
+      "anchor": "Cycle End lot=L20261019 result=NG ct=56.31",
+      "why": "第 37/38/39/76/77/78 拍比中位数慢 9~16 秒，占比 5%，P95/中位数与 CV 都被稀释，靠「慢拍占比」才抓得到",
+      "line_no": 2645,
+      "occurrences": 1
+    },
+    {
+      "id": "A",
+      "name": "换型时轴参数被覆盖（定位偏差根因）",
+      "expects": [
+        "param_conflict",
+        "position_deviation"
+      ],
+      "anchor": "value=12930.00",
+      "why": "换型流程在写 pulse_per_mm 时与轴参数初始化存在竞态，后写入者覆盖前者；覆盖率约 1.37% 的偏差直接造成定位超差",
+      "line_no": 4058,
+      "occurrences": 1
+    },
+    {
+      "id": "B",
+      "name": "同一轴未到位即下发新指令（时序竞争）",
+      "expects": [
+        "concurrent_command"
+      ],
+      "anchor": "CMD MoveAbs axis=0 target=150.000",
+      "why": "流程调度与手动干预抢同一轴，后发指令打断前一指令，造成半程位置偏差",
+      "line_no": 4067,
+      "occurrences": 1
+    },
+    {
+      "id": "C",
+      "name": "通信序号跳变（丢包）",
+      "expects": [
+        "comm_gap"
+      ],
+      "anchor": "seq=126",
+      "why": "序号从 base+1 跳到 base+5，中间 3 帧未收到",
+      "line_no": 210,
+      "occurrences": 12
+    },
+    {
+      "id": "D",
+      "name": "超时事件聚集",
+      "expects": [
+        "timeout_burst"
+      ],
+      "anchor": "Timeout what=axis0_reached waited=3.5",
+      "why": "连续 4 次等待轴 0 到位超时，指向该轴确实没到位而不是记录问题",
+      "line_no": 4074,
+      "occurrences": 1
+    },
+    {
+      "id": "E",
+      "name": "状态采集线程被阻塞 9 秒（心跳断流）",
+      "expects": [
+        "heartbeat_gap"
+      ],
+      "anchor": "Calib residual=1.40 um",
+      "why": "锚点是断流恢复后的第一条日志；断流期间现场状态完全不可见",
+      "line_no": 4079,
+      "occurrences": 1
+    },
+    {
+      "id": "F",
+      "name": "标定残差单调上升（机械松动/温漂）",
+      "expects": [
+        "calib_drift"
+      ],
+      "anchor": "Calib residual=5.15 um",
+      "why": "残差从 1.40 μm 单调升到 5.15 μm，属典型的「慢慢变坏」型问题",
+      "line_no": 4097,
+      "occurrences": 1
+    },
+    {
+      "id": "G",
+      "name": "视觉判定不良率在末段集中升高",
+      "expects": [
+        "vision_ng_rate"
+      ],
+      "anchor": "Vision result=OK dx=0.0345 dy=0.0014",
+      "why": "末段 16 次判定中 8 次 NG，全程平均被稀释，只有分段扫描才能看出来",
+      "line_no": 4119,
+      "occurrences": 1
+    }
+  ]
+}

@@ -1,0 +1,1264 @@
+{
+  "vendor": "雷赛",
+  "vendor_en": "Leisai",
+  "model": "DMC3000 / DMC5000 系列（PCIe 板卡）",
+  "dll": "LTDMC.dll",
+  "namespace": "Motion.Adapters.Leisai",
+  "class_name": "DmcMotionController",
+  "card_type": "0x0A",
+  "axis_count": 4,
+  "verified": "official-manual",
+  "source": "官方《DMC3000 系列卡用户使用手册 V2.0（20250710）》+ 官方 C# 绑定 LTDMC.cs（V2.5.7.23 升级包，1466 条声明 / 1463 个函数名）",
+  "sources": [
+    "**官方手册（2026-10-20 取得实体文件）**：《DMC3000 系列卡用户使用手册 V2.0（20250710）》—— 1.4 订货信息（表 1.2~1.11 卡↔接线盒配套）、7.12 位置比较（7.12.3 一维高速位置比较）、8.3 回原点运动函数（mode 0~12 全表）、8.7 运动状态检测（停止原因 0~41/49~76/90/100~109/201~208 + 表 8.2 轴运动信号位图 + dmc_axis_io_status + dmc_check_done + dmc_LinkState + dmc_set_output_status_repower）、8.13 伺服驱动专用接口（dmc_write_sevon_pin / dmc_read_sevon_pin）、8.14 通用 IO（表 8.3 输入位图）、8.17 高速位置锁存、8.18/8.19 位置比较与高速位置比较、8.33 运动函数错误码（表 8.7）、**附录 1~10 十款接线盒端子表**",
+    "**官方 C# 绑定（2026-10-20 取得）**：LTDMC_升级包_V2.5.7.23 内的 LTDMC.cs（**1466 条声明 / 1463 个唯一函数名**，全部 DllImport 指向 **LTDMC.dll**；dmc_ 1252 + nmc_ 214 + emc_ 0）→ 已导出为 knowledge/sdks/official_api/leisai.csv 作为可核对的真值清单",
+    "**官方 C 头文件（2026-10-20 取得）**：LTDMC_升级包_V2.5.7.23 内的 LTDMC.h（GBK，`DMC_API <类型> __stdcall <函数名>(...)` 共 1513 条声明 → **调用约定 = stdcall**）→ 已导出为 knowledge/sdks/official_api/leisai_cpp.csv",
+    "**PE 导出表**：LTDMC.dll（32 位 / 64 位）的导出符号已导出为 knowledge/sdks/official_api/dll_exports.csv —— 本仓每条绑定都在导出表里",
+    "**手册表格导出的真值**：表 8.3 输入位图 → leisai_io_bits.csv（64 行）；附录 1 ACC-X400 端子表 → leisai_io_terminals.csv（88 行）；1.4 配套表 → leisai_model_kits.csv（10 行）"
+  ],
+  "notes": [
+    "**官方 C# 绑定的导出必须先剥注释再匹配，否则真值表会漏函数**：官方 `LTDMC.cs` 里声明有三种形态 —— ①`[DllImport(\"LTDMC.dll\")] public static extern …`（常规）；②**属性与 `extern` 之间夹着中文注释行**（`nmc_set_home_profile`、`dmc_set_leadscrew_comp_2D_config_unit` / `_ex` 就是这种，正则 `\\]\\s*public` 匹配不上）；③**整条声明被 `//` 注释掉**（`dmc_pdo_buffer_add_data_multi`、`nmc_torque_set_delay_cycle` 这 2 条）。**做法：先剥注释再匹配** —— 剥完之后 ②变成①（注释行变空行，正好跨过去），而 ③整条消失。**只改正则会漏 ②（实测漏 3 条），只「允许夹注释」而不剥注释则会收进 ③（实测多收 5 条）。** 修正后官方绑定 = **1466 条声明 / 1463 个唯一函数名**（dmc_ 1252 + nmc_ 214 + emc_ 0）；另 2 条被注释掉的 ③ **DLL 里 32/64 位都导出**（能调，但没有官方托管签名 → 要用得自证签名）。",
+    "**官方 C 头文件声明了、DLL 却没导出的函数有 6 个，照抄头文件必炸 `EntryPointNotFound`**：`dmc_arc_move_center_angle_unit`、`dmc_cmd_buf_set_line_profile_ext`、`dmc_conti_da_curve_control`、`dmc_get_vector_s_profile_multicoor`、`dmc_lbs_trace_reset_config_object`、`dmc_set_vector_s_profile_multicoor`（官方 `LTDMC.h` 有声明，V2.5.7.23 的 `LTDMC.dll` 64 位导出表里没有）。→ **绑定必须同时过三关：官方 C# 绑定 + 官方 C 头文件 + DLL PE 导出表**，缺一关就会翻车。（同类已处理案例：固高 `GT_GantryHoming`、正运动 `ZAux_Direct_GetNtype`。）",
+    "**总线卡（DMC-E）与独立控制器（EMC）的当量是「控制器侧」的，与 DMC3000 脉冲卡根本不同**：手册 7.2（DMC-E）/ 6.2（EMC）给 `dmc_set_equiv(CardNo, axis, equiv)` 与 `dmc_get_equiv` —— **在控制器里设置脉冲当量**：设成 100 表示「控制器发 100 个位置 = 平台前进 1mm」，此时**控制器里的速度单位就是 mm/s**；设成 1 则单位是 pulse、速度是 pulse/s。设置在轴使能状态下也允许，但**要 1 个总线周期才生效**，且**设一次会一直保持**。⚠ **脉冲卡（DMC3000）没有这个函数** —— 脉冲卡是**软件侧**除脉冲当量。**所以在脉冲卡适配器里绝对不能调用 `dmc_set_equiv`**（那是控制器侧的，会把当量改掉）；总线卡/独立控制器则是**反过来**：不该在软件侧换算，位置/速度应直接以 unit 传。",
+    "**总线轴的伺服使能入口是 `nmc_set_axis_enable(CardNo, axis)` / `nmc_set_axis_disable`**，配套 `nmc_get_errcode` / `nmc_clear_errcode` 读总线状态（手册 DMC-E 7.4 / EMC 6.4）。⚠ 但**手册只写了函数名，没写使能序列**（是否由主机写 CiA402 0x6040/0x6041、由谁写、等待多久）—— **这属于「可能让电机突然动作的机器安全动作」，我们不替厂商做这个决定**，所以总线轴的 `Enable` 仍保持**显式失败 + TODO 标记**，不猜。",
+    "**EMC（独立整机）与 DMC（插卡）共用同一个 `LTDMC.dll` 和同一套 `dmc_` API** —— **不是另一套 `emc_` 库**（官方绑定里 `emc_` 前缀 0 个）。差别在**连接方式**：EMC 用 `dmc_board_init_eth(IpAddr)` 经**以太网 TCP/IP** 初始化（默认 IP 192.168.5.11，PC 需同网段，最多 254 台组网；另有 RS485 支持 MODBUS RTU 与自由协议），DMC 插卡用 `dmc_board_init()` 走 PCI 枚举。→ **EMC 的函数名能直接复用，但「卡号」的含义不同**（EMC 是链接号/控制器号），而且 EMC 有本体 12 入 12 出高速 IO + 背板总线可扩 32 个模块。",
+    "**EMC 手册有两处函数名笔误，照抄必炸 `EntryPointNotFound`**：`dmc_EMG_stop`（手册正文 6.3、8.16 的 C 原型、附录 4 索引**三处**都写成大写 EMG）与 `dmc_axis_IO_status`（两处大写 IO）。**硬证据**：EMC 自己的官方 C# 绑定、三个版本的 `LTDMC.dll` 导出表**都只有全小写**`dmc_emg_stop` / `dmc_axis_io_status`（PE 导出名大小写敏感）。（手册里另有 10 处 `position→positIOn`、`version→versIOn` 这类差异，那是 **EMC 手册 PDF 文本层的字形伪影**，不是笔误 —— 已用官方绑定与导出表逐条排除。）",
+    "**总线轴的 PDO 对象表手册自带（两本逐行相同，共 23 个 CiA402 对象）**：603F/6040/6041/6060/6061/6064/606C/607A/60FD/60FE/6071/6072/6077/6080/6087/60B2 走 PDO，607C/6098/6099/609A/6092 只能走 SDO。⚠ **但表 F3.0 的「PDO 映射」列有 15 行的 T/R 方向与 CiA402 惯例相反**（6040 控制字标 R_PDO、6041 状态字标 T_PDO、6064 实际位置标 T_PDO、60FD 数字输入标 T_PDO…）—— **已列为向厂商求证项**，我们不按这张表的 T/R 列写代码。",
+    "**DMC-E 与 EMC 的技术指标（表 1.1，2026-10-20 核对）**：DMC-E1000（经济型）16 轴、**不支持插补**、**LTC 高速锁存口 0 个**、通用 DI/DO 16/16、总线周期 500us~4ms；DMC-E3000（通用型）64 轴、**8 个插补坐标系**、LTC 4 个、**通用 DI/DO 只有 8/8**、总线周期 62.5us~4ms（62.5/125us 仅 E3064S）；DMC-E5000（轨迹型）64 轴、8 坐标系、**连续插补缓冲区 5000 条**、E5000 不支持连续插补圆弧限速需 E5064S。EMC-E3000/5000：64 轴、**4 个插补坐标系**、通用 DI/DO 16/16、**本体 12 入 12 出高速 IO**、总线周期 500us~2ms（**E5000 满载 64 轴 + 4 坐标系必须 ≥2ms**）、背板总线可扩 32 个模块、连续插补/椭圆插补/前瞻只有 E5000 有。",
+    "**EMC 控制器上没有专用 EMG 急停输入口**（手册 2.2.1 原文）：厂商建议**在本地通用输入口里选一个口当 EMG**，再用 IO 映射功能把它映射成急停。→ EMC 的急停接线**不是**「插到一个叫 EMG 的端子」，现场必须显式配置 —— **这是安全项，做错等于没有急停**。",
+    "**厂商手册《DMC3000 系列卡用户使用手册 V2.0》附录 11《运动控制函数索引》有一处疏漏**：dmc_get_stop_reason 与 dmc_clear_stop_reason 在 8.7 节正文里是有完整说明的（手册 p155~156），但**附录 11 的索引表里没有列这两个函数**（索引共 169 条，已导出为 leisai_manual_index.csv）。我们照正文绑定，不影响使用；已写进给厂商的资料清单，请其补进索引。",
+    "**不要用厂商标注「内部使用（保留）」的函数**：官方 `LTDMC.cs` 把 `dmc_get_sevon_enable` / `dmc_set_sevon_enable` 标为「内部使用（保留）」，返回值语义未公开 → 适配器的 `IsEnabled` 改用手册 8.13 明确写了语义的 `dmc_read_sevon_pin`（返回 SEVON 端子电平 0/1）。伺服使能是安全信号，用语义不明的函数读它 = 猜。",
+    "**伺服使能是每轴一个的专用端子，不占通用输出位**：`dmc_write_sevon_pin(CardNo, axis, on_off)` 按**轴号**写 SEVON 端子（ACC-X400 接线盒上是 CN1~CN4 的第 3 脚），**与 DMC5X10 那种「bit16~23=SEVON0~7」的位段模型是两种不同型号的实现，不能混**。SEVON 的有效电平取决于驱动器接法 → 适配器用 `ServoOnActiveLevel` 显式配置（默认高电平）。",
+    "**保留参数不能传非 0 值**：`dmc_set_ltc_mode` 的 `ltc_mode` 与 `filter`、`dmc_set_latch_mode` 的 `all_enable=1` 全是手册 8.17 标注的**保留值**（固定值 0；all_enable 合法值只有 0 单次 / 2 连续 / 3 触发延时急停）→ 适配器已按 0 传。`dmc_set_latch_mode` 的 `triger_chunnel` 同样是保留参数，通道由轴号决定（LTC0→0~3 轴，LTC1→4~7 轴）。",
+    "**脉冲卡（DMC3000 系列）没有轴状态机函数**：官方手册 8.7《运动状态检测及控制》给的是 `dmc_axis_io_status`（表 8.2 位图：ALM/EL±/EMG/ORG/SL±/INP/EZ/RDY/DSTP）与 `dmc_check_done`（0 运行中 / 1 已停止）。官方绑定里唯一的轴状态机 `nmc_get_axis_state_machine` 是 **EtherCAT 总线轴专用**，脉冲卡上调用只会失败或给出总线轴语义 → 适配器的 `GetState` 按 8.7 的位图自行映射，**且不生成 nmc_* 的 P/Invoke**。",
+    "**高速比较（CMP）通道号已定死，但端子随接线盒变**：手册 8.19 明写 `hcmp` 取值 0~3、**一一对应硬件 CMP0~CMP3 端口**；比较模式 0 禁止 / 1 等于 / 2 小于 / 3 大于 / 4 队列（127 点）/ 5 线性，**脉冲宽度 time 只有模式 4、5 有效**。CMP0/CMP1 是普通光耦（4kHz）、CMP2/CMP3 是高速光耦（1MHz）。**CMP 端口落在哪个端子取决于接线盒型号**：ACC-X400 是 CN23 的 PWM0/PWM1 与 CN21 的 OUT14/OUT15。⚠ 旧 notes 写的「E3032 / EMC 是 hcmp 0~5 → OUT2~7」是**别的系列**的映射，不能套到 DMC3000。",
+    "**IO 端子表不用再问厂商**：手册 1.4《订货信息》表 1.2~1.11 给出 10 款卡 ↔ 接线盒的配套关系，**附录 1~10 给出 10 款接线盒的完整端子表**（ACC-X400 / ACC-X400B / ACC3600 / ACC3800 / ACC-XC00 / ACC2-X400B …），已按现场型号自行抄录（ACC-X400 一款已抄成 88 行端子表）。现场只要告诉我们**卡型号 + 接线盒型号**，端子表我们自己从手册取。",
+    "**三套同名 LTDMC 库并存**（雷赛官网/经销商给的开发包里有 3 个不同版本的 SDK）：V2.5.7.23（dll32 2,753,536 B / dll64 3,410,432 B，**本仓绑定用的就是这份**）、2024-09-09（2.4.6.4，少 292 个导出）、2023-12-11 EMC 版（2.4.0.3，少 388 个导出（实测导出数 3781 / 3489 / 3393））。**我们绑定的每一条函数在 3 个版本 × 32/64 位里都导得出（缺 0）** —— 但**部署时必须拷与固件配套的那一份**，别混版本。EMC 那套是**独立产品线（EMC/MC/PAC 整机）**的开发包（绑定 804 条、且没有 emc_ 前缀的函数 —— **用的还是同一套 dmc_ 函数名，不是另一套库**）。",
+    "**接线盒通讯与断电重连**（手册 8.7）：`dmc_LinkState` 检主卡与接线盒的通讯（0 连上 / 1 断开）；`dmc_set_output_status_repower` 控制**接线盒断线或断电再上电时输出端子的状态**（1 = 关掉所有输出口含伺服使能 / 0 = 保持断电前状态，**默认 0**），需 3XX201615 及更高固件。",
+    "板卡型 DMC 必须安装雷赛驱动与 dmc.dll，且要区分 x86/x64，库版本要与固件匹配",
+    "dmc_board_init() **无参数**，返回识别到的在线卡数（<=0 为失败）；不是错误码",
+    "返回值分两类：多数函数 0=成功、非0=错误码；但 dmc_get_position / dmc_get_encoder / dmc_read_inbit / dmc_read_inport / dmc_get_latch_value **直接返回业务值**，当成错误码会误判",
+    "带 _unit 后缀的函数返回**物理单位(mm)**，不带后缀的返回**脉冲** —— 两者混用会差一个脉冲当量",
+    "指令脉冲（command）与编码器计数（feedback）是两套计数，GetPosition 与 GetFeedback 必须分别换算",
+    "**DMC-E 不是另一个产品线**：它是 DMC 系列的 **EtherCAT 总线版插卡**（型号尾 -PCIE）。官方 DMC-E 头文件与 DMC 头文件是**同一份文件**（SHA256 相同）→ 同一套 dmc_/nmc_ API、同一个 LTDMC.dll。nmc_*（如 nmc_home_move / nmc_get_axis_state_machine）是**总线轴专用前缀**，与 dmc_* **同在 LTDMC.dll**（官方绑定实测 dmc_ 1252 个 + nmc_ 214 个 = 1463 个函数名）；但纯脉冲卡（DMC3000）上没有总线轴，nmc_* 调了没意义 —— 别把「前缀不同」当成「库不同」",
+    "**雷赛内部的「卡 / 控制器」分界**：卡 = DMC 脉冲卡 + DMC-E 总线卡（插进 PC 机箱，走 LTDMC.dll）；独立整机 = EMC / MC / PAC，走**以太网**（`dmc_board_init_eth(IP)`）。⚠ **函数库是同一套**：EMC 用的是同一个 `LTDMC.dll`、同一套 `dmc_`/`nmc_` 函数名，`emc_` 前缀在官方绑定里 0 个 —— 「emc_ 为 0」恰恰说明 EMC 用的就是 dmc_ 命名，**不是「EMC 是另一套库」**。差别在连接方式（PCI 枚举 vs 以太网）与「卡号」语义（PCI 卡号 vs 链接号）。",
+    "**官方绑定里没有 `dmc_get_axis_state_machine`** —— 轴状态机只有 `nmc_get_axis_state_machine`（总线轴专用）。纯脉冲卡（DMC3000）的轴状态机函数名需按现场型号手册确认，别拿总线轴的函数硬套",
+    "CMP 高速比较通道号随系列而异：E3032 上 CMP0~5→OUT2~7；EMC 上 hcmp 0~5→OUT2~7；另有资料写 hcmp 0~3→CMP0~3。**不能跨型号套用**",
+    "dmc_hcmp_set_config 的 cmp_logic = **输出有效电平**（0 低 / 1 高）；time = **脉冲宽度(us)，只有比较模式 4/5 有效**",
+    "**位置锁存的触发口不是 IN4~IN7**：手册 8.14 表 8.3 的 IO 位图明写 **bit14 = IN14/LTC0、bit15 = IN15/LTC1**，8.17 又写明 **LTC0 锁 0~3 号轴、LTC1 锁 4~7 号轴**（DMC3400A 只有 LTC0）→ **锁存通道由轴号决定，不是靠参数选通道**，`dmc_set_latch_mode` 的第 5 参 `triger_chunnel` 是**保留参数、固定值 0**。之前写的「锁存器 0~3 对应硬件 IN4~IN7」是错的，已改。接线盒上 LTC 落在哪个物理口随型号而变（ACC-X400 = IN14/IN15）。",
+    "DMC5X10 的输出位段（仅供该型号参考，不可套用到其它型号）：bit0~15=OUT0~15（其中 OUT12~15 同时是 CMP0~3），bit16~23=SEVON0~7（伺服使能），bit24~31=ERC0~7；且 SRV-ON 必须先做输入分配",
+    "已知错误码片段：0 成功 / 1 ERR_UNKNOWN 未知错误 / 2 ERR_PARAERR 参数错误 / 10 ERR_SENDERR 数据传输错误（查 PCI 槽位）",
+    "**DLL 名随系列而异**：dmc.dll / dmc3000.dll / LTDMC.dll（部分功能还需要 PVT.dll）。本文件里的 dll 字段决定生成的 DllImport 名字，换卡时改这一处重新生成",
+    "dmc_get_encoder 是**独立的编码器计数通道**（与指令脉冲是两套计数），但只有现场接了编码器且计数随动时才算真实反馈；没接时它恒为 0 → 用 EncoderFeedbackWired 配置项声明，不要靠代码猜",
+    "**回零方向没有安全默认值**：负向/正向取决于机构，原点开关在哪一侧只有现场知道。默认 Unconfigured，回零直接抛异常；先按 L2 低速点动确认方向再填",
+    "回零 mode 表的上限在不同公开资料里有 0~9 / 0~11 / 0~12 三种说法：枚举保留 0~12，以厂商手册为准；**mode 4/8（只记 EZ）要求轴上真的接了 Z 相**，没接时轴会一直跑到撞限位",
+    "**官方手册 8.3 已定死回零 mode 全表（0~12）**，与本文件的枚举逐条一致；另：`ezCount` 是**保留参数，固定值 0**（网上「0=锁存指令位置/1=锁存编码器位置」的说法是错的）",
+    "**DLL 名以官方绑定为准：LTDMC.dll**（官方 LTDMC.cs 里 1463 个函数名、1466 条声明全部指向它）。DMC3000 的函数库/头文件包里另有 dmc3000.dll 等名字，取决于现场装的驱动版本 —— 换名时改本文件的 dll 字段重新生成",
+    "**dmc_vmove 的方向编码已由官方手册 8.9 定死：dir 0=负方向，1=正方向**（网上相反的写法是错的）",
+    "**官方绑定里没有 dmc_set_home_profile** —— 回零速度走通用速度曲线 dmc_set_profile：vel_mode=0 用它的起始速度(Min_Vel)、=1 用最大速度(Max_Vel)。照博客调一个不存在的函数 = 回零直接崩",
+    "**函数错误码与停止原因是两套码**：错误码（表 8.7）=「这次调用失败没有」；停止原因（8.7）=「运动为什么停的」，**只有 0 是正常停止**（流传的「0 与 5 都正常」是错的，5=正硬限位立即停止）",
+    "**官方手册章节索引（查哪一页）**：8.3 回零 / 8.7 运动状态与停止原因 / 8.14 通用 IO / 8.16 编码器 / 8.17 高速位置锁存 / 8.18 位置比较 / 8.19 高速位置比较 / 8.22 轴 IO 映射 / 8.33 错误码全表"
+  ],
+  "pinvoke": [
+    {
+      "fn": "dmc_board_init",
+      "ret": "short",
+      "args": [],
+      "verified": "public-doc",
+      "doc": "板卡初始化。**无参数**，返回识别到的在线卡数（<=0 失败）。官方原型：short dmc_board_init()"
+    },
+    {
+      "fn": "dmc_board_close",
+      "ret": "short",
+      "args": [],
+      "verified": "public-doc",
+      "doc": "关闭板卡。**无参数**"
+    },
+    {
+      "fn": "dmc_set_profile",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "minVel",
+          "type": "double"
+        },
+        {
+          "name": "maxVel",
+          "type": "double"
+        },
+        {
+          "name": "tAcc",
+          "type": "double"
+        },
+        {
+          "name": "tDec",
+          "type": "double"
+        },
+        {
+          "name": "stopVel",
+          "type": "double"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置梯形速度曲线。速度单位 pulse/s；**tAcc/tDec 是时间、单位秒**（最小 0.001s），不是加速度、也不是毫秒"
+    },
+    {
+      "fn": "dmc_set_s_profile",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "mode",
+          "type": "ushort"
+        },
+        {
+          "name": "sPara",
+          "type": "double"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置 S 段（曲线加减速）参数。sPara 是平滑过渡时间、单位秒（0~0.5），0=退化为梯形"
+    },
+    {
+      "fn": "dmc_set_dec_stop_time",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "stopTime",
+          "type": "double"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置减速停止时间，单位秒"
+    },
+    {
+      "fn": "dmc_pmove",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "dist",
+          "type": "int"
+        },
+        {
+          "name": "posiMode",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "单轴定位；posiMode 0=相对 1=绝对；单位 pulse"
+    },
+    {
+      "fn": "dmc_vmove",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "dir",
+          "type": "ushort"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "连续点动（官方手册 8.9 原文）。**dir 是方向不是速度**：**0=负方向，1=正方向**（官方手册已定死，网上相反的写法是错的）。速度走 dmc_set_profile"
+    },
+    {
+      "fn": "dmc_stop",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "stopMode",
+          "type": "ushort"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "停止；stopMode 0=减速停 1=立即停（官方原型是 UInt16）"
+    },
+    {
+      "fn": "dmc_get_encoder",
+      "ret": "int",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读取编码器反馈计数（pulse）。**直接返回值，不是错误码**"
+    },
+    {
+      "fn": "dmc_get_position",
+      "ret": "int",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读取指令位置（**原始 pulse 计数**，Int32 直接返回）。想拿 mm 请自己除以脉冲当量；dmc_get_position_unit 返回的是物理单位(mm)，别混用"
+    },
+    {
+      "fn": "dmc_check_done",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "检测指定轴的运动状态。返回值：**0 = 正在运行，1 = 已停止**（不是错误码）。手册 8.7 注明适用于单轴、PVT 运动。",
+      "page": 160
+    },
+    {
+      "fn": "dmc_axis_io_status",
+      "ret": "uint",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "读取指定轴有关运动信号的状态（DWORD 直接返回，**不是错误码**）。手册 8.7 表 8.2 位定义：bit0 ALM 伺服报警 / bit1 EL+ 正硬限位 / bit2 EL- 负硬限位 / bit3 EMG 急停 / bit4 ORG 原点 / bit6 SL+ 正软限位 / bit7 SL- 负软限位 / bit8 INP 伺服到位 / bit9 EZ / bit10 RDY 伺服准备 / bit11 DSTP 减速停止；其他位保留。**脉冲卡没有轴状态机函数，轴状态只能用这张位图 + dmc_check_done 自行映射。**",
+      "page": 160,
+      "proto": "DWORD dmc_axis_io_status(WORD CardNo,WORD axis)"
+    },
+    {
+      "fn": "dmc_get_stop_reason",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "reason",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读取轴停止原因。返回 0 才是正常停止"
+    },
+    {
+      "fn": "dmc_clear_stop_reason",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "清除轴停止原因"
+    },
+    {
+      "fn": "dmc_set_homemode",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "homeDir",
+          "type": "ushort"
+        },
+        {
+          "name": "velMode",
+          "type": "double"
+        },
+        {
+          "name": "mode",
+          "type": "ushort"
+        },
+        {
+          "name": "ezCount",
+          "type": "ushort"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "设置回零模式（官方手册 8.3 原文）。homeDir 0=负向 1=正向；velMode 0=低速回零（用 dmc_set_profile 的**起始速度**）1=高速回零（用**最大速度**）；mode 见 HomeMode 枚举（0~12 官方全表）；**ezCount 是保留参数，固定值 0**（网上流传的「ez_count 可选锁存源」说法是错的，那是原点锁存函数的参数）。另外：mode=4 时速度模式固定为低速；DMC3C00 后四轴只支持 0/1/2/10/11/12 六种模式；限位回零(10/11/12)需 3XX201611 及以后固件"
+    },
+    {
+      "fn": "dmc_home_move",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "启动回零运动"
+    },
+    {
+      "fn": "dmc_set_position",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "pos",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置指令脉冲位置（清零）"
+    },
+    {
+      "fn": "dmc_set_encoder",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "val",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置编码器计数值"
+    },
+    {
+      "fn": "dmc_write_sevon_pin",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "onOff",
+          "type": "ushort"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "控制指定轴的伺服使能端口输出。手册 8.13：**按轴号写每轴一个的 SEVON 专用端子**（ACC-X400 接线盒上是 CN1~CN4 的第 3 脚），**不占用通用输出位**；on_off = 端子电平，0 低电平 / 1 高电平。返回值是错误码。",
+      "page": 170
+    },
+    {
+      "fn": "dmc_read_sevon_pin",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNo",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "读取指定轴的伺服使能端口（SEVON）电平。手册 8.13 原文：short dmc_read_sevon_pin(WORD CardNo, WORD axis)，**返回值：伺服使能端口电平，0：低电平，1：高电平**（注意它返回的是电平，不是错误码）。官方 LTDMC.cs 注释：「输出读取 SEVON 信号（适用于所有脉冲卡）」",
+      "page": 170,
+      "proto": "short dmc_read_sevon_pin(WORD CardNo,WORD axis)"
+    },
+    {
+      "fn": "nmc_get_axis_state_machine",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "state",
+          "type": "ushort",
+          "is_ref": true
+        }
+      ],
+      "verified": "needs-manual-check",
+      "doc": "读取轴状态机（0 未启动 / 1 启动禁止 / 2 准备启动 / 3 启动 / 4 操作使能 / 5 停止 / 6 错误触发 / 7 错误）。**这是 EtherCAT 总线轴专用函数（官方 C# 绑定第 3 参是 `ref ushort`）**，脉冲卡（DMC3000 系列）**没有**对应的轴状态机函数 —— 官方手册 8.7 给的是 dmc_axis_io_status 位图 + dmc_check_done。**因此本仓不生成它的 P/Invoke**（脉冲卡上调用只会失败或给出总线轴语义）；要做 DMC-E/EMC 总线轴需另取 DMC-E 手册。",
+      "skip_emit": true
+    },
+    {
+      "fn": "dmc_read_inbit",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "bitno",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读通用输入位。**返回值就是 IO 电平（0=低 1=高），不是错误码**；负数才表示出错。bitno 是**逻辑输入口号不是物理端子号**，取值上限随型号而异（0~7 / 0~15 / 0~31），口号↔端子的映射在硬件手册的 IO 端子章节"
+    },
+    {
+      "fn": "dmc_read_inport",
+      "ret": "uint",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "portno",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "批量读输入端口（DWORD 直接返回，**不是错误码**）。portno 取 0 或 1，每组 32 位，位定义见手册 8.14 表 8.3：第 0 组 bit0~15 = IN0~IN15（**bit14 = IN14/LTC0、bit15 = IN15/LTC1**）、bit16~23 = EL0+~EL7+、bit24~31 = EL0-~EL7-；第 1 组 bit0~7 = ORG0~7、bit8~15 = ALM0~7、bit16~23 = RDY0~7、bit24~31 = INP0~7。"
+    },
+    {
+      "fn": "dmc_write_outbit",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "bitno",
+          "type": "ushort"
+        },
+        {
+          "name": "onOff",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "写通用输出位：onOff 0=低电平 1=高电平。位号按型号手册"
+    },
+    {
+      "fn": "dmc_hcmp_set_mode",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "hcmp",
+          "type": "ushort"
+        },
+        {
+          "name": "cmpEnable",
+          "type": "ushort"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "设置高速比较模式。手册 8.19：**hcmp 取值 0~3，对应硬件 CMP0~CMP3 端口**；cmp_mode 取值：**0 禁止（默认）/ 1 等于 / 2 小于 / 3 大于 / 4 队列（127 个点空间）/ 5 线性**。模式 1 只在当前位置等于比较位置时输出有效电平；模式 2 小于时一直保持有效电平；模式 3 大于时一直保持有效电平；**模式 4、5 的输出脉宽由 dmc_hcmp_set_config 的 time 设**。",
+      "page": 192
+    },
+    {
+      "fn": "dmc_hcmp_set_config",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "hcmp",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "cmpSource",
+          "type": "ushort"
+        },
+        {
+          "name": "cmpLogic",
+          "type": "ushort"
+        },
+        {
+          "name": "time",
+          "type": "int"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "配置高速比较器：hcmp（0~3 ↔ 硬件 CMP0~CMP3）、axis、cmp_source（0 指令位置 / 1 编码器位置）、cmp_logic（输出有效电平，0 低 / 1 高）、**time = 脉冲宽度（us），仅比较模式 4、5 有效**（模式 1/2/3 传 0）。手册 7.12.3：DMC3000 系列共 4 个高速比较器，**CMP0/CMP1 是普通光耦（4kHz）、CMP2/CMP3 是高速光耦（1MHz）**。",
+      "page": 192
+    },
+    {
+      "fn": "dmc_hcmp_add_point",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "hcmp",
+          "type": "ushort"
+        },
+        {
+          "name": "cmpPos",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "添加高速比较点（单位 pulse）"
+    },
+    {
+      "fn": "dmc_hcmp_clear_points",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "hcmp",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "清除高速比较点"
+    },
+    {
+      "fn": "dmc_write_cmp_pin",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "hcmp",
+          "type": "ushort"
+        },
+        {
+          "name": "onOff",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "控制指定 CMP 端口的输出（hcmp 0~3 ↔ CMP0~CMP3）。**CMP 端口落在哪个物理端子随接线盒型号而变**：ACC-X400 上 CMP0/1 = CN23 的 PWM0/PWM1、CMP2/3 = CN21 的 OUT14/OUT15；现场换接线盒必须重新核对。"
+    },
+    {
+      "fn": "dmc_compare_set_config",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "enable",
+          "type": "ushort"
+        },
+        {
+          "name": "cmpSource",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置单轴位置比较：使能 + 比较源（0=指令位置 1=编码器位置）"
+    },
+    {
+      "fn": "dmc_compare_add_point",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "pos",
+          "type": "int"
+        },
+        {
+          "name": "dir",
+          "type": "ushort"
+        },
+        {
+          "name": "action",
+          "type": "ushort"
+        },
+        {
+          "name": "actpara",
+          "type": "uint"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "添加单轴比较点（6 参数）：pos=比较位置(pulse)，dir=方向(0负/1正/2双向)，action=动作(0输出脉冲/1输出电平)，actpara=动作参数(脉冲宽度us 或 电平值)"
+    },
+    {
+      "fn": "dmc_compare_clear_points",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "清除单轴比较点"
+    },
+    {
+      "fn": "dmc_set_ltc_mode",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "ltcLogic",
+          "type": "ushort"
+        },
+        {
+          "name": "ltcMode",
+          "type": "ushort"
+        },
+        {
+          "name": "filter",
+          "type": "double"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "设置指定轴的 LTC 信号。手册 8.17：**ltc_logic** = 触发方式（0 下降沿 / 1 上升沿 / 2 双边沿）；**ltc_mode 与 filter 是保留参数，固定值 0**（不是「AB 相/锁存信号」，也不是去抖时间 —— 传非 0 手册未定义行为）。注意 DMC3C00 后四轴不支持高速位置锁存。",
+      "page": 184
+    },
+    {
+      "fn": "dmc_get_ltc_mode",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "ltcLogic",
+          "type": "ushort",
+          "is_ref": true
+        },
+        {
+          "name": "ltcMode",
+          "type": "ushort",
+          "is_ref": true
+        },
+        {
+          "name": "filter",
+          "type": "double",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "读取指定轴的 LTC 信号设置。手册 8.17：ltc_logic 返回触发方式；**ltc_mode 与 filter 是保留参数**。",
+      "page": 184
+    },
+    {
+      "fn": "dmc_set_latch_mode",
+      "ret": "short",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        },
+        {
+          "name": "allEnable",
+          "type": "ushort"
+        },
+        {
+          "name": "latchSource",
+          "type": "ushort"
+        },
+        {
+          "name": "trigerChunnel",
+          "type": "ushort"
+        }
+      ],
+      "verified": "official-manual",
+      "doc": "设置锁存方式。手册 8.17：all_enable = **0 单次 / 1 保留 / 2 连续 / 3 触发延时急停**；latch_source = 0 指令位置计数器 / 1 编码器计数器；**triger_chunnel 是保留参数，固定值 0 —— 锁存通道由轴号决定**：LTC0 锁存 0~3 号轴、LTC1 锁存 4~7 号轴（DMC3400A 只有 LTC0）。「触发延时急停」只对 0 号轴（DMC3400A）或 0、4 号轴（DMC3C00/3800/3600）起作用。",
+      "page": 185
+    },
+    {
+      "fn": "dmc_get_latch_value",
+      "ret": "int",
+      "args": [
+        {
+          "name": "cardNum",
+          "type": "ushort"
+        },
+        {
+          "name": "axis",
+          "type": "ushort"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读取锁存器的值（Int32 **直接返回**，单位 pulse）。手册 8.17：**单次锁存**用本函数读；连续锁存用 dmc_get_latch_value_extern。",
+      "page": 187
+    },
+    {
+      "fn": "dmc_emc_...",
+      "ret": "short",
+      "args": [],
+      "verified": "needs-manual-check",
+      "doc": "**占位条目（不生成任何 P/Invoke）**：EMC（雷赛**独立式控制器**）**用的就是同一套 `LTDMC.dll`、同一套 `dmc_`/`nmc_` 函数名** —— 官方 EMC 开发包 804 条声明里 `emc_` 前缀 **0 个**，EMC 手册自己的 C 原型也全是 `dmc_`（「没有 emc_ 函数」恰恰说明 EMC 用的是 dmc_ 命名）。EMC 与 DMC 的差别只在**连接方式**（EMC 用 `dmc_board_init_eth(IP)` 走以太网，DMC 插卡用 `dmc_board_init()` 走 PCI 枚举）与「卡号」语义（EMC 是链接号）。⚠ 所以**不存在 `dmc_emc_*` 这类函数**，本条只是占位提醒，**任何 `emc_` 名字都不要绑**；总线轴/EMC 专有函数是 `nmc_*` 前缀，同在 LTDMC.dll 里",
+      "skip_emit": true
+    }
+  ],
+  "bodies": {
+    "Open": [
+      "if (_card < 0) throw new InvalidOperationException(\"卡号未配置，请在构造参数中指定卡号\");",
+      "// 官方初始化：dmc_board_init() **无参数**，返回识别到的在线卡数（不是错误码）。",
+      "var cards = Native.dmc_board_init();",
+      "if (cards <= 0) throw new MotionException($\"dmc_board_init 未找到在线板卡（返回 {cards}）。\"",
+      "    + \"请确认：① 驱动已安装；② DLL 名与卡配套（dmc.dll / dmc3000.dll / LTDMC.dll，见 knowledge/sdks/dmc.json 的 dll 字段）；③ 进程位数与 DLL 一致。\");",
+      "if (_card >= cards) throw new MotionException($\"卡号 {_card} 超出实际在线卡数 {cards}（dmc_board_init 返回值）\");",
+      "_isOpen = true;"
+    ],
+    "Close": [
+      "if (!_isOpen) return;",
+      "Native.dmc_board_close(); // 无参数",
+      "_isOpen = false;"
+    ],
+    "Enable": [
+      "// 伺服使能走**每轴一个的 SEVON 专用端子**（ACC-X400 接线盒上是 CN1~CN4 的第 3 脚），",
+      "// 官方 dmc_write_sevon_pin 按**轴号**写，**不占用通用输出位** —— 所以不需要知道位号。",
+      "// ⚠ SEVON 的有效电平取决于驱动器接法（常闭/常开），已用 ServoOnActiveLevel 显式配置，默认高电平。",
+      "var level = on ? ServoOnActiveLevel : (ServoOnActiveLevel == 1 ? 0 : 1);",
+      "var err = Native.dmc_write_sevon_pin((ushort)_card, (ushort)axis, (ushort)level);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 使能失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "IsEnabled": [
+      "// 读 SEVON 端子电平（手册 8.13：返回值是电平 0/1，**不是错误码**；官方注释「适用于所有脉冲卡」）。",
+      "// **不用 dmc_get_sevon_enable** —— 官方 LTDMC.cs 把它标为「内部使用（保留）」，返回值语义未公开，猜错就是安全信号反了。",
+      "var level = Native.dmc_read_sevon_pin((ushort)_card, (ushort)axis);",
+      "if (level < 0) throw new MotionException($\"读取轴 {axis} 伺服使能状态失败，返回 {level}\");",
+      "return level == ServoOnActiveLevel;"
+    ],
+    "MoveAbs": [
+      "var pulses = (int)Math.Round(posMm * GetPulsePerMm(axis));",
+      "SetProfile(axis, profile);",
+      "var err = Native.dmc_pmove((ushort)_card, (ushort)axis, pulses, 1); // 1=绝对",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 绝对定位失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "MoveRel": [
+      "var pulses = (int)Math.Round(distMm * GetPulsePerMm(axis));",
+      "SetProfile(axis, profile);",
+      "var err = Native.dmc_pmove((ushort)_card, (ushort)axis, pulses, 0); // 0=相对",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 相对定位失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "MoveLinear": [
+      "throw new NotSupportedException(\"雷赛板卡的多轴插补入口需按具体型号的函数手册确认后实现；\"",
+      "    + \"当前请用 MoveAbs 逐轴下发，或改用支持总线插补的卡型。\");"
+    ],
+    "MoveArc": [
+      "// 圆弧插补函数**必须带 _unit 后缀**：dmc_arc_move_center_unit / dmc_arc_move_radius_unit（9 参数）。",
+      "// 不带后缀的 dmc_arc_move_center / dmc_arc_move_radius 在 SDK 里根本不存在，调用会抛 EntryPointNotFound。",
+      "throw new NotSupportedException(\"雷赛圆弧插补为坐标系插补（需 _unit 版 9 参数 + 坐标系号），入口需按型号函数手册确认后实现。\");"
+    ],
+    "Jog": [
+      "// 点动速度必须真的下发：旧实现用的是 Default 档，调用方传的 speedMmS 被丢掉了",
+      "var p = new MotionProfile(Math.Abs(speedMmS), 1000.0, 5000.0);",
+      "SetProfile(axis, p);",
+      "// dmc_vmove 的第 3 参是**方向**不是速度：0=负向 1=正向（速度已由 SetProfile 下发到 dmc_set_profile）。",
+      "var dir = (ushort)(speedMmS >= 0 ? 1 : 0);",
+      "var err = Native.dmc_vmove((ushort)_card, (ushort)axis, dir);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 点动失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "Stop": [
+      "var err = Native.dmc_stop((ushort)_card, (ushort)axis, mode == StopMode.Immediate ? (ushort)1 : (ushort)0);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 停止失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "Home": [
+      "// 回零方向必须显式指定：没有「安全默认方向」—— 猜错就是朝机构外跑。",
+      "if (HomeDirection == HomeDir.Unconfigured)",
+      "    throw new MotionException(\"回零方向未配置：请显式设置 HomeDirection（Positive/Negative）。方向猜错会让轴朝机构外跑，先用低速点动确认原点开关在哪一侧。\");",
+      "var ppm = GetPulsePerMm(axis);",
+      "// ⚠ 官方绑定里**没有** dmc_set_home_profile —— 回零速度走的是通用速度曲线 dmc_set_profile：",
+      "//   官方手册 8.3 原文：vel_mode=0 低速回零 = 用 dmc_set_profile 的**起始速度**(Min_Vel)，",
+      "//   vel_mode=1 高速回零 = 用**最大速度**(Max_Vel)。",
+      "//   所以两档都设成回零速度，vel_mode 选哪档都是同一个值。",
+      "var err = Native.dmc_set_profile((ushort)_card, (ushort)axis,",
+      "    HomeSpeedMmS * ppm, HomeSpeedMmS * ppm, 0.05, 0.05, 0.0);",
+      "if (err != 0) throw new MotionException($\"设置回零速度曲线失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "err = Native.dmc_set_homemode((ushort)_card, (ushort)axis,",
+      "    (ushort)(HomeDirection == HomeDir.Positive ? 1 : 0),",
+      "    HomeSpeedMode == HomeVelMode.High ? 1.0 : 0.0,",
+      "    (ushort)HomeMode, EzCount);",
+      "if (err != 0) throw new MotionException($\"设置回零模式失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "err = Native.dmc_home_move((ushort)_card, (ushort)axis);",
+      "if (err != 0) throw new MotionException($\"启动回零失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "GetPositionMm": [
+      "// dmc_get_position 返回**原始脉冲计数**（Int32 直接返回，不是错误码）。",
+      "// 注意别用 dmc_get_position_unit —— 那个返回的是物理单位(mm)，再除一次脉冲当量就差 1000 倍。",
+      "var pulses = Native.dmc_get_position((ushort)_card, (ushort)axis);",
+      "return pulses / GetPulsePerMm(axis);"
+    ],
+    "GetFeedbackMm": [
+      "// dmc_get_encoder 是**独立的编码器计数通道**（与指令脉冲 dmc_get_position 是两套计数）。",
+      "var counts = Native.dmc_get_encoder((ushort)_card, (ushort)axis);",
+      "return counts / GetPulsePerMm(axis);"
+    ],
+    "HasRealFeedback": [
+      "// dmc_get_encoder 是独立通道，但只有现场真接了编码器、计数随动时它才代表真实位置。",
+      "// 没接线时它恒为 0 —— 拿它算跟随误差会得出「误差 = 整个位移量」的假结论。",
+      "// 所以真伪由接线配置决定，不由代码猜：没接就保持 false，契约测试会跳过跟随误差断言。",
+      "return EncoderFeedbackWired;"
+    ],
+    "IsMoving": [
+      "return Native.dmc_check_done((ushort)_card, (ushort)axis) != 1;"
+    ],
+    "IsMotionDone": [
+      "return Native.dmc_check_done((ushort)_card, (ushort)axis) == 1;"
+    ],
+    "GetStopReason": [
+      "// 停止原因与函数错误码是**两套码**：错误码=「这次调用失败没有」，停止原因=「运动为什么停的」。",
+      "// 官方手册 8.7：只有 **0 是正常停止**（网上流传的「0 与 5 都算正常」是错的 —— 5 是正硬限位立即停止）。",
+      "int reason = -1;",
+      "var err = Native.dmc_get_stop_reason((ushort)_card, (ushort)axis, ref reason);",
+      "if (err != 0) throw new MotionException($\"读取停止原因失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "return reason;"
+    ],
+    "GetStopReasonText": [
+      "// 官方手册 8.7 停止原因表：**只有 0 是正常停止**。",
+      "// 文本是给人看的 —— 现场报警时操作员要看「正硬限位立即停止」而不是「5」。",
+      "var reason = GetStopReason(axis);",
+      "var text = LeisaiStopReasonText(reason);",
+      "return string.IsNullOrEmpty(text) ? $\"（停止原因 {reason}，不在官方表内）\" : text;"
+    ],
+    "GetState": [
+      "// **脉冲卡（DMC3000 系列）没有轴状态机函数** —— 官方手册 8.7 给的是「轴运动信号状态位图」+「运动状态」，",
+      "// 官方绑定里唯一的轴状态机 nmc_get_axis_state_machine 是 **EtherCAT 总线轴专用**，",
+      "// 脉冲卡上调用它只会失败或给出总线轴语义 → 这里按 8.7 自己映射到统一枚举。",
+      "// 位定义见手册 8.7 表 8.2：bit0 ALM / bit1 EL+ / bit2 EL- / bit3 EMG / bit4 ORG /",
+      "// bit6 SL+ / bit7 SL- / bit8 INP / bit9 EZ / bit10 RDY / bit11 DSTP。",
+      "var sts = Native.dmc_axis_io_status((ushort)_card, (ushort)axis);",
+      "if ((sts & 0x1) != 0) return AxisState.Error;              // ALM 伺服报警",
+      "if ((sts & 0x8) != 0) return AxisState.Error;              // EMG 急停",
+      "if ((sts & 0x2) != 0 || (sts & 0x4) != 0) return AxisState.ErrorTrigger;   // EL+/- 硬限位",
+      "if ((sts & 0x40) != 0 || (sts & 0x80) != 0) return AxisState.ErrorTrigger; // SL+/- 软限位",
+      "// dmc_check_done：0 = 正在运行，1 = 已停止",
+      "if (Native.dmc_check_done((ushort)_card, (ushort)axis) != 1) return AxisState.Started;",
+      "var sevon = Native.dmc_read_sevon_pin((ushort)_card, (ushort)axis);",
+      "if (sevon < 0) throw new MotionException($\"读取轴 {axis} 伺服使能电平失败，返回 {sevon}\");",
+      "if (sevon == ServoOnActiveLevel) return AxisState.ServoOn;",
+      "return AxisState.Stopped;"
+    ],
+    "ReadInput": [
+      "// dmc_read_inbit 的返回值**就是 IO 电平**（0=低 1=高），不是错误码 ——",
+      "// 旧实现把它当错误码判，导致高电平被当成失败抛出。负数才是错误。",
+      "var level = Native.dmc_read_inbit((ushort)_card, (ushort)port);",
+      "if (level < 0) throw new MotionException($\"读输入口 {port} 失败，返回值 {level}\");",
+      "return level != 0;"
+    ],
+    "WriteOutput": [
+      "var err = Native.dmc_write_outbit((ushort)_card, (ushort)port, on ? (ushort)1 : (ushort)0);",
+      "if (err != 0) throw new MotionException($\"写输出口 {port} 失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "SetCompareOutput": [
+      "// 高速比较（CMP）：位置到点由硬件触发输出，用在飞拍/高速取图。",
+      "if (CmpChannel < 0) throw new MotionException(\"使用位置比较输出前必须先设置 CmpChannel（高速比较通道号，按型号手册确认对应哪个 CMP 输出端子）。\");",
+      "var pulses = (int)Math.Round(posMm * GetPulsePerMm(axis));",
+      "var card = (ushort)_card;",
+      "var ch = (ushort)CmpChannel;",
+      "var err = Native.dmc_hcmp_clear_points(card, ch);",
+      "if (err != 0) throw new MotionException($\"清除比较点失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "// cmp_source：0=指令位置 1=编码器位置；cmp_logic：0 低电平有效 / 1 高电平有效；",
+      "// time = 脉冲宽度(us)，**只有比较模式 4/5 有效**，这里用模式 1（等于比较）所以固定传 0。",
+      "// 手册 8.19：**hcmp 取值 0~3，一一对应硬件 CMP0~CMP3 端口**（这一层不再有疑问）；",
+      "// 但**哪个物理端子承载 CMP0~CMP3 随接线盒型号而变** —— ACC-X400 是 CN23 的 PWM0/PWM1 与 CN21 的 OUT14/OUT15。",
+      "// 现场换接线盒时必须重新核对端子（这是接线问题，不是协议问题）。",
+      "err = Native.dmc_hcmp_set_config(card, ch, (ushort)axis, (ushort)CmpSource, (ushort)CmpLogic, 0);",
+      "if (err != 0) throw new MotionException($\"设置比较参数失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "err = Native.dmc_hcmp_add_point(card, ch, pulses);",
+      "if (err != 0) throw new MotionException($\"添加比较点失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "err = Native.dmc_hcmp_set_mode(card, ch, 1); // 1=等于比较",
+      "if (err != 0) throw new MotionException($\"使能比较失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "SetLatch": [
+      "// 位置锁存（LTC）：外部信号有效瞬间锁存当前反馈位置，用于视觉/激光测距的高精度触发。",
+      "// **手册 8.17：锁存通道不是参数选出来的 —— LTC0 锁 0~3 号轴、LTC1 锁 4~7 号轴，由轴号决定**；",
+      "// dmc_set_latch_mode 的第 5 参 triger_chunnel 是**保留参数，固定值 0**。",
+      "// 触发信号落在哪个物理输入口由**接线盒型号**决定（ACC-X400：LTC0 = IN14、LTC1 = IN15，手册表 8.3），",
+      "// 所以 inPort 只做范围校验与提示，不参与协议。",
+      "if (inPort < 0 || inPort > 15)",
+      "    throw new MotionException($\"雷赛通用输入口号是 0~15，收到 {inPort}。请按现场接线盒型号填入 LTC 触发所在的输入口号\"",
+      "        + \"（ACC-X400 接线盒：LTC0 = IN14、LTC1 = IN15）。\");",
+      "var card = (ushort)_card;",
+      "// ltc_logic：0 下降沿 / 1 上升沿 / 2 双边沿；ltc_mode 与 filter 是**保留参数，固定值 0**",
+      "var err = Native.dmc_set_ltc_mode(card, (ushort)axis, (ushort)LatchLogic, 0, 0);",
+      "if (err != 0) throw new MotionException($\"设置锁存模式失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "// all_enable：0 单次 / 2 连续 / 3 触发延时急停（1 是保留值）；latch_source：0 指令位置 / 1 编码器位置；",
+      "// triger_chunnel 保留参数，固定值 0（通道由轴号决定）",
+      "err = Native.dmc_set_latch_mode(card, (ushort)axis, (ushort)LatchMode, (ushort)LatchSource, 0);",
+      "if (err != 0) throw new MotionException($\"设置锁存方式失败，错误码 {err}{LeisaiErrorText(err)}\");"
+    ],
+    "SetPulsePerMm": [
+      "_pulsePerMm[axis] = pulsePerMm;",
+      "if (pulsePerMm <= 0) throw new ArgumentOutOfRangeException(nameof(pulsePerMm), \"脉冲当量必须为正\");"
+    ],
+    "GetPulsePerMm": [
+      "return _pulsePerMm[axis];"
+    ]
+  },
+  "helpers": {
+    "SetProfile": [
+      "private void SetProfile(int axis, MotionProfile profile)",
+      "{",
+      "    var ppm = GetPulsePerMm(axis);",
+      "    var vel = profile.VelocityMmS * ppm;                 // pulse/s",
+      "    // 雷赛的 Tacc/Tdec 是**时间**（单位秒，最小 0.001s），不是加速度、也不是毫秒。",
+      "    // 梯形曲线：tAcc = V / a（换到脉冲空间后脉冲当量约掉，结果与 mm 口径一致）。",
+      "    var acc = profile.AccelMmS2 > 0 ? profile.AccelMmS2 : 1000.0;",
+      "    var tAcc = Math.Max(0.001, profile.VelocityMmS / acc);",
+      "    var err = Native.dmc_set_profile((ushort)_card, (ushort)axis, 0.0, vel, tAcc, tAcc, 0.0);",
+      "    if (err != 0) throw new MotionException($\"设置速度曲线失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "    // S 段是「平滑过渡时间」（秒，0~0.5），不是 jerk 值。",
+      "    // 由 jerk 反算是**近似关系**，精确对应需按实机标定 —— 故夹在 [0, 0.5]。",
+      "    var sPara = 0.0;",
+      "    if (profile.JerkMmS3 > 0)",
+      "        sPara = Math.Min(0.5, Math.Max(0.0, profile.VelocityMmS / profile.JerkMmS3));",
+      "    err = Native.dmc_set_s_profile((ushort)_card, (ushort)axis, 0, sPara);",
+      "    if (err != 0) throw new MotionException($\"设置 S 段失败，错误码 {err}{LeisaiErrorText(err)}\");",
+      "}"
+    ],
+    "LeisaiEnums": [
+      "/// <summary>回零方式。取值与雷赛 dmc_set_homemode 的 mode 参数一一对应（官方手册 8.3 全表）。</summary>",
+      "/// <remarks>",
+      "/// ⚠ **mode 4 / 8（只记 EZ）要求轴上真的接了 Z 相** —— 没接 Z 相时轴会一直跑直到撞限位",
+      "/// （官方停止原因码 24「没有找到 EZ 信号」/ 204 就是这个场景）。",
+      "/// ⚠ mode=4 时回零速度模式被固定为低速。",
+      "/// ⚠ DMC3C00 后四轴只支持 0/1/2/10/11/12 六种模式；限位回零(10/11/12)需 3XX201611 及以后固件。",
+      "/// </remarks>",
+      "public enum LeisaiHomeMode : ushort",
+      "{",
+      "    OriginOnce = 0,          // 一次回零",
+      "    OriginOnceReverse = 1,   // 一次回零加回找",
+      "    OriginTwice = 2,         // 二次回零",
+      "    OriginThenEzSame = 3,    // 一次回零后再记一个同向 EZ 脉冲进行回零",
+      "    EzOnly = 4,              // 记一个 EZ 脉冲进行回零（**必须接了 Z 相**；速度模式固定为低速）",
+      "    OriginThenEzReverse = 5, // 原点加反向 EZ",
+      "    OriginLatch = 6,         // 原点锁存",
+      "    OriginLatchEzSame = 7,   // 原点锁存加同向 EZ 锁存",
+      "    EzLatchOnly = 8,         // 单独记一个 EZ 锁存",
+      "    OriginLatchEzReverse = 9,// 原点锁存加反向 EZ 锁存",
+      "    LimitOnce = 10,          // 一次限位回零",
+      "    LimitOnceReverse = 11,   // 一次限位回零加反找",
+      "    LimitTwice = 12          // 二次限位回零",
+      "}",
+      "",
+      "/// <summary>回零方向。对应 dmc_set_homemode 的 home_dir。</summary>",
+      "/// <remarks>Unconfigured = 还没指定：回零会直接抛异常，不猜方向（方向错 = 朝机构外跑）。</remarks>",
+      "public enum HomeDir : ushort { Negative = 0, Positive = 1, Unconfigured = 255 }",
+      "",
+      "/// <summary>回零速度模式。对应 dmc_set_homemode 的 vel_mode。</summary>",
+      "public enum HomeVelMode : ushort { Low = 0, High = 1 }",
+      "",
+      "/// <summary>比较位置来源。对应 dmc_hcmp_set_config / dmc_compare_set_config 的 cmp_source。</summary>",
+      "public enum CompareSource : ushort { Command = 0, Encoder = 1 }"
+    ],
+    "LeisaiHomeConfig": [
+      "/// <summary>回零方式。默认一次原点回零。</summary>",
+      "/// <remarks>mode 表的取值上限在不同公开资料里有 0~9 / 0~11 / 0~12 三种说法，以厂商手册为准。</remarks>",
+      "public LeisaiHomeMode HomeMode { get; set; } = LeisaiHomeMode.OriginOnce;",
+      "",
+      "/// <summary>回零方向。**默认不配置**（Unconfigured）—— 回零会抛异常，必须显式指定。</summary>",
+      "/// <remarks>方向没有「安全默认」：负向/正向取决于机构，原点开关在哪边只有现场知道。猜错 = 朝机构外跑。首次上机按 L2 低速点动确认方向后再填。</remarks>",
+      "public HomeDir HomeDirection { get; set; } = HomeDir.Unconfigured;",
+      "",
+      "/// <summary>回零速度模式。默认低速（用回零曲线的起始速度）。</summary>",
+      "public HomeVelMode HomeSpeedMode { get; set; } = HomeVelMode.Low;",
+      "",
+      "/// <summary>回零速度（mm/s）。同时用作回零曲线的起始/最大速度。</summary>",
+      "public double HomeSpeedMmS { get; set; } = 20.0;",
+      "",
+      "/// <summary>EZ 计数。**官方手册 8.3 明确：这是保留参数，固定值 0**。</summary>",
+      "/// <remarks>网上流传的「ez_count 可选锁存源」说法是错的 —— 那是原点锁存函数 dmc_set_homelatch_mode 的 source 参数，与本参数无关。</remarks>",
+      "public ushort EzCount { get; set; } = 0;"
+    ],
+    "LeisaiHardwareConfig": [
+      "/// <summary>轴上是否真的接了编码器（且计数随动）。</summary>",
+      "/// <remarks>",
+      "/// 接了才允许把 GetFeedbackMm 当真实反馈用（判断跟随误差、伺服整定、飞拍补偿）。",
+      "/// **没接就保持 false** —— 此时 dmc_get_encoder 恒为 0，拿它算跟随误差会得到",
+      "/// 「误差 = 整个位移量」这种假结论；契约测试会据此把「跟随误差必须非零」判为不适用，",
+      "/// 而不是在真机上误报「反馈是假数据」。",
+      "/// </remarks>",
+      "public bool EncoderFeedbackWired { get; set; } = false;",
+      "",
+      "/// <summary>高速比较（CMP）通道号，对应卡上的 CMP 输出端子。",
+      "/// 设为 -1 表示未配置 —— 位置比较输出会直接抛异常，而不是默默打错端子。</summary>",
+      "public int CmpChannel { get; set; } = -1;",
+      "",
+      "/// <summary>比较位置来源。默认编码器位置：飞拍按实际位置触发才能补偿跟随误差。</summary>",
+      "public CompareSource CmpSource { get; set; } = CompareSource.Encoder;",
+      "",
+      "/// <summary>比较输出的有效电平：0=低电平有效，1=高电平有效。</summary>",
+      "public int CmpLogic { get; set; } = 0;",
+      "",
+      "/// <summary>锁存源。部分型号固定为 1（辅助编码器计数），部分型号可自选。</summary>",
+      "public int LatchSource { get; set; } = 1;",
+      "",
+      "/// <summary>锁存触发电平：0=低电平有效，1=高电平有效。</summary>",
+      "public int LatchLogic { get; set; } = 1;",
+      "",
+      "/// <summary>伺服使能（SEVON）端子的有效电平：1 = 高电平使能（默认）/ 0 = 低电平使能。取决于驱动器接法（常闭还是常开）。</summary>",
+      "public int ServoOnActiveLevel { get; set; } = 1;",
+      "",
+      "/// <summary>锁存方式（dmc_set_latch_mode 的 all_enable）：0 = 单次 / 2 = 连续 / 3 = 触发延时急停（1 是保留值）。</summary>",
+      "public int LatchMode { get; set; } = 0;"
+    ],
+    "LeisaiHelpers": [
+      "",
+      "/// <summary>函数错误码含义（官方手册 表 8.7《运动函数错误码》）。</summary>",
+      "/// <remarks>只收「代码里真会遇到的」那些；未列出的按未知处理，不猜。</remarks>",
+      "private static string LeisaiErrorText(int code)",
+      "{",
+      "    switch (code)",
+      "    {",
+      "        case -1: return \"（内部空指针返回值）\";",
+      "        case 0: return \"（成功）\";",
+      "        case 1: return \"（未知错误）\";",
+      "        case 2: return \"（动态库层参数错误）\";",
+      "        case 3: return \"（操作超时）\";",
+      "        case 4: return \"（轴处于运动中）\";",
+      "        case 5: return \"（连接数量过多，需减少连接）\";",
+      "        case 6: return \"（插补错误）\";",
+      "        case 7: return \"（连接失败：主站正在初始化）\";",
+      "        case 8: return \"（无法连接）\";",
+      "        case 9: return \"（卡号错误或连接已断开）\";",
+      "        case 10: return \"（发送数据失败/数据传输错误，请检查 PCI 槽位）\";",
+      "        case 12: return \"（固件文件错误）\";",
+      "        case 14: return \"（固件与控制卡型号不匹配）\";",
+      "        case 17: return \"（控制卡不支持该功能）\";",
+      "        case 19: return \"（型号类型不匹配）\";",
+      "        case 20: return \"（固件参数错误）\";",
+      "        case 22: return \"（固件当前状态不允许该操作）\";",
+      "        case 24: return \"（不支持该功能）\";",
+      "        case 25: return \"（密码错误）\";",
+      "        case 52: return \"（参数不在有效范围）\";",
+      "        case 63: return \"（加减速时间为 0）\";",
+      "        case 70: return \"（S 曲线平滑时间为 0）\";",
+      "        case 77: return \"（加速时间等于 0）\";",
+      "        case 78: return \"（减速时间等于 0）\";",
+      "        case 101: return \"（所选轴超出最大值）\";",
+      "        case 102: return \"（轴正在运动，不能设置参数）\";",
+      "        case 103: return \"（轴正在运动，不能进入该模式）\";",
+      "        case 104: return \"（轴处于正限位，不能正向运动）\";",
+      "        case 105: return \"（轴处于负限位，不能负向运动）\";",
+      "        case 106: return \"（轴处于软正限位，不能正向运动）\";",
+      "        case 107: return \"（轴处于软负限位，不能负向运动）\";",
+      "        case 110: return \"（设置轴当量错误，不能为 0）\";",
+      "        case 112: return \"（设置位置错误，已超出允许范围）\";",
+      "        case 115: return \"（轴处于报警状态，不能运动）\";",
+      "        case 116: return \"（轴处于急停状态，不能运动）\";",
+      "        case 117: return \"（总线轴未使能）\";",
+      "        case 121: return \"（所选比较轴超出范围）\";",
+      "        case 122: return \"（比较点数已满）\";",
+      "        case 123: return \"（比较 IO 超出范围）\";",
+      "        case 124: return \"（高速比较 IO 超出范围）\";",
+      "        case 207: return \"（正负限位同时有效，无法启动回零）\";",
+      "        case 1000: return \"（轴号超出最大轴数或伺服轴数范围）\";",
+      "        case 1002: return \"（轴或坐标系处于运动中，不支持该操作）\";",
+      "        case 1012: return \"（总线轴未使能，先使能再操作）\";",
+      "        case 1017: return \"（轴 ALM 伺服报警信号有效）\";",
+      "        case 1018: return \"（轴 EMG 急停信号有效）\";",
+      "        case 1019: return \"（轴 DSTP 信号有效）\";",
+      "        case 1029: return \"（轴运动状态异常，需先清除轴异常状态）\";",
+      "        case 1030: return \"（急停保护状态，不允许轴运动与 IO 输出）\";",
+      "        case 1040: return \"（用户手动停止）\";",
+      "        case 1041: return \"（被其它任务牵连停止）\";",
+      "        case 1099: return \"（未知错误）\";",
+      "        case 1100: return \"（目标位置大于轴软件正限位）\";",
+      "        case 1101: return \"（目标位置小于轴软件负限位）\";",
+      "        default: return string.Empty;",
+      "    }",
+      "}",
+      "",
+      "/// <summary>停止原因含义（官方手册 8.7《运动状态检测及控制》停止原因表）。</summary>",
+      "/// <remarks>",
+      "/// **与函数错误码是两套码**：错误码是「这次调用失败没有」，停止原因是「运动为什么停的」。",
+      "/// 只有 0 是正常停止；1~38 是脉冲卡停机原因，100+ 是总线，201~208 是回零相关。",
+      "/// </remarks>",
+      "private static string LeisaiStopReasonText(int reason)",
+      "{",
+      "    switch (reason)",
+      "    {",
+      "        case 0: return \"（正常停止）\";",
+      "        case 1: return \"（ALM 伺服报警立即停止）\";",
+      "        case 2: return \"（ALM 伺服报警减速停止）\";",
+      "        case 3: return \"（LTC 外部触发立即停止）\";",
+      "        case 4: return \"（EMG 急停立即停止）\";",
+      "        case 5: return \"（正硬限位立即停止）\";",
+      "        case 6: return \"（负硬限位立即停止）\";",
+      "        case 7: return \"（正硬限位减速停止）\";",
+      "        case 8: return \"（负硬限位减速停止）\";",
+      "        case 9: return \"（正软限位立即停止）\";",
+      "        case 10: return \"（负软限位立即停止）\";",
+      "        case 11: return \"（正软限位减速停止）\";",
+      "        case 12: return \"（负软限位减速停止）\";",
+      "        case 13: return \"（命令立即停止）\";",
+      "        case 14: return \"（命令减速停止）\";",
+      "        case 15: return \"（其它原因立即停止）\";",
+      "        case 16: return \"（其它原因减速停止）\";",
+      "        case 17: return \"（未知原因立即停止）\";",
+      "        case 18: return \"（未知原因减速停止）\";",
+      "        case 19: return \"（外部 IO 减速停止）\";",
+      "        case 20: return \"（前瞻预处理来不及，底层自动 stop）\";",
+      "        case 21: return \"（原点不在两个限位之间停止）\";",
+      "        case 22: return \"（回零方向与当前有效限位端相反）\";",
+      "        case 23: return \"（正负限位同时有效）\";",
+      "        case 24: return \"（没有找到 EZ 信号）\";",
+      "        case 25: return \"（回零位置溢出停止）\";",
+      "        case 26: return \"（动加速度过大，异常停止）\";",
+      "        case 27: return \"（双原点停止）\";",
+      "        case 28: return \"（区域限位立即停止）\";",
+      "        case 29: return \"（区域限位减速停止）\";",
+      "        case 30: return \"（龙门超差保护减速停止）\";",
+      "        case 31: return \"（龙门超差保护立即停止）\";",
+      "        case 32: return \"（插补规划错误停止）\";",
+      "        case 33: return \"（单轴跟踪误差保护立即停止）\";",
+      "        case 34: return \"（单轴跟踪误差保护减速停止）\";",
+      "        case 35: return \"（插补缓冲区错误停止）\";",
+      "        case 36: return \"（龙门主从轴超差保护立即停止）\";",
+      "        case 37: return \"（龙门主从轴超差保护减速停止）\";",
+      "        case 38: return \"（轴输出脉冲频率超过 4M）\";",
+      "        case 39: return \"（IO 触发立即停止）\";",
+      "        case 40: return \"（IO 触发减速停止）\";",
+      "        case 41: return \"（比较功能触发立即停止）\";",
+      "        case 49: return \"（看门狗超时）\";",
+      "        case 50: return \"（两轴碰撞检测立即停止）\";",
+      "        case 51: return \"（两轴碰撞检测减速停止）\";",
+      "        case 100: return \"（总线错误停止）\";",
+      "        case 101: return \"（总线错误急停）\";",
+      "        case 201: return \"（正负限位之间全程没找到原点信号）\";",
+      "        case 202: return \"（回零方向不匹配）\";",
+      "        case 203: return \"（正负限位同时有效）\";",
+      "        case 204: return \"（正负限位之间全程没有 EZ 信号）\";",
+      "        case 205: return \"（位置溢出）\";",
+      "        case 206: return \"（双原点错误）\";",
+      "        case 207: return \"（外部信号触发回零停止）\";",
+      "        case 208: return \"（驱动器回零被中断停止）\";",
+      "        default: return string.Empty;",
+      "    }",
+      "}"
+    ]
+  }
+}

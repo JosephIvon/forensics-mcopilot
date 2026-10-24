@@ -1,0 +1,12 @@
+{
+  "case": "柔性传动谐振",
+  "loop_wn_rad_s": 100.0,
+  "loop_zeta": 0.8,
+  "ringing_hz": 35.0,
+  "ringing_amp_mm": 2.0,
+  "ringing_decay_per_s": 8.0,
+  "expect_findings": [
+    "SRV-02"
+  ],
+  "note": "机械谐振模态 35 Hz 落在 12~120 Hz 疑似区间，SRV-02 应命中"
+}

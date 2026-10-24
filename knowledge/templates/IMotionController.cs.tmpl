@@ -1,0 +1,152 @@
+// ============================================================================
+//  运动控制卡统一抽象层（设备抽象层）
+//  —— 由 mcopilot adapter 生成，请勿直接改本文件；改接口请改模板后重新生成。
+//
+//  设计约定（三条，破了就会在换卡时出事）：
+//  1. 业务层一律使用 **mm / mm·s⁻¹**，永远不出现 pulse。任何 pulse 换算只允许
+//     出现在具体适配器内部。换卡不改业务代码的前提就是这条。
+//  2. 指令位置(GetPositionMm) 与 反馈位置(GetFeedbackMm) 是两个方法，不合并。
+//     雷赛板卡的「指令脉冲」与「编码器计数」是两套计数，合并就等于埋雷。
+//  3. 到位之后必须读 GetStopReason()。返回 0 才叫「正常完成」。
+//     「指令下发成功」不等于「到位」，更不等于「到位原因正常」。
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+
+namespace Motion
+{
+    /// <summary>轴状态机。数值语义按品牌统一映射，调用方不要依赖具体品牌的原始枚举。</summary>
+    public enum AxisState
+    {
+        NotStarted = 0,   // 未启动
+        StartDisabled = 1,// 启动禁止
+        ReadyToStart = 2, // 准备启动
+        Started = 3,      // 已启动（运动中）
+        ServoOn = 4,      // 操作使能
+        Stopped = 5,      // 停止
+        ErrorTrigger = 6, // 错误触发
+        Error = 7         // 错误
+    }
+
+    /// <summary>停止方式。</summary>
+    public enum StopMode
+    {
+        Decelerate = 0, // 减速停止
+        Immediate = 1   // 立即停止（急停用这个）
+    }
+
+    /// <summary>运动参数。单位固定为 mm / mm·s⁻¹ / mm·s⁻³。</summary>
+    public readonly struct MotionProfile
+    {
+        public double VelocityMmS { get; }
+        public double AccelMmS2 { get; }
+        public double JerkMmS3 { get; }
+
+        public MotionProfile(double velocityMmS, double accelMmS2, double jerkMmS3)
+        {
+            VelocityMmS = velocityMmS;
+            AccelMmS2 = accelMmS2;
+            JerkMmS3 = jerkMmS3;
+        }
+
+        public static MotionProfile Default => new MotionProfile(200.0, 1000.0, 5000.0);
+    }
+
+    /// <summary>运动控制异常。所有适配器统一抛这个类型，便于上层分类处理。</summary>
+    public class MotionException : Exception
+    {
+        public int ErrorCode { get; }
+
+        public MotionException(string message) : base(message) { }
+
+        public MotionException(string message, int errorCode) : base(message)
+        {
+            ErrorCode = errorCode;
+        }
+    }
+
+    /// <summary>
+    /// 运动控制器抽象接口 —— 所有品牌卡适配器都必须实现本接口。
+    /// 业务代码只依赖本接口，不依赖任何厂商 SDK。
+    /// </summary>
+    public interface IMotionController : IDisposable
+    {
+        /// <summary>品牌名，用于日志与报告。</summary>
+        string Vendor { get; }
+
+        /// <summary>轴数。</summary>
+        int AxisCount { get; }
+
+        /// <summary>是否已连接。</summary>
+        bool IsOpen { get; }
+
+        void Open();
+        void Close();
+
+        void Enable(int axis, bool on);
+        bool IsEnabled(int axis);
+
+        void MoveAbs(int axis, double posMm, MotionProfile profile);
+        void MoveRel(int axis, double distMm, MotionProfile profile);
+
+        /// <summary>多轴直线插补。目标为各轴绝对位置（mm）。</summary>
+        void MoveLinear(IReadOnlyList<double> targetsMm, MotionProfile profile);
+
+        /// <summary>平面圆弧插补。圆心与终点均为绝对坐标（mm）。</summary>
+        void MoveArc(double centerXMm, double centerYMm, double endXMm, double endYMm,
+                     bool counterClockwise, MotionProfile profile);
+
+        void Jog(int axis, double speedMmS);
+        void Stop(int axis, StopMode mode);
+        void Home(int axis);
+
+        /// <summary>指令位置（mm）。</summary>
+        double GetPositionMm(int axis);
+
+        /// <summary>编码器反馈位置（mm）。</summary>
+        /// <remarks>
+        /// ⚠ **不保证是真实测量**：开环轴上它可能只是指令位置的副本。
+        /// 用 <see cref="HasRealFeedback"/> 判断这一轴到底有没有真反馈。
+        /// </remarks>
+        double GetFeedbackMm(int axis);
+
+        /// <summary>该轴的反馈位置是否来自**独立的真实测量通道**（编码器 / 驱动器 0x6064）。</summary>
+        /// <remarks>
+        /// false = 反馈是指令位置的副本，或通道没接线（恒为 0）。
+        /// 这种轴上「指令位置 − 反馈位置」恒为 0（或恒等于整个位移量），
+        /// 拿它判断跟随误差、伺服整定、飞拍补偿只会得出假结论 ——
+        /// 契约测试里的「跟随误差必须非零」会据此自动判定为不适用，而不是在真机上误报。
+        /// </remarks>
+        bool HasRealFeedback(int axis);
+
+        bool IsMoving(int axis);
+        bool IsMotionDone(int axis);
+
+        /// <summary>停止原因。0 = 正常停止。非 0 必须被业务层单独处理。</summary>
+        int GetStopReason(int axis);
+
+        /// <summary>停止原因的可读文本（与 GetStopReason 读的是同一个值，只是翻译成人话）。</summary>
+        /// <remarks>
+        /// 停止原因码有几十个（雷赛官方 0~38 + 100+ + 201~208），
+        /// 直接甩一个 int 给操作员没有用 —— 出事时他要看的是「正硬限位立即停止」而不是「5」。
+        /// </remarks>
+        string GetStopReasonText(int axis);
+
+        AxisState GetState(int axis);
+
+        bool ReadInput(int port);
+        void WriteOutput(int port, bool on);
+
+        /// <summary>硬件比较输出：到达 posMm 时由硬件自动翻转 outPort（飞拍/触发）。</summary>
+        void SetCompareOutput(int axis, double posMm, int outPort);
+
+        /// <summary>位置锁存：inPort 有效时锁存当前反馈位置。</summary>
+        void SetLatch(int axis, int inPort);
+
+        /// <summary>设置脉冲当量（脉冲/mm）。换机械/换丝杆后必须重新设置。</summary>
+        void SetPulsePerMm(int axis, double pulsePerMm);
+
+        double GetPulsePerMm(int axis);
+    }
+}

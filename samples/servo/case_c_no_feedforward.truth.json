@@ -1,0 +1,9 @@
+{
+  "case": "type-1 无速度前馈（匀速段）",
+  "err_per_vel_s": 0.002,
+  "max_velocity_mm_s": 200.0,
+  "expect_findings": [
+    "SRV-05"
+  ],
+  "note": "误差与速度严格成正比（相关系数=1），SRV-05 应命中；且指令在持续变化 → 阶跃类指标不适用"
+}

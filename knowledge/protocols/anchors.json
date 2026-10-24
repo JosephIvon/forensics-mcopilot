@@ -1,0 +1,161 @@
+{
+  "schema_version": "protocol_anchors/1",
+  "generated": "2026-10-21",
+  "purpose": "协议域外部真值锚点清单：文件 → sha256。门禁 scripts/gate_anchors.py 重算比对，防一手件/提取文本/源码包被静默篡改（铁律4）。",
+  "algorithm": "sha256",
+  "path_base": "仓库根（相对路径）。以 `out/` 或 `../` 开头的条目属**非入库区**（本地运行产物 / 仓外原件）：门禁在位即核指纹，缺位记 SKIP 并说明「当前不可自动复核」——不静默当绿。",
+  "anchors": [
+    {
+      "name": "Modbus_Application_Protocol_V1_1b3.pdf",
+      "role": "spec_pdf",
+      "spec": "MODBUS Application Protocol Specification V1.1b3（2012-04-26，modbus.org 官方）",
+      "path": "../mcopilot-external/vendor_docs/protocol_specs/Modbus_Application_Protocol_V1_1b3.pdf",
+      "size": 932519,
+      "sha256": "f80d0d7132fd035104c3f21b01026470e3310ca3d8d493d9a9737d0d32ad2eb1",
+      "repo_path": "knowledge/protocols/specs/Modbus_Application_Protocol_V1_1b3.pdf",
+      "storage": "external"
+    },
+    {
+      "name": "Modbus_Messaging_Implementation_Guide_V1_0b.pdf",
+      "role": "spec_pdf",
+      "spec": "MODBUS Messaging Implementation Guide V1.0b（2006-10-24，modbus.org 官方）",
+      "path": "../mcopilot-external/vendor_docs/protocol_specs/Modbus_Messaging_Implementation_Guide_V1_0b.pdf",
+      "size": 808753,
+      "sha256": "065d71170475642e82f370c648bf5135263cb20f61ce92c921add975fab6f669",
+      "repo_path": "knowledge/protocols/specs/Modbus_Messaging_Implementation_Guide_V1_0b.pdf",
+      "storage": "external"
+    },
+    {
+      "name": "Modbus_over_serial_line_V1_02.pdf",
+      "role": "spec_pdf",
+      "spec": "MODBUS over Serial Line Specification and Implementation Guide V1.02（2006-12-20，modbus.org 官方）",
+      "path": "../mcopilot-external/vendor_docs/protocol_specs/Modbus_over_serial_line_V1_02.pdf",
+      "size": 264122,
+      "sha256": "85a91e278b26d68c94a2f61a5300cd39c9e4c855034833f391abc6541fbdf7e5",
+      "repo_path": "knowledge/protocols/specs/Modbus_over_serial_line_V1_02.pdf",
+      "storage": "external"
+    },
+    {
+      "name": "FOCAS_function_list.pdf",
+      "role": "spec_pdf",
+      "spec": "FOCAS1/2 函数清单（第三方分发的 FANUC 手册副本；官方 B-63xx 未获得，来源性质见 focas.json spec_version）",
+      "path": "../mcopilot-external/vendor_docs/protocol_specs/FOCAS_function_list.pdf",
+      "size": 388213,
+      "sha256": "17c37cf839673d83eccc7add4e4a620d93528acf4637cfa27036c2b6c9ce7fd1",
+      "repo_path": "knowledge/protocols/specs/FOCAS_function_list.pdf",
+      "storage": "external"
+    },
+    {
+      "name": "FOCAS2_Ethernet_Linux_en.pdf",
+      "role": "spec_pdf",
+      "spec": "FOCAS2/Ethernet for Linux OPERATOR'S MANUAL Edition 2（GitHub 第三方仓库翻印副本）",
+      "path": "../mcopilot-external/vendor_docs/protocol_specs/FOCAS2_Ethernet_Linux_en.pdf",
+      "size": 108130,
+      "sha256": "3546536bdca8883456fa49deccfe067a831af679f31ec09ab5028f27068968f5",
+      "repo_path": "knowledge/protocols/specs/FOCAS2_Ethernet_Linux_en.pdf",
+      "storage": "external"
+    },
+    {
+      "name": "Snap7-refman.pdf",
+      "role": "spec_pdf",
+      "spec": "Snap7 Reference Manual Rev.8（对应 Snap7 1.4.2，第三方逆向工程文档——S7 无官方公开协议规范）",
+      "path": "../mcopilot-external/vendor_docs/protocol_specs/Snap7-refman.pdf",
+      "size": 4272567,
+      "sha256": "52d870f8ed767e73c20e00e1b0c312764d089b26e327ca7cb48ae0b135117279",
+      "repo_path": "knowledge/protocols/specs/Snap7-refman.pdf",
+      "storage": "external"
+    },
+    {
+      "name": "snap7-master.tar.gz",
+      "role": "source_snapshot",
+      "spec": "Snap7 1.4.3 源码包（S7 错误码/超时/PDU 布局 mechanical-evidence 取证的一手件）",
+      "path": "out/_protocols_s7/src/snap7-master.tar.gz",
+      "size": 3849133,
+      "sha256": "e8cc1164d1a6a1dfb9b644e99915dfb4ab3a13232551df0e8e6a0f8184134738"
+    },
+    {
+      "name": "com0com-3.0.0.0-i386-and-x64-signed.exe",
+      "role": "tool_installer",
+      "spec": "com0com null-modem 模拟器签名安装包（RTU 行为契约的虚拟串口对依赖）",
+      "path": "out/_protocols_rtuloop/com0com-3.0.0.0-i386-and-x64-signed.exe",
+      "size": 105762,
+      "sha256": "65b3573b45d78a791f8582f59867bb1190a9fd1a6577faa146081482effcfb5c"
+    },
+    {
+      "name": "com0com-3.0.0.0-Win-x64_Setup-Signed.exe",
+      "role": "tool_installer",
+      "spec": "com0com x64 签名安装包",
+      "path": "out/_protocols_rtuloop/com0com-3.0.0.0-Win-x64_Setup-Signed.exe",
+      "size": 261544,
+      "sha256": "26486b28604b49a9008c54feb11b9ece0008a8287ee5caf0bcf2a62f4317128f"
+    },
+    {
+      "name": "com0com-3.0.0.0-Win-x86_x64_ManualInstall-Signed.zip",
+      "role": "tool_installer",
+      "spec": "com0com 手动安装包（免安装场景）",
+      "path": "out/_protocols_rtuloop/com0com-3.0.0.0-Win-x86_x64_ManualInstall-Signed.zip",
+      "size": 293928,
+      "sha256": "343c6ab0b4aafbc8092f1362aa6b931683955182a7c3afde903ef4d23df8036b"
+    },
+    {
+      "name": "com0com-3.0.0.0-Win-x86_x64_Setup-AlternateSigned_2012-11-02.exe",
+      "role": "tool_installer",
+      "spec": "com0com 备用签名安装包（2012-11-02）",
+      "path": "out/_protocols_rtuloop/com0com-3.0.0.0-Win-x86_x64_Setup-AlternateSigned_2012-11-02.exe",
+      "size": 246941,
+      "sha256": "ae0dd19472f92bab3165d370c3713616a3ffb708fad785684759b04653705a71"
+    },
+    {
+      "name": "Modbus_Application_Protocol_V1_1b3.txt",
+      "role": "extracted_text",
+      "spec": "Modbus AP V1.1b3 规范提取文本（quote 反查同源文本，pdf2txt.py 产物）",
+      "path": "out/_protocols_extract/Modbus_Application_Protocol_V1_1b3.txt",
+      "size": 87795,
+      "sha256": "cc0b4a955cf58c329eb5ca5c4b523d0b20429a35a0e1056178933d2282fe2ce2",
+      "reextract_from": "../mcopilot-external/vendor_docs/protocol_specs/Modbus_Application_Protocol_V1_1b3.pdf",
+      "reextract_tool": "knowledge/protocols/specs/pdf2txt.py",
+      "reextract_check": "哈希必须与在档 txt 完全一致（证明提取链未被篡改，见 gate_anchors.py 再提取抽查）"
+    },
+    {
+      "name": "Modbus_Messaging_Implementation_Guide_V1_0b.txt",
+      "role": "extracted_text",
+      "spec": "Modbus Messaging V1.0b 规范提取文本（quote 反查同源文本）",
+      "path": "out/_protocols_extract/Modbus_Messaging_Implementation_Guide_V1_0b.txt",
+      "size": 84952,
+      "sha256": "28907b19754a39544ae54ba4416cac8f331696df1fb62290956efecea0f4e50b"
+    },
+    {
+      "name": "Modbus_over_serial_line_V1_02.txt",
+      "role": "extracted_text",
+      "spec": "Modbus Serial Line V1.02 规范提取文本（quote 反查同源文本）",
+      "path": "out/_protocols_extract/Modbus_over_serial_line_V1_02.txt",
+      "size": 85225,
+      "sha256": "76659b77cbd6d2b67515e0de706fa9e250d0a8b222c1dd90cae783f8370de62e"
+    },
+    {
+      "name": "FX5_SLMP_JY997D54401.pdf",
+      "role": "spec_pdf",
+      "spec": "FX5 User's Manual (SLMP) 手册编号 JY997D54401（114 页，三菱官方手册原文，经镜像分发取得；官方下载页为 JS 动态无法直链——来源性质见 slmp.json source_note）",
+      "repo_path": "knowledge/protocols/slmp_specs/FX5_SLMP_JY997D54401.pdf",
+      "path": "../mcopilot-external/vendor_docs/protocol_specs/FX5_SLMP_JY997D54401.pdf",
+      "storage": "external",
+      "size": 1337160,
+      "sha256": "6e273720b435e18e5ccf422929cfbc2d1aa1e1ef0317bbde2ff92b14589a65a5",
+      "source_url": "http://www.atronika.com/Mitsubishi/PLC/MITSUBISHI_manual_plc_fx5_slmp.pdf"
+    }
+  ],
+  "url_liveness": [
+    {
+      "name": "focas_inventcom",
+      "url": "https://www.inventcom.net/fanuc-focas-library/",
+      "role": "focas.json spec_version.documents[0].base_url（第三方 HTML 复刻手册在线源）",
+      "policy": "默认 WARN 不计入失败（CI 无网不误报）；gate_anchors.py --strict 时计入失败"
+    }
+  ],
+  "storage_policy": {
+    "in_repo": "本仓跟踪文件，指纹随提交可复核",
+    "external": "仓外原件，按 `../mcopilot-external/` 约定存放；仓内只留指针 + size + sha256",
+    "not_committed": "本地运行产物（out/），不入库；缺失时门禁 SKIP",
+    "moved_on": "2026-10-22 公开前审：厂商/标准 PDF 原件按本仓既有约定外置，仓内指针与指纹不变"
+  }
+}

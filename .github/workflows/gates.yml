@@ -1,0 +1,76 @@
+name: gates
+
+# 本仓的"CI 必须绿"不是口号：门禁 G1–G12 与 pytest 都在这里跑。
+# 门禁需要 Windows（csc / .NET Framework 4.8 / PowerShell 5.1 兼容面），
+# 所以 runner 固定 windows-latest —— 换 Linux 跑等于换一套被测环境，绿了也不能算数。
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gates:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: 环境自述（版本与解释器路径）
+        run: |
+          python --version
+          python -c "import sys; print(sys.executable)"
+
+      - name: pytest 全量
+        env:
+          PYTHONPATH: src
+          PYTHONIOENCODING: utf-8
+        run: python -m pytest -q
+
+      - name: 文档与电子书同步门禁（双语 / 行号引用 / 书锚点 / 裁剪件 / 结构）
+        env:
+          PYTHONIOENCODING: utf-8
+        run: |
+          python scripts/verify_bilingual_parity.py
+          python scripts/verify_doc_refs.py
+          python book/tools/check_doc_refs_heads.py
+          python book/tools/verify_crops_verbatim.py
+          python book/tools/check_vol2s_structure.py
+
+      - name: 公开前脱敏门禁（家目录/用户名与本机工作区路径必须是 0）
+        env:
+          PYTHONIOENCODING: utf-8
+        run: python book/tools/scan_absolute_paths.py
+
+      - name: 门禁 G1–G12（编译 / 黄金帧 / 契约 / quote 反查 / 锚点 / 文档一致性 / 接入 / 农场 / 语料）
+        shell: pwsh
+        run: ./scripts/gate_protocol.ps1
+
+      - name: 真实语料门禁（Lemay 夹具逐行断言 + 负向三重）
+        shell: pwsh
+        run: ./scripts/gate_corpus.ps1
+
+      - name: 外部真值锚点门禁（sha256 + 再提取抽查；仓外原件不在位记 SKIP）
+        run: python scripts/gate_anchors.py
+
+      - name: 文档一致性门禁（文档里的数字全部实算）
+        shell: pwsh
+        run: ./scripts/gate_docsync.ps1
+
+      - name: 负向门禁（每个注入都要让对应门变红）
+        shell: pwsh
+        run: ./scripts/gate_negative.ps1
+
+      - name: 故障注入农场（批产→检出→判卷→矩阵）
+        shell: pwsh
+        run: ./scripts/gate_farm.ps1
+
+      - name: 接入闭环（三场景：全绿 / 已知归因 / 未知升级）
+        shell: pwsh
+        run: ./scripts/gate_onboard.ps1

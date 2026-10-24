@@ -1,0 +1,24 @@
+{
+  "provenance": "real_record",
+  "evidence_type": "external",
+  "source": "Klipper 论坛附件 raw_data_x_20230409_173541.zip（真机 TEST_RESONANCES AXIS=X 原始加速度计数据）",
+  "zip_sha256": "c9aa0b48416d47aab62dd2d300b8ba660a6da3ec98303448b8a7fb3aeeece859",
+  "csv_sha256": "333453370dfda113476755f55b241ce17448f068fa45c395f60e808646e7f787",
+  "truth_basis": "本文件由当日一次性独立复算（**复算脚本未入库**，2026-10-22 按 git ls-files 复核；见 samples/servo/PROVENANCE.md 的复算说明）（不 import mcopilot 的估计器）：Welch+Kaiser PSD（Klipper 自己的谐振判定方法）与自写 H1/FFT 的 FRF 两条独立路线互相印证",
+  "boundary": "响应通道是真机实测加速度（不是位置）；指令通道是按 Klipper 公开源码重建的。这份数据只能验 FRF 估计器的数据通路与谐振频率读数，不能验伺服闭环位置带宽模型。",
+  "recomputable": {
+    "n_samples": 190793,
+    "fs_hz": 1486.645,
+    "duration_s": 128.337,
+    "psd_peak_hz": 60.804,
+    "psd_peak_raw_hz": 60.908,
+    "frf_peak_hz": 62.252,
+    "frf_peak_rel": 886254.330918,
+    "frf_coh_min": 1.0,
+    "frf_coh_median": 1.0,
+    "peak_band_hz": [
+      20.0,
+      135.0
+    ]
+  }
+}

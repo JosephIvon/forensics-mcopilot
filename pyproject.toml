@@ -1,0 +1,51 @@
+[build-system]
+# setuptools>=77：PEP 639 的 SPDX 许可表达式（`license = "MIT"` + `license-files`）
+# 要 77 才认。61–76 只认旧式表格 `{text = "..."}`，而旧式在新版里已被弃用 ——
+# 两条路都写不通，只能钉到 77。
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mcopilot"
+version = "1.0.0"
+description = "运动控制上位机 AI 工程助手套件 —— 把工业需求里能被 AI 承担的部分做成能进生产流程的工具"
+readme = "README.md"
+keywords = ["motion-control", "industrial-automation", "forensics", "servo", "spc", "mcp"]
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+dependencies = []          # 核心零依赖；matplotlib 仅用于出图
+
+[project.optional-dependencies]
+charts = ["matplotlib>=3.5"]
+dev = ["pytest>=7"]
+
+[project.scripts]
+mcopilot = "mcopilot.cli:main"
+
+# ---------------------------------------------------------------------------
+# 分发契约（架构决定，不是随手写的）
+#
+# **分发单元是仓库，不是独立的 wheel。**
+#
+# 真值基座 `knowledge/` 同时是：运行时数据、被审证据（记厂商原件 sha256）、
+# 电子书引用的锚点，而且它自己还指向**仓外**的厂商原件（`../mcopilot-external/`）。
+# 这层关系装不进一个 wheel —— 所以 wheel 不是本项目的交付形态。
+#
+# 因此：
+#   · 支持的安装形态是 **源码签出** 或 **`pip install -e .`（可编辑安装）**；
+#   · `pip install .` 装出来的 wheel **不含真值基座**，装上后命令会找不到数据。
+#     这是设计使然，不是 bug —— `core/util.py` 的 `_ROOT_HINT` 会把这一点连同
+#     三条可照着做的修复办法一起报出来。
+#   · 这条契约由 `tests/test_layout_contract.py` 钉住，改布局会先让测试变红。
+# ---------------------------------------------------------------------------
+
+[tool.setuptools]
+package-dir = { "" = "src" }   # src 布局：包边界在 src/，仓内容不会被误当成模块
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

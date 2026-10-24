@@ -1,0 +1,100 @@
+{
+  "note": "每个检测器的「误报源 / 内置防护 / 怎么人工复核」。这是给人看的边界说明 —— 工具只能告诉你「触发了」，不能告诉你「该不该信」。改这里不用改代码。",
+  "version": 1,
+  "detectors": {
+    "position_deviation": {
+      "events": ["MOVE_CMD", "REACHED"],
+      "false_positive_sources": [
+        "单位口径不同：上位机目标写 mm、控制器回读是脉冲 → 差值恒为巨大值，满屏误报",
+        "目标位置是相对坐标（MoveRel/相对点），却和绝对 pos 相减",
+        "到位信号在减速段就置位（提前量）→ 残差是设计值不是偏差"
+      ],
+      "builtin_guard": "无。代码只做 abs(pos - target) > 阈值，不校验单位与坐标系 —— 单位一致性由适配层保证（契约测试断言 GetPositionMm 与 GetFeedbackMm 同口径）",
+      "how_to_verify": "把命中那几拍的目标值、回读值、轴号一起看：差值是固定倍数 → 单位问题；是固定小量 → 到位提前量；是随机量 → 真偏差"
+    },
+    "reached_latency": {
+      "events": ["MOVE_CMD", "REACHED"],
+      "false_positive_sources": [
+        "到位靠状态轮询：时延里含轮询量化误差（200ms 轮询 = 最多 200ms 的假超时）",
+        "同一轴在上一条到位前就发了新指令 → 配对错位，时延被算到后一条指令头上",
+        "多轴顺序执行（排队）→ 后面的轴天然等得久"
+      ],
+      "builtin_guard": "无。配对逻辑是「同轴的下一条 MOVE_CMD 会顶掉 pending 里那条」，并发时会把时延算错",
+      "how_to_verify": "看命中时同轴是否还有并发指令；把阈值减去状态轮询周期后再判；与 mcopilot motion plan 算出的理论到位时间对比"
+    },
+    "concurrent_command": {
+      "events": ["MOVE_CMD"],
+      "false_positive_sources": [
+        "正常的多段运动/插补序列（每段都发一条 MOVE_CMD）会被判成并发",
+        "正常的人工干预（操作员手动点动）本来就该报，但不该算「故障」"
+      ],
+      "builtin_guard": "**没有**。判据是「该轴还在 pending 里又来一条指令」，与时间无关；而 knowledge/log_rules.json 里的 concurrent_command_ms 阈值代码根本没读（死阈值）",
+      "how_to_verify": "看后一条指令是不是流程里的正常下一段；人工干预类应与流程竞争区分开"
+    },
+    "param_conflict": {
+      "events": ["PARAM_WRITE"],
+      "false_positive_sources": [
+        "正常换型：配方下发本来就会写参数（值不同但都是对的）",
+        "参数周期性刷新/回读写回同一份参数"
+      ],
+      "builtin_guard": "**有**：只报「同 (轴, key) 且写入值不同」（差值 > 1e-9），写同一个值不算冲突",
+      "how_to_verify": "看两次写入的来源模块是否相同（[Recipe] 下发 vs [Motion] 初始化）；同模块=多为正常刷新"
+    },
+    "comm_gap": {
+      "events": ["COMM_SEQ"],
+      "false_positive_sources": [
+        "序号计数器重置：设备重启、换工装、换线体后从 0 重新数",
+        "上位机重新初始化通信通道"
+      ],
+      "builtin_guard": "**有**：跨度超过 comm_gap_max_loss（默认 200 帧）的单独报成「计数器重置」，不算丢包；普通跳变仍按丢包报",
+      "how_to_verify": "看跳变点前后有没有 App Start 或 Init 类日志"
+    },
+    "calib_drift": {
+      "events": ["CALIB"],
+      "false_positive_sources": [
+        "标定板脏污/换批次造成的单点大值（不是趋势）",
+        "正常的热漂移：缓慢线性上升，属于环境特性而不是故障"
+      ],
+      "builtin_guard": "**有**：两条分支 —— 超阈值（绝对值）���前半段均值 > 后半段均值 1.5 倍且差 > 0.5μm（趋势）",
+      "how_to_verify": "看残差是单点跳变（板脏/换批）还是单调上升（松动/温漂）；后者要结合开机后时长"
+    },
+    "cycle_jitter": {
+      "events": ["CYCLE_END"],
+      "false_positive_sources": [
+        "产品尺寸差异导致的正常节拍差异",
+        "换料/换型那几拍必然慢（属正常工艺动作）",
+        "首件/末件节拍与稳态不同"
+      ],
+      "builtin_guard": "**有**：三个判据取或 —— P95/中位数波动、变异系数、慢拍（>1.15×中位数）占比；单靠 P95 会被尾部稀释，所以加了慢拍占比",
+      "how_to_verify": "看慢拍是否集中在换型/换料批次；把该批次剔除后是否还超"
+    },
+    "timeout_burst": {
+      "events": ["TIMEOUT"],
+      "false_positive_sources": [
+        "正常的等待（等设备回 ready、等来料）本来就会记 timeout",
+        "换型后首拍预热"
+      ],
+      "builtin_guard": "**有**：要求聚集数 ≥ timeout_burst_count（默认 3），单次 timeout 不报",
+      "how_to_verify": "看 what 字段是哪一类等待；不同 what 的聚集要分开看，别混成一个结论"
+    },
+    "heartbeat_gap": {
+      "events": ["HEARTBEAT"],
+      "false_positive_sources": [
+        "夜间无操作时段本来就不发心跳",
+        "日志级别配置把心跳过滤掉了（不是程序卡死）",
+        "日志写盘阻塞"
+      ],
+      "builtin_guard": "无",
+      "how_to_verify": "看断流时长与断流前最后一个操作；确认是「程序卡住」还是「本来就不发」"
+    },
+    "vision_ng_rate": {
+      "events": ["VISION"],
+      "false_positive_sources": [
+        "真实工艺不良（这时该报，但它不是软件问题）",
+        "判定窗口太短：10 次判定里 3 次 NG 就报，样本太少时比例很不稳"
+      ],
+      "builtin_guard": "**有**：触发线取 max(绝对阈值 vision_ng_rate, 全程均值 × vision_ng_ratio)，避免全程平均把某段变差稀释掉；按区段扫描而不是看全程",
+      "how_to_verify": "看 dx/dy 有没有方向性偏移（有偏移=标定问题；无偏移=工艺问题）；并看该区段前后有无换型"
+    }
+  }
+}

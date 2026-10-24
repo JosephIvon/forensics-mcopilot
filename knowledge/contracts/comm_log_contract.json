@@ -1,0 +1,134 @@
+{
+  "schema": "comm_log/1",
+  "generated": "2026-10-21",
+  "purpose": "现场通信日志契约：规定 forensics 归因（eval_forensics 管线）可直接消费的 Modbus 现场日志逐帧记录格式。scripts/validate_comm_log.py 是本契约的唯一裁判（退出码=违规数），scripts/eval_forensics.py 只吃通过该门的日志——不合规日志一律先修采集端，不在归因层猜格式。",
+  "style_ref": "axiscope C1 契约（axiscope.waveform/1，docs/contracts/C1-canonical-waveform.md）同款纪律：schema id 不符即拒收；词表封闭枚举；派生不变式机器可查；数据质量红线宁可拒收不可带病放行；采集端缺陷不静默修复。",
+  "scope": {
+    "in": "Modbus TCP / RTU 的一帧或一个帧级事件（请求/响应/广播/传输层错误）一行 JSONL 记录。",
+    "out": "帧内 PDU 逐字段解析（归因层的职责，本契约只要求可定位到帧）；其他协议（S7/Focas/SLMP）的日志契约——接入时按本文件风格另立 schema id，不共用词表。"
+  },
+  "file_rules": {
+    "format": "JSON Lines：UTF-8 无 BOM、LF 行尾、每行一个 JSON 对象、空行跳过。",
+    "stream_key": "序列单调性按 (channel, device.host_or_port) 分流判定，全文件混写多条流合法。",
+    "line_order": "记录按采集顺序排列；seq 与行序冲突时以 seq 为准判单调（行序错乱本身不算违规，seq 乱才算）。"
+  },
+  "fields": {
+    "timestamp_utc": {
+      "type": "string",
+      "required": true,
+      "format": "ISO 8601 UTC，以 Z 结尾（如 2026-10-21T10:15:30.123Z），带毫秒以内小数可选",
+      "rule": "必须可被日历解析（月日时分秒不得越界）；本地时间、时区偏移写法一律不收——现场机器时区不可信，采集端负责先归一到 UTC。"
+    },
+    "seq": {
+      "type": "integer",
+      "required": true,
+      "min": 0,
+      "rule": "同一 (channel, device.host_or_port) 流内严格单调递增，重启采集器必须换文件或重置归零后重新对齐，禁止复用已发出的 seq。"
+    },
+    "channel": {
+      "type": "string",
+      "required": true,
+      "enum": ["tcp", "rtu"]
+    },
+    "direction": {
+      "type": "string",
+      "required": true,
+      "enum": ["req", "resp", "broadcast"],
+      "rule": "req=主站→从站单播请求；resp=从站→主站响应（含异常响应）；broadcast=主站→总线广播（仅 RTU）。"
+    },
+    "unit_id": {
+      "type": "integer",
+      "required": true,
+      "min": 0,
+      "max": 255,
+      "rule": "SL V1.02 §2.1/§2.2：0=广播，1-247=从站独立地址，248-255 保留。broadcast 记录必须 unit_id=0；保留段地址 248-255 出现在日志里即为违规（不是罕见值，是不该发出去的帧）。"
+    },
+    "function_code": {
+      "type": "integer",
+      "required": true,
+      "min": 1,
+      "max": 127,
+      "rule": "记基础功能码（低 7 位，1..127）。异常响应不把 FC+0x80 的原始字节填进本字段——异常性由 exception_code 表达（AP V1.1b3 §4.5：异常响应 FC=请求 FC+0x80，MSB 置 1）。FC=0 与用户自定义区间是否合规不在本契约裁（归因层对着知识库裁）。"
+    },
+    "exception_code": {
+      "type": ["integer", "null"],
+      "required": false,
+      "min": 1,
+      "max": 11,
+      "default": null,
+      "rule": "仅 direction=resp 可携带；取值 null 或 1..0x0B（0x0A/0x0B 为网关路径/目标异常，AP V1.1b3 §7 表；07/09 在 V1.1b3 表中缺席，见 modbus.json exception_codes 判断项）。req/broadcast 出现非空异常码即违规。"
+    },
+    "frame_hex": {
+      "type": "string",
+      "required": false,
+      "format": "十六进制字符串（大小写不限），字节间空白可容忍（校验器剥掉后须为偶数个 hex 字符）；不含 MBAP/TCP 头以外的链路封装时如实按抓到的字节记。",
+      "recommended_when": ["direction=broadcast", "exception_code 非 null"],
+      "rule": "广播帧与异常帧强烈建议携带（没有原始字节，归因层无法区分「从站真回了异常」与「采集端解析错了」）；普通帧可省。缺失只记建议行，不计违规。"
+    },
+    "error": {
+      "type": "string",
+      "required": false,
+      "enum": ["timeout", "crc", "reset", "refused", "no_response", "malformed", "other"],
+      "rule": "传输层/链路层失败事件（该行此时不代表一帧，代表一次失败）。timeout=应用层等待超时；no_response=物理层无载波应答类（RTU 缺 FromPC/diagslave 静默）；crc=RTU 校验失败；reset=连接被对端/中间设备重置；refused=TCP 拒连；malformed=长度/布局解析失败；other=以上都不像，必须写 notes。error 与 exception_code 互斥（协议级异常与链路级失败同帧矛盾）。"
+    },
+    "device": {
+      "type": "object",
+      "required": true,
+      "fields": {
+        "host_or_port": {
+          "type": "string",
+          "required": true,
+          "rule": "tcp：IP/host（可带端口，如 192.168.0.10:502）；rtu：串口名（如 COM3）。非空字符串，是流键的一半。"
+        }
+      },
+      "extra": "允许携带额外字段（如 slave_alias），校验器不裁额外字段——契约裁的是「必须有且合规」，不是「只许有」。"
+    },
+    "notes": {
+      "type": "string",
+      "required": false,
+      "rule": "自由文本；error=other 时必填（说不清的失败不许进日志）。"
+    }
+  },
+  "invariants": [
+    "I1 流内单调：同 (channel, device.host_or_port) 的 seq 严格递增；跨流各自独立。",
+    "I2 广播形态：direction=broadcast ⇒ channel=rtu 且 unit_id=0 且无 exception_code 且无 error（SL V1.02 §2.4.1：广播后从站不回响应）。",
+    "I3 异常归属：exception_code∈1..11 ⇒ direction=resp（异常响应只会从从站回来）。",
+    "I4 互斥：error 与 exception_code 不得同时出现。",
+    "I5 other 可归因：error=other ⇒ notes 非空。",
+    "I6 时间合法：timestamp_utc 必须是真实存在的 UTC 时刻（拒绝 2 月 30 日类）。"
+  ],
+  "non_goals": [
+    "resp 与 req 的配对完整性不在校验范围（现场采集允许截断/丢包后起采，resp 找不到前置 req 不算违规）；配对是归因层的消费规则：resp 归属同流中最近的未匹配前置 req。",
+    "frame_hex 与 unit_id/function_code 的一致性（如 resp 帧 FC 位是否真置 1）不在行级校验范围——那是带帧解析的深检职责。",
+    "采集体量红线（最少帧数/最短时长）暂不设：本轮零份真实日志，红线数字定了也是编的，待首批现场日志落库后按 C1 红线同款流程补。"
+  ],
+  "red_lines": [
+    "R1 schema 不符即拒收：schema 字段缺失或值不为 comm_log/1（契约头部）→ 整文件拒收，不算行级违规算文件级。",
+    "R2 不带病归因：validate_comm_log 退出码非 0 的日志集，eval_forensics 必须拒跑（先修采集端）。",
+    "R3 不静默改数据：校验器只报不修；任何字段规范化（如时间归一）是采集端的责任。"
+  ],
+  "selftest": {
+    "owner": "scripts/validate_comm_log.py --selftest",
+    "contains": "3 条内嵌样例：1 合法 + 2 非法；退出码 0 = 校验器行为与契约一致（合法放行、非法逐条报出且违规数精确吻合）"
+  },
+  "consumers": [
+    {
+      "path": "scripts/validate_comm_log.py",
+      "role": "契约裁判：逐行校验，PASS/FAIL+行号+违规摘要，退出码=违规数"
+    },
+    {
+      "path": "scripts/eval_forensics.py",
+      "role": "归因评测骨架：{日志集, 检出结果 jsonl, 标注真值 jsonl} → precision/recall/漏检清单；吃日志前先过契约门"
+    }
+  ],
+  "honesty": {
+    "status": "本契约与配套工具 2026-10-21 落档时，仓库内零份真实现场日志、零份标注真值集。内嵌样例全部是合成数据，只证明格式与工具链可跑，不构成任何归因能力的证据。",
+    "next": "P4 forensics 协议感知开工时：现场日志按本契约采集 → validate_comm_log 全绿 → 标注真值集另立文件 → eval_forensics 才可产出有意义指标。"
+  },
+  "knowledge_refs": [
+    "knowledge/protocols/modbus.json#serial_addressing（广播地址 0 / 从站 1-247 / 保留 248-255，SL V1.02 §2.1-2.2）",
+    "knowledge/protocols/modbus.json#limits_and_timeouts.serial_turnaround_delay_after_broadcast（广播无响应，SL V1.02 §2.4.1）",
+    "knowledge/protocols/modbus.json#limits_and_timeouts.exception_response_format（异常响应 FC+0x80，AP V1.1b3 §4.5）",
+    "knowledge/protocols/modbus.json#exception_codes（异常码 1..0x0B 及 07/09 缺席项，AP V1.1b3 §7）"
+  ]
+}

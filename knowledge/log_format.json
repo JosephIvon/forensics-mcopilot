@@ -1,0 +1,12 @@
+{
+  "name": "上位机标准设备日志（时间戳 + 级别 + 模块 + 键值消息）",
+  "version": 1,
+  "line_regex": "^(?P<ts>\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}\\.\\d{3})\\s+\\[(?P<level>\\w+)\\s*\\]\\s+\\[(?P<src>[A-Za-z0-9_\\.]+)\\]\\s+(?P<msg>.*)$",
+  "timestamp_field": "ts",
+  "timestamp_format": "%Y-%m-%d %H:%M:%S.%f",
+  "notes": "换你们自己的日志格式时，只需要改这一个文件 + log_rules.json 里的 events 正则；代码不动。",
+  "samples": [
+    "2026-10-18 08:31:02.145 [INFO ] [Motion] CMD MoveAbs axis=0 target=123.450 speed=200.000",
+    "2026-10-18 08:31:02.655 [INFO ] [Motion] Reached axis=0 pos=123.452"
+  ]
+}

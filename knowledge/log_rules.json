@@ -1,0 +1,98 @@
+{
+  "version": 1,
+  "note": "事件抽取规则 + 检测阈值。改这里就能适配你们自己的日志语义，不用改代码。",
+  "events": [
+    {"type": "MOVE_CMD",     "regex": "CMD MoveAbs\\s+axis=(?P<axis>\\d+)\\s+target=(?P<target>-?[\\d.]+)\\s+speed=(?P<speed>[\\d.]+)"},
+    {"type": "MOVE_REL_CMD", "regex": "CMD MoveRel\\s+axis=(?P<axis>\\d+)\\s+dist=(?P<dist>-?[\\d.]+)"},
+    {"type": "JOG_CMD",      "regex": "CMD Jog\\s+axis=(?P<axis>\\d+)\\s+speed=(?P<speed>[\\d.]+)"},
+    {"type": "ENABLE",       "regex": "Enable\\s+axis=(?P<axis>\\d+)\\s+on=(?P<on>[01])"},
+    {"type": "HOME_CMD",     "regex": "CMD Home\\s+axis=(?P<axis>\\d+)"},
+    {"type": "HOME_DONE",    "regex": "HomeDone\\s+axis=(?P<axis>\\d+)\\s+pos=(?P<pos>-?[\\d.]+)"},
+    {"type": "REACHED",      "regex": "Reached\\s+axis=(?P<axis>\\d+)\\s+pos=(?P<pos>-?[\\d.]+)"},
+    {"type": "STOP",         "regex": "CMD Stop\\s+axis=(?P<axis>\\d+)\\s+mode=(?P<mode>\\w+)"},
+    {"type": "IO_WRITE",     "regex": "IO Write\\s+port=(?P<port>\\d+)\\s+value=(?P<value>[01])"},
+    {"type": "IO_EDGE",      "regex": "IO Edge\\s+port=(?P<port>\\d+)\\s+value=(?P<value>[01])"},
+    {"type": "COMM_SEQ",     "regex": "Comm Seq\\s+axis=(?P<axis>\\d+)\\s+seq=(?P<seq>\\d+)"},
+    {"type": "CALIB",        "regex": "Calib\\s+residual=(?P<residual>[\\d.]+)\\s+um"},
+    {"type": "PARAM_WRITE",  "regex": "ParamWrite\\s+axis=(?P<axis>\\d+)\\s+key=(?P<key>\\w+)\\s+value=(?P<value>-?[\\d.]+)"},
+    {"type": "RECIPE_LOAD",  "regex": "Recipe Load\\s+name=(?P<name>\\S+)\\s+ver=(?P<ver>\\S+)"},
+    {"type": "CYCLE_START",  "regex": "Cycle Start\\s+lot=(?P<lot>\\S+)\\s+device=(?P<device>\\S+)"},
+    {"type": "CYCLE_END",    "regex": "Cycle End\\s+lot=(?P<lot>\\S+)\\s+result=(?P<result>OK|NG)\\s+ct=(?P<ct>[\\d.]+)"},
+    {"type": "VISION",       "regex": "Vision\\s+result=(?P<result>OK|NG)\\s+dx=(?P<dx>-?[\\d.]+)\\s+dy=(?P<dy>-?[\\d.]+)"},
+    {"type": "TEMP",         "regex": "Temp\\s+zone=(?P<zone>\\w+)\\s+value=(?P<value>-?[\\d.]+)"},
+    {"type": "PRESS",        "regex": "Press\\s+value=(?P<value>-?[\\d.]+)"},
+    {"type": "POWER",        "regex": "Power\\s+value=(?P<value>-?[\\d.]+)"},
+    {"type": "TIMEOUT",      "regex": "Timeout\\s+what=(?P<what>\\S+)\\s+waited=(?P<waited>[\\d.]+)"},
+    {"type": "HEARTBEAT",    "regex": "Heartbeat\\s+seq=(?P<seq>\\d+)"}
+  ],
+  "detector_requires": {
+    "position_deviation": ["MOVE_CMD", "REACHED"],
+    "reached_latency": ["MOVE_CMD", "REACHED"],
+    "concurrent_command": ["MOVE_CMD", "REACHED"],
+    "param_conflict": ["PARAM_WRITE"],
+    "comm_gap": ["COMM_SEQ"],
+    "calib_drift": ["CALIB"],
+    "cycle_jitter": ["CYCLE_END"],
+    "timeout_burst": ["TIMEOUT"],
+    "heartbeat_gap": ["HEARTBEAT"],
+    "vision_ng_rate": ["VISION"]
+  },
+  "thresholds": {
+    "reached_latency_ms": 1500,
+    "position_tolerance_mm": 0.02,
+    "concurrent_command_ms": 0,
+    "param_conflict_window_ms": 60000,
+    "comm_gap_allowed": 1,
+    "comm_gap_max_loss": 200,
+    "calib_residual_um": 8.0,
+    "cycle_jitter_ratio": 0.25,
+    "cycle_jitter_cv": 0.08,
+    "heartbeat_gap_ms": 5000,
+    "timeout_burst_count": 3,
+    "vision_ng_rate": 0.25,
+    "vision_ng_ratio": 3.0
+  },
+  "severity": {
+    "position_deviation": "高",
+    "param_conflict": "高",
+    "concurrent_command": "高",
+    "comm_gap": "高",
+    "reached_latency": "中",
+    "calib_drift": "中",
+    "cycle_jitter": "中",
+    "timeout_burst": "中",
+    "heartbeat_gap": "中",
+    "vision_ng_rate": "中"
+  },
+  "root_cause_map": {
+    "position_deviation": [
+      {"cause": "脉冲当量/电子齿轮配置被换型流程覆盖", "verify": "比对 ParamWrite 事件中 pulse_per_mm 的写入历史", "requirement": "R-09 / Q-05"},
+      {"cause": "回零后零点偏移或未重新回零即换料", "verify": "检查 HomeCmd/HomeDone 与换料时间点的先后", "requirement": "R-09"},
+      {"cause": "伺服跟随误差超容差（加速度过高 / 带宽不足）", "verify": "用 mcopilot motion settle 估算当前加速度下的跟随误差；用 mcopilot servo diagnose 采一段阶跃波形反推等效参数", "requirement": "Q-06a / Q-06b"}
+    ],
+    "concurrent_command": [
+      {"cause": "流程调度器与手动干预抢同一轴", "verify": "确认 CMD 来源模块（UI 手动 vs 流程）", "requirement": "R-04"},
+      {"cause": "到位判定用阻塞等待导致重入", "verify": "检查 WaitMoveDone 是否有超时与重入保护", "requirement": "Q-03"}
+    ],
+    "comm_gap": [
+      {"cause": "网络拥塞/交换机端口缓冲溢出", "verify": "看 gap 是否集中在同一时间段", "requirement": "Q-09"},
+      {"cause": "上位机自身处理阻塞导致发送间隔不均", "verify": "看 gap 位置是否紧随一次长耗时操作", "requirement": "Q-09"}
+    ],
+    "reached_latency": [
+      {"cause": "减速段太长 / 加速度设置偏低导致到位时间长", "verify": "用 mcopilot motion plan 算理论到位时间对比", "requirement": "R-04"},
+      {"cause": "到位信号在减速段之后才采样（轮询周期过长）", "verify": "检查状态轮询线程周期", "requirement": "Q-03"}
+    ],
+    "cycle_jitter": [
+      {"cause": "关键路径上存在无界等待或重试", "verify": "对齐节拍异常批次与 Timeout 事件", "requirement": "R-01"},
+      {"cause": "通信/IO 读写抖动", "verify": "看 comm_gap 与 heartbeat_gap 是否同期", "requirement": "Q-09"}
+    ],
+    "param_conflict": [
+      {"cause": "换型时配方下发与轴参数初始化存在竞态", "verify": "看两次 ParamWrite 的时间差与所属模块", "requirement": "R-09"},
+      {"cause": "多台上位机/两处代码写同一份参数", "verify": "看写入日志的来源模块是否不同", "requirement": "R-02"}
+    ],
+    "calib_drift": [
+      {"cause": "相机/镜头机械松动或温漂", "verify": "看残差随时间的趋势（单调上升=机械松动）", "requirement": "Q-08"},
+      {"cause": "标定板/工装磨损", "verify": "周期性重标定对比残差", "requirement": "Q-08"}
+    ]
+  }
+}

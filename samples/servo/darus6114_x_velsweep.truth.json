@@ -1,0 +1,52 @@
+{
+  "provenance": "real_record",
+  "evidence_type": "external",
+  "source": "DaRUS-6114（斯图加特大学数据仓储）01_sysid_freq/ 的 x_velSweep_s0_p50_dir_pos.csv（x 轴速度扫频记录）",
+  "dataset_doi": "10.18419/DARUS-6114",
+  "paper": "Evaluation of Sliding-Mode Position Controllers on Multi-Axis Machine Tools with Compliant Mechanics",
+  "license": "CC BY 4.0",
+  "csv_sha256": "c68778d9c3d964629313c853668a1977fb898716a7467e71303edc272d0b60dd",
+  "truth_basis": "本文件由当日一次性独立复算（**复算脚本未入库**，2026-10-22 按 git ls-files 复核；见 samples/servo/PROVENANCE.md 的复算说明）（不 import mcopilot 的估计器）：纯标准库 FFT + 短时谱脊线法；数据集自己公开的每轴 ω₀ （out/_dl/darus/parameters.txt）",
+  "boundary": "**能验**：① 这份记录是真正的**线性频率扫掠**（+49.4 Hz/s，R²=0.99982，扫到 395 Hz）—— 「velSweep 是速度模式扫速、不是频率扫掠」这个旧结论**已被推翻**；② 公开 ω₀ 落在扫频带内（过零 t = 2.522 s）；③ 实测谐振峰在 64.453 Hz，**不是**公开 ω₀ 77.875 Hz；④ 速度环跟随上限 ≈ 275 Hz。**不能验**：① **位置环**的频响与相位裕度 —— 这是速度模式记录（位置环 off）、激励在速度通道；② 公开 ω₀ 就是本机谐振 —— 实测峰在别处，公开 ω₀ 是**解耦**轴的固有频率。",
+  "recomputable": {
+    "n_samples": 11000,
+    "fs_hz": 1000.0,
+    "duration_s": 10.999,
+    "dt_min_s": 0.001,
+    "dt_max_s": 0.001,
+    "dt_jitter_rel": 2e-12,
+    "axis": "x",
+    "mode": "velocity mode (position loop off); excitation sits in the VELOCITY channel",
+    "is_frequency_sweep": true,
+    "sweep_rate_hz_per_s": 49.417,
+    "freq_law_r2": 0.99982,
+    "sweep_f_lo_hz": 0.977,
+    "sweep_f_hi_hz": 394.531,
+    "published_omega0_rad_s": 489.3,
+    "published_omega0_hz": 77.875,
+    "omega0_inside_sweep_band": true,
+    "omega0_cross_t_s": 2.522,
+    "response_follows_up_to_hz": 275.39,
+    "resonance_hz": 64.453,
+    "resonance_lift_db": 4.76,
+    "resonance_hump_band_hz": [
+      49.8,
+      65.92
+    ],
+    "published_omega0_level_db": 0.88,
+    "resonance_band_hz": [
+      30.0,
+      150.0
+    ],
+    "pos_cmd_monotone_frac": 0.9092,
+    "pos_cmd_direction": "positive",
+    "pos_cmd_range_mm": [
+      50.823,
+      150.918
+    ],
+    "pos_err_mean_um": -161.81,
+    "pos_err_std_um": 25.0,
+    "vel_cmd_vs_add_corr": 0.9985,
+    "vel_cmd_vs_add_lag_samples": 2
+  }
+}

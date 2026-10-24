@@ -1,0 +1,2112 @@
+{
+  "protocol": "modbus",
+  "schema_version": "modbus_extract/1",
+  "generated": "2026-10-20",
+  "note": "本文件由 Modbus 规范知识提取任务产出：三份官方 PDF 机械提取 + 少量 judgment 项（各条目均带 spec_ref 与 provenance；judgment 项带 needs:manual_check）。引文复制自 out/_protocols_extract/ 下三份提取文本（允许行折断点合并）。",
+  "spec_version": {
+    "documents": [
+      {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "doc_short": "AP",
+        "version": "V1.1b3",
+        "doc_date": "页脚 April 26, 2012；标题页标识 V1.1b3",
+        "pdf_pages": 50,
+        "sha256": "f80d0d7132fd035104c3f21b01026470e3310ca3d8d493d9a9737d0d32ad2eb1",
+        "source_url": "https://www.modbus.org/file/secure/modbusprotocolspecification.pdf",
+        "original_url": "https://www.modbus.org/docs/Modbus_Application_Protocol_V1_1b3.pdf"
+      },
+      {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "doc_short": "SL",
+        "version": "V1.02",
+        "doc_date": "Dec 20, 2006",
+        "pdf_pages": 44,
+        "sha256": "85a91e278b26d68c94a2f61a5300cd39c9e4c855034833f391abc6541fbdf7e5",
+        "source_url": "https://www.modbus.org/file/secure/modbusoverserial.pdf",
+        "original_url": "https://www.modbus.org/docs/Modbus_over_serial_line_V1_02.pdf"
+      },
+      {
+        "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+        "doc_short": "MSG",
+        "version": "V1.0b",
+        "doc_date": "October 24, 2006",
+        "pdf_pages": 46,
+        "sha256": "065d71170475642e82f370c648bf5135263cb20f61ce92c921add975fab6f669",
+        "source_url": "https://www.modbus.org/file/secure/messagingimplementationguide.pdf",
+        "original_url": "https://www.modbus.org/docs/Modbus_Messaging_Implementation_Guide_V1_0b.pdf"
+      }
+    ],
+    "note": "三份 PDF 均下载自 modbus.org 官网现行地址（官网 2026 年改版后文件移至 /file/secure/ 下，内容即原 /docs/ 三份规范）。spec_ref.page 为 PDF 物理页码，与页脚页码一致（已抽查）。"
+  },
+  "function_codes": [
+    {
+      "code": 1,
+      "code_hex": "0x01",
+      "name": "Read Coils",
+      "section": "6.1",
+      "description": "读取 1..2000 个连续线圈状态；PDU 中线圈地址从 0 开始（编号 1-16 寻址为 0-15）；响应按位打包，LSB 为查询中寻址的第一个输出。",
+      "request": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x01"
+          },
+          {
+            "field": "Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity of coils",
+            "size": "2 Bytes",
+            "range": "1 to 2000 (0x7D0)"
+          }
+        ],
+        "quote": "Starting Address 2 Bytes 0x0000 to 0xFFFF Quantity of coils 2 Bytes 1 to 2000 (0x7D0)"
+      },
+      "response": {
+        "bytes": "3 + N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x01"
+          },
+          {
+            "field": "Byte count",
+            "size": "1 Byte",
+            "range": "N* (Quantity of Outputs / 8, 余数非 0 则 N+1)"
+          },
+          {
+            "field": "Coil Status",
+            "size": "N* x 1 Byte"
+          }
+        ],
+        "quote": "The coils in the response message are packed as one coil per bit of the data field. Status is indicated as 1= ON and 0= OFF."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x81",
+      "limits": {
+        "quantity": "1 to 2000 (0x7D0)"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.1",
+        "page": 11,
+        "quote": "This function code is used to read from 1 to 2000 contiguous status of coils in a remote device. The Request PDU specifies the starting address, i.e. the address of the first coil specified, and the number of coils."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 2,
+      "code_hex": "0x02",
+      "name": "Read Discrete Inputs",
+      "section": "6.2",
+      "description": "读取 1..2000 个连续离散输入状态；PDU 中地址从 0 开始；响应按位打包，不足 8 位的高位补零。",
+      "request": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x02"
+          },
+          {
+            "field": "Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity of Inputs",
+            "size": "2 Bytes",
+            "range": "1 to 2000 (0x7D0)"
+          }
+        ],
+        "quote": "Quantity of Inputs 2 Bytes 1 to 2000 (0x7D0)"
+      },
+      "response": {
+        "bytes": "3 + N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x02"
+          },
+          {
+            "field": "Byte count",
+            "size": "1 Byte",
+            "range": "N*"
+          },
+          {
+            "field": "Input Status",
+            "size": "N* x 1 Byte"
+          }
+        ],
+        "quote": "If the returned input quantity is not a multiple of eight, the remaining bits in the final data byte will be padded with zeros (toward the high order end of the byte)."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x82",
+      "limits": {
+        "quantity": "1 to 2000 (0x7D0)"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.2",
+        "page": 12,
+        "quote": "This function code is used to read from 1 to 2000 contiguous status of discrete inputs in a remote device."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 3,
+      "code_hex": "0x03",
+      "name": "Read Holding Registers",
+      "section": "6.3",
+      "description": "读取保持寄存器连续块内容；PDU 中寄存器地址从 0 开始；响应每寄存器 2 字节，高字节在前。",
+      "request": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x03"
+          },
+          {
+            "field": "Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity of Registers",
+            "size": "2 Bytes",
+            "range": "1 to 125 (0x7D)"
+          }
+        ],
+        "quote": "Quantity of Registers 2 Bytes 1 to 125 (0x7D)"
+      },
+      "response": {
+        "bytes": "3 + 2N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x03"
+          },
+          {
+            "field": "Byte count",
+            "size": "1 Byte",
+            "range": "2 x N*"
+          },
+          {
+            "field": "Register value",
+            "size": "N* x 2 Bytes"
+          }
+        ],
+        "quote": "For each register, the first byte contains the high order bits and the second contains the low order bits."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x83",
+      "limits": {
+        "quantity": "1 to 125 (0x7D)"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.3",
+        "page": 15,
+        "quote": "This function code is used to read the contents of a contiguous block of holding registers in a remote device."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 4,
+      "code_hex": "0x04",
+      "name": "Read Input Registers",
+      "section": "6.4",
+      "description": "读取 1..125 个连续输入寄存器；PDU 中地址从 0 开始；响应每寄存器 2 字节。",
+      "request": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x04"
+          },
+          {
+            "field": "Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity of Input Registers",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0x007D"
+          }
+        ],
+        "quote": "Quantity of Input Registers 2 Bytes 0x0001 to 0x007D"
+      },
+      "response": {
+        "bytes": "3 + 2N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x04"
+          },
+          {
+            "field": "Byte count",
+            "size": "1 Byte",
+            "range": "2 x N*"
+          },
+          {
+            "field": "Input Registers",
+            "size": "N* x 2 Bytes"
+          }
+        ],
+        "quote": "This function code is used to read from 1 to 125 contiguous input registers in a remote device."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x84",
+      "limits": {
+        "quantity": "0x0001 to 0x007D (1..125)"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.4",
+        "page": 16,
+        "quote": "This function code is used to read from 1 to 125 contiguous input registers in a remote device."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 5,
+      "code_hex": "0x05",
+      "name": "Write Single Coil",
+      "section": "6.5",
+      "description": "写单个线圈 ON/OFF；0xFF00=ON，0x0000=OFF，其他值非法；正常响应为请求回显。",
+      "request": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x05"
+          },
+          {
+            "field": "Output Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Output Value",
+            "size": "2 Bytes",
+            "range": "0x0000 or 0xFF00"
+          }
+        ],
+        "quote": "A value of FF 00 hex requests the output to be ON. A value of 00 00 requests it to be OFF. All other values are illegal and will not affect the output."
+      },
+      "response": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x05"
+          },
+          {
+            "field": "Output Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Output Value",
+            "size": "2 Bytes",
+            "range": "0x0000 or 0xFF00"
+          }
+        ],
+        "quote": "The normal response is an echo of the request, returned after the coil state has been written."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x85",
+      "limits": {
+        "output_value": "仅 0x0000 或 0xFF00"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.5",
+        "page": 17,
+        "quote": "This function code is used to write a single output to either ON or OFF in a remote device."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 6,
+      "code_hex": "0x06",
+      "name": "Write Single Register",
+      "section": "6.6",
+      "description": "写单个保持寄存器；正常响应为请求回显。",
+      "request": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x06"
+          },
+          {
+            "field": "Register Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Register Value",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          }
+        ],
+        "quote": "Register Address 2 Bytes 0x0000 to 0xFFFF Register Value 2 Bytes 0x0000 to 0xFFFF"
+      },
+      "response": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x06"
+          },
+          {
+            "field": "Register Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Register Value",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          }
+        ],
+        "quote": "The normal response is an echo of the request, returned after the register contents have been written."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x86",
+      "limits": {},
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.6",
+        "page": 19,
+        "quote": "This function code is used to write a single holding register in a remote device. The Request PDU specifies the address of the register to be written. Registers are addressed starting at zero."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 7,
+      "code_hex": "0x07",
+      "name": "Read Exception Status",
+      "section": "6.7",
+      "description": "（仅串行线）读取 8 个异常状态输出，打包进 1 字节，最低输出引用在最低有效位；内容设备相关。",
+      "request": {
+        "bytes": 1,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x07"
+          }
+        ],
+        "quote": "Request Function code 1 Byte 0x07"
+      },
+      "response": {
+        "bytes": 2,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x07"
+          },
+          {
+            "field": "Output Data",
+            "size": "1 Byte",
+            "range": "0x00 to 0xFF"
+          }
+        ],
+        "quote": "The normal response contains the status of the eight Exception Status outputs. The outputs are packed into one data byte, with one bit per output."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        4
+      ],
+      "error_function_code": "0x87",
+      "limits": {
+        "scope": "Serial Line only"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.7",
+        "page": 20,
+        "quote": "This function code is used to read the contents of eight Exception Status outputs in a remote device."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 8,
+      "code_hex": "0x08",
+      "name": "Diagnostics",
+      "section": "6.8",
+      "description": "（仅串行线）诊断测试序列；2 字节子功能码定义测试类型，正常响应回显功能码与子功能码。子功能码表（6.8.1）：00 Return Query Data、01 Restart Communications Option、02 Return Diagnostic Register、03 Change ASCII Input Delimiter、04 Force Listen Only Mode、0A Clear Counters and Diagnostic Register、0B Return Bus Message Count、0C Return Bus Communication Error Count、0D Return Bus Exception Error Count、0E Return Server Message Count、0F Return Server No Response Count、10 Return Server NAK Count、11 Return Server Busy Count、12 Return Bus Character Overrun Count、14 Clear Overrun Counter and Flag；05..09、13、21..65535 RESERVED。",
+      "request": {
+        "bytes": "3 + 2N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x08"
+          },
+          {
+            "field": "Sub-function",
+            "size": "2 Bytes",
+            "range": "见 6.8.1 子功能码表"
+          },
+          {
+            "field": "Data",
+            "size": "N x 2 Bytes",
+            "range": "依子功能而定"
+          }
+        ],
+        "quote": "The function uses a two–byte sub-function code field in the query to define the type of test to be performed. The server echoes both the function code and sub-function code in a normal response."
+      },
+      "response": {
+        "bytes": "3 + 2N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x08"
+          },
+          {
+            "field": "Sub-function",
+            "size": "2 Bytes",
+            "range": "回显请求子功能码"
+          },
+          {
+            "field": "Data",
+            "size": "N x 2 Bytes",
+            "range": "依子功能而定（如 Echo Request Data）"
+          }
+        ],
+        "quote": "The normal response to the Return Query Data request is to loopback the same data."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        3,
+        4
+      ],
+      "error_function_code": "0x88",
+      "limits": {
+        "sub_functions_reserved": "05..09、13(0x0D)、21..65535 为 RESERVED；Annex A 另保留 8/19 与 8/21-65535"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.8 / 6.8.1",
+        "page": 21,
+        "quote": "MODBUS function code 08 provides a series of tests for checking the communication system between a client device and a server, or for checking various internal error conditions within a server."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 11,
+      "code_hex": "0x0B",
+      "name": "Get Comm Event Counter",
+      "section": "6.9",
+      "description": "（仅串行线）取通信事件计数器的状态字与事件计数；状态字全 1（FF FF）表示忙；诊断功能（08）子功能 00 01 / 00 0A 可复位计数器。",
+      "request": {
+        "bytes": 1,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x0B"
+          }
+        ],
+        "quote": "Request Function code 1 Byte 0x0B"
+      },
+      "response": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x0B"
+          },
+          {
+            "field": "Status",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Event Count",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          }
+        ],
+        "quote": "The status word will be all ones (FF FF hex) if a previously–issued program command is still being processed by the remote device (a busy condition exists)."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        4
+      ],
+      "error_function_code": "0x8B",
+      "limits": {
+        "scope": "Serial Line only"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.9",
+        "page": 25,
+        "quote": "This function code is used to get a status word and an event count from the remote device's communication event counter."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 12,
+      "code_hex": "0x0C",
+      "name": "Get Comm Event Log",
+      "section": "6.10",
+      "description": "（仅串行线）取状态字、事件计数、报文计数与 0-64 字节事件域；Byte 0 为最新事件。",
+      "request": {
+        "bytes": 1,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x0C"
+          }
+        ],
+        "quote": "Request Function code 1 Byte 0x0C"
+      },
+      "response": {
+        "bytes": "8 + 事件字节数",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x0C"
+          },
+          {
+            "field": "Byte Count",
+            "size": "1 Byte",
+            "range": "Quantity of Events + 3 x 2 Bytes"
+          },
+          {
+            "field": "Status",
+            "size": "2 Bytes"
+          },
+          {
+            "field": "Event Count",
+            "size": "2 Bytes"
+          },
+          {
+            "field": "Message Count",
+            "size": "2 Bytes"
+          },
+          {
+            "field": "Event Bytes",
+            "size": "0-64 Bytes",
+            "range": "按时间序，Byte 0 最新"
+          }
+        ],
+        "quote": "The event bytes field contains 0-64 bytes, with each byte corresponding to the status of one MODBUS send or receive operation for the remote device."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        4
+      ],
+      "error_function_code": "0x8C",
+      "limits": {
+        "event_bytes": "0-64"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.10",
+        "page": 26,
+        "quote": "This function code is used to get a status word, event count, message count, and a field of event bytes from the remote device."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 15,
+      "code_hex": "0x0F",
+      "name": "Write Multiple Coils",
+      "section": "6.11",
+      "description": "强制连续线圈序列 ON/OFF；地址从 0 开始；输出按位打包，最后字节未用位补零；响应回显功能码、起始地址与数量。",
+      "request": {
+        "bytes": "6 + N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x0F"
+          },
+          {
+            "field": "Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity of Outputs",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0x07B0"
+          },
+          {
+            "field": "Byte Count",
+            "size": "1 Byte",
+            "range": "N*"
+          },
+          {
+            "field": "Outputs Value",
+            "size": "N* x 1 Byte"
+          }
+        ],
+        "quote": "Quantity of Outputs 2 Bytes 0x0001 to 0x07B0 Byte Count 1 Byte N* Outputs Value N* x 1 Byte"
+      },
+      "response": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x0F"
+          },
+          {
+            "field": "Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity of Outputs",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0x07B0"
+          }
+        ],
+        "quote": "The normal response returns the function code, starting address, and quantity of coils forced."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x8F",
+      "limits": {
+        "quantity": "0x0001 to 0x07B0 (1..1968)"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.11",
+        "page": 29,
+        "quote": "This function code is used to force each coil in a sequence of coils to either ON or OFF in a remote device. The Request PDU specifies the coil references to be forced. Coils are addressed starting at zero."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 16,
+      "code_hex": "0x10",
+      "name": "Write Multiple registers",
+      "section": "6.12",
+      "description": "写 1..123 个连续寄存器块；每寄存器 2 字节打包；响应回显功能码、起始地址与寄存器数量。",
+      "request": {
+        "bytes": "6 + 2N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x10"
+          },
+          {
+            "field": "Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity of Registers",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0x007B"
+          },
+          {
+            "field": "Byte Count",
+            "size": "1 Byte",
+            "range": "2 x N*"
+          },
+          {
+            "field": "Registers Value",
+            "size": "N* x 2 Bytes"
+          }
+        ],
+        "quote": "Quantity of Registers 2 Bytes 0x0001 to 0x007B Byte Count 1 Byte 2 x N* Registers Value N* x 2 Bytes"
+      },
+      "response": {
+        "bytes": 5,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x10"
+          },
+          {
+            "field": "Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity of Registers",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0x007B"
+          }
+        ],
+        "quote": "This function code is used to write a block of contiguous registers (1 to 123 registers) in a remote device."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x90（推导：功能码 + 0x80；文本未逐字打印该行）",
+      "limits": {
+        "quantity": "0x0001 to 0x007B (1..123)"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.12",
+        "page": 30,
+        "quote": "This function code is used to write a block of contiguous registers (1 to 123 registers) in a remote device. The requested written values are specified in the request data field. Data is packed as two bytes per register."
+      },
+      "provenance": "mechanical",
+      "needs": "manual_check",
+      "needs_note": "仅 error_function_code 的 0x90 为按 '+0x80' 规则推导（与 FC15=0x8F、FC17=0x97 显式值一致），其余字段均为机械提取"
+    },
+    {
+      "code": 17,
+      "code_hex": "0x11",
+      "name": "Report Server ID",
+      "section": "6.13",
+      "description": "（仅串行线）读取设备类型、当前状态等描述信息；响应含 Server ID（设备相关）、Run Indicator Status（0x00=OFF, 0xFF=ON）与附加数据。",
+      "request": {
+        "bytes": 1,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x11"
+          }
+        ],
+        "quote": "Request Function code 1 Byte 0x11"
+      },
+      "response": {
+        "bytes": "设备相关",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x11"
+          },
+          {
+            "field": "Byte Count",
+            "size": "1 Byte",
+            "range": "设备相关"
+          },
+          {
+            "field": "Server ID",
+            "size": "device specific"
+          },
+          {
+            "field": "Run Indicator Status",
+            "size": "1 Byte",
+            "range": "0x00 = OFF, 0xFF = ON"
+          },
+          {
+            "field": "Additional Data",
+            "size": "可变"
+          }
+        ],
+        "quote": "Run Indicator Status 1 Byte 0x00 = OFF, 0xFF = ON"
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        4
+      ],
+      "error_function_code": "0x91",
+      "limits": {
+        "scope": "Serial Line only"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.13",
+        "page": 31,
+        "quote": "This function code is used to read the description of the type, the current status, and other information specific to a remote device."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 20,
+      "code_hex": "0x14",
+      "name": "Read File Record",
+      "section": "6.14",
+      "description": "文件记录读；每文件 10000 条记录（0x0000-0x270F）；引用类型必须为 6；Byte Count 0x07-0xF5；读取量与响应其他字段合计不得超过 253 字节 PDU 上限。",
+      "request": {
+        "bytes": "2 + 7x子请求数",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x14"
+          },
+          {
+            "field": "Byte Count",
+            "size": "1 Byte",
+            "range": "0x07 to 0xF5 bytes"
+          },
+          {
+            "field": "Sub-Req. x, Reference Type",
+            "size": "1 Byte",
+            "range": "06"
+          },
+          {
+            "field": "Sub-Req. x, File Number",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0xFFFF"
+          },
+          {
+            "field": "Sub-Req. x, Record Number",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0x270F"
+          },
+          {
+            "field": "Sub-Req. x, Record Length",
+            "size": "2 Bytes",
+            "range": "寄存器数"
+          }
+        ],
+        "quote": "Each group is defined in a separate ‘sub-request’ field that contains 7 bytes: The reference type: 1 byte (must be specified as 6) The File number: 2 bytes"
+      },
+      "response": {
+        "bytes": "可变（子响应序列）",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x14"
+          },
+          {
+            "field": "Byte Count",
+            "size": "1 Byte",
+            "range": "所有子响应字节总数"
+          },
+          {
+            "field": "Sub-Resp. x",
+            "size": "可变",
+            "range": "含自身 Byte Count 字段"
+          }
+        ],
+        "quote": "The quantity of registers to be read, combined with all other fields in the expected response, must not exceed the allowable length of the MODBUS PDU : 253 bytes."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4,
+        8
+      ],
+      "error_function_code": "0x94",
+      "limits": {
+        "byte_count": "0x07 to 0xF5",
+        "file_number_note_quote": "While it is allowed for the File Number to be in the range 1 to 0xFFFF, it should be noted that interoperability with legacy equipment may be compromised if the File Number is greater than 10 (0x0A)."
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.14",
+        "page": 32,
+        "quote": "This function code is used to perform a file record read. All Request Data Lengths are provided in terms of number of bytes and all Record Lengths are provided in terms of registers."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 21,
+      "code_hex": "0x15",
+      "name": "Write File Record",
+      "section": "6.15",
+      "description": "文件记录写；Request data length 0x09-0xFB；子请求 7 字节+数据（每寄存器 2 字节）；正常响应为请求回显。",
+      "request": {
+        "bytes": "2 + (7+数据)x子请求数",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x15"
+          },
+          {
+            "field": "Request data length",
+            "size": "1 Byte",
+            "range": "0x09 to 0xFB"
+          },
+          {
+            "field": "Sub-Req. x, Reference Type",
+            "size": "1 Byte",
+            "range": "06"
+          },
+          {
+            "field": "Sub-Req. x, File Number",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0xFFFF"
+          },
+          {
+            "field": "Sub-Req. x, Record Number",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0x270F"
+          },
+          {
+            "field": "Sub-Req. x, Record Length",
+            "size": "2 Bytes",
+            "range": "寄存器数"
+          },
+          {
+            "field": "Sub-Req. x, Data",
+            "size": "2 Bytes x 寄存器数"
+          }
+        ],
+        "quote": "The quantity of registers to be written, combined with all other fields in the request, must not exceed the allowable length of the MODBUS PDU : 253bytes."
+      },
+      "response": {
+        "bytes": "同请求（回显）",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x15"
+          }
+        ],
+        "quote": "The normal response is an echo of the request."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4,
+        8
+      ],
+      "error_function_code": "0x95",
+      "limits": {
+        "request_data_length": "0x09 to 0xFB"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.15",
+        "page": 34,
+        "quote": "This function code is used to perform a file record write. All Request Data Lengths are provided in terms of number of bytes and all Record Lengths are provided in terms of the number of 16-bit words."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 22,
+      "code_hex": "0x16",
+      "name": "Mask Write Register",
+      "section": "6.16",
+      "description": "用 AND 掩码、OR 掩码与当前内容组合修改指定保持寄存器；地址从 0 开始；正常响应为请求回显。",
+      "request": {
+        "bytes": 7,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x16"
+          },
+          {
+            "field": "Reference Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "And_Mask",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Or_Mask",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          }
+        ],
+        "quote": "Result = (Current Contents AND And_Mask) OR (Or_Mask AND (NOT And_Mask))"
+      },
+      "response": {
+        "bytes": 7,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x16"
+          },
+          {
+            "field": "Reference Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "And_Mask",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Or_Mask",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          }
+        ],
+        "quote": "The normal response is an echo of the request. The response is returned after the register has been written."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x96",
+      "limits": {
+        "algorithm": "Result = (Current Contents AND And_Mask) OR (Or_Mask AND (NOT And_Mask))",
+        "special_cases_quote": "If the Or_Mask value is zero, the result is simply the logical ANDing of the current contents and And_Mask. If the And_Mask value is zero, the result is equal to the Or_Mask value."
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.16",
+        "page": 36,
+        "quote": "This function code is used to modify the contents of a specified holding register using a combination of an AND mask, an OR mask, and the register's current contents."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 23,
+      "code_hex": "0x17",
+      "name": "Read/Write Multiple registers",
+      "section": "6.17",
+      "description": "单事务内一次读+一次写；先写后读；保持寄存器地址从 0 开始。",
+      "request": {
+        "bytes": "10 + 2N",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x17"
+          },
+          {
+            "field": "Read Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity to Read",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0x007D"
+          },
+          {
+            "field": "Write Starting Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          },
+          {
+            "field": "Quantity to Write",
+            "size": "2 Bytes",
+            "range": "0x0001 to 0x0079"
+          },
+          {
+            "field": "Write Byte Count",
+            "size": "1 Byte",
+            "range": "2 x N*"
+          },
+          {
+            "field": "Write Registers Value",
+            "size": "N* x 2 Bytes"
+          }
+        ],
+        "quote": "Quantity to Read 2 Bytes 0x0001 to 0x007D Write Starting Address 2 Bytes 0x0000 to 0xFFFF Quantity to Write 2 Bytes 0x0001 to 0X0079 Write Byte Count 1 Byte 2 x N*"
+      },
+      "response": {
+        "bytes": "2 + 2N'",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x17"
+          },
+          {
+            "field": "Byte Count",
+            "size": "1 Byte",
+            "range": "2 x N'*"
+          },
+          {
+            "field": "Read Registers value",
+            "size": "N'* x 2 Bytes"
+          }
+        ],
+        "quote": "This function code performs a combination of one read operation and one write operation in a single MODBUS transaction. The write operation is performed before the read."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x97",
+      "limits": {
+        "read_quantity": "1..125 (0x7D)",
+        "write_quantity": "1..121 (0x79)"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.17",
+        "page": 38,
+        "quote": "This function code performs a combination of one read operation and one write operation in a single MODBUS transaction. The write operation is performed before the read."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 24,
+      "code_hex": "0x18",
+      "name": "Read FIFO Queue",
+      "section": "6.18",
+      "description": "读 FIFO 寄存器队列：先返回队列计数，后跟队列数据；最多 32 个寄存器（计数+最多 31 个数据寄存器）；FIFO Count > 31 返回异常码 03。",
+      "request": {
+        "bytes": 3,
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x18"
+          },
+          {
+            "field": "FIFO Pointer Address",
+            "size": "2 Bytes",
+            "range": "0x0000 to 0xFFFF"
+          }
+        ],
+        "quote": "FIFO Pointer Address 2 Bytes 0x0000 to 0xFFFF"
+      },
+      "response": {
+        "bytes": "可变",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x18"
+          },
+          {
+            "field": "Byte Count",
+            "size": "2 Bytes",
+            "range": "含队列计数字节与值寄存器字节"
+          },
+          {
+            "field": "FIFO Count",
+            "size": "2 Bytes",
+            "range": "≤31"
+          },
+          {
+            "field": "FIFO Value Register",
+            "size": "N* x 2 Bytes",
+            "range": "N = FIFO Count"
+          }
+        ],
+        "quote": "Up to 32 registers can be read: the count, plus up to 31 queued data registers."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0x98",
+      "limits": {
+        "fifo_count": "≤31；超限 → 异常码 03",
+        "limit_quote": "If the queue count exceeds 31, an exception response is returned with an error code of 03 (Illegal Data Value)."
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.18",
+        "page": 40,
+        "quote": "This function code allows to read the contents of a First-In-First-Out (FIFO) queue of register in a remote device."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 43,
+      "code_hex": "0x2B",
+      "name": "Encapsulated Interface Transport",
+      "section": "6.19",
+      "description": "MEI 传输封装机制：在 MODBUS PDU 内隧道传输服务请求与方法调用及其返回；MEI Type 13（CANopen）与 14（Read Device Identification）为当前公开；43/0-12 与 43/15-255 保留。",
+      "request": {
+        "bytes": "可变（≤253 字节 PDU）",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x2B"
+          },
+          {
+            "field": "MEI Type",
+            "size": "1 Byte",
+            "range": "公开: 13, 14；保留: 0-12, 15-255"
+          }
+        ],
+        "quote": "The MODBUS Encapsulated Interface (MEI)Transport is a mechanism for tunneling service requests and method invocations, as well as their returns, inside MODBUS PDUs."
+      },
+      "response": {
+        "bytes": "可变（≤253 字节 PDU）",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x2B"
+          },
+          {
+            "field": "MEI Type",
+            "size": "1 Byte",
+            "range": "回显"
+          }
+        ],
+        "quote": "The PDU will have the 253 Byte limitation in both the Request and the Response message."
+      },
+      "exceptions_applicable": true,
+      "exception_codes": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "error_function_code": "0xAB（推导：0x2B + 0x80；文本未逐字给出）",
+      "limits": {
+        "reserved": "43/0-12 与 43/15-255 保留（Annex A）"
+      },
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.19 / Annex A",
+        "page": 41,
+        "quote": "Function Code 43 and its MEI Type 14 for Device Identification is one of two Encapsulated Interface Transport currently available in this Specification."
+      },
+      "provenance": "mechanical",
+      "needs": "manual_check",
+      "needs_note": "error_function_code 0xAB 为推导值，其余字段为机械提取"
+    },
+    {
+      "code": "43/13",
+      "code_hex": "0x2B/0x0D",
+      "name": "CANopen General Reference Request and Response PDU",
+      "section": "6.20",
+      "description": "CANopen General Reference 经 MEI Type 13 封装；V1.1b3 不给出报文细节，指向 CiA 网站的外部规范。",
+      "request": {
+        "bytes": "≤253 字节 PDU",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x2B"
+          },
+          {
+            "field": "MEI Type",
+            "size": "1 Byte",
+            "range": "0x0D"
+          }
+        ],
+        "quote": "Please refer to Annex B for a reference to a specification that provides information on MEI Type 13."
+      },
+      "response": {
+        "bytes": "≤253 字节 PDU",
+        "fields": [],
+        "quote": "The PDU will have the 253 Byte limitation in both the Request and the Response message."
+      },
+      "exceptions_applicable": true,
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.20 / Annex B",
+        "page": 50,
+        "quote": "Please refer to the MODBUS website or the CiA (CAN in Automation) website for a copy and terms of use that cover Function Code 43 MEI Type 13."
+      },
+      "provenance": "judgment",
+      "needs": "manual_check",
+      "needs_note": "报文格式在 V1.1b3 中未定义（外部规范），仅条目存在性与 PDU 限制为机械提取"
+    },
+    {
+      "code": "43/14",
+      "code_hex": "0x2B/0x0E",
+      "name": "Read Device Identification",
+      "section": "6.21",
+      "description": "读设备标识与物理/功能描述附加信息；对象模型分 Basic（VendorName 0x00、ProductCode 0x01、MajorMinorRevision 0x02，全部强制）、Regular（标准定义、可选实现）、Extended（设备相关）三类。",
+      "request": {
+        "bytes": "可变",
+        "fields": [
+          {
+            "field": "Function code",
+            "size": "1 Byte",
+            "range": "0x2B"
+          },
+          {
+            "field": "MEI Type",
+            "size": "1 Byte",
+            "range": "0x0E"
+          },
+          {
+            "field": "Read Device ID code / Object Id",
+            "size": "各 1 Byte",
+            "range": "见 6.21"
+          }
+        ],
+        "quote": "The interface consists of 3 categories of objects : Basic Device Identification. All objects of this category are mandatory : VendorName, Product code, and revision number."
+      },
+      "response": {
+        "bytes": "可变",
+        "fields": [
+          {
+            "field": "对象 Id/名称/类型",
+            "size": "可变",
+            "range": "0x00 VendorName / 0x01 ProductCode / 0x02 MajorMinorRevision 均为 ASCII String、Mandatory、Basic 类"
+          }
+        ],
+        "quote": "This function code allows reading the identification and additional information relative to the physical and functional description of a remote device, only."
+      },
+      "exceptions_applicable": true,
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.21",
+        "page": 43,
+        "quote": "The Read Device Identification interface is modeled as an address space composed of a set of addressable data elements. The data elements are called objects and an object Id identifies them."
+      },
+      "provenance": "mechanical"
+    }
+  ],
+  "exception_codes": [
+    {
+      "code": 1,
+      "code_hex": "0x01",
+      "name": "ILLEGAL FUNCTION",
+      "meaning": "查询中收到的功能码不是服务器允许的动作；可能因功能码只适用于较新设备而所选设备未实现，或服务器处于不能处理该类请求的状态（如未配置却被要求读寄存器）。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 48,
+        "quote": "The function code received in the query is not an allowable action for the server. This may be because the function code is only applicable to newer devices, and was not implemented in the unit selected."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 2,
+      "code_hex": "0x02",
+      "name": "ILLEGAL DATA ADDRESS",
+      "meaning": "查询中的数据地址不是服务器允许的地址；具体地，引用号与传输长度的组合无效（例：100 个寄存器的控制器请求起始 96、数量 5 会因越界失败）。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 48,
+        "quote": "The data address received in the query is not an allowable address for the server. More specifically, the combination of reference number and transfer length is invalid."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 3,
+      "code_hex": "0x03",
+      "name": "ILLEGAL DATA VALUE",
+      "meaning": "查询数据域中包含服务器不允许的值；表示复杂请求剩余部分的结构错误（如隐含长度不正确），不是指寄存器存储值超出应用预期。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 48,
+        "quote": "A value contained in the query data field is not an allowable value for server. This indicates a fault in the structure of the remainder of a complex request, such as that the implied length is incorrect."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 4,
+      "code_hex": "0x04",
+      "name": "SERVER DEVICE FAILURE",
+      "meaning": "服务器在执行请求动作时发生不可恢复错误。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 48,
+        "quote": "An unrecoverable error occurred while the server was attempting to perform the requested action."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 5,
+      "code_hex": "0x05",
+      "name": "ACKNOWLEDGE",
+      "meaning": "与编程命令配合的专用用法：服务器已接受请求并在处理，但需较长时间；返回此响应防止客户端超时，客户端可随后发 Poll Program Complete 查询是否完成。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 48,
+        "quote": "The server has accepted the request and is processing it, but a long duration of time will be required to do so. This response is returned to prevent a timeout error from occurring in the client."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 6,
+      "code_hex": "0x06",
+      "name": "SERVER DEVICE BUSY",
+      "meaning": "与编程命令配合的专用用法：服务器正忙于处理长时操作。（该单元格文字在提取文本中于列边界截断，完整句需人工核对原 PDF）",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 48,
+        "quote": "Specialized use in conjunction with programming commands. The server is engaged in processing a long"
+      },
+      "provenance": "mechanical",
+      "needs": "manual_check",
+      "needs_note": "引文忠实于提取文本，但 06 行的含义句在列布局提取处被截断（'long' 之后缺失）"
+    },
+    {
+      "code": 7,
+      "code_hex": "0x07",
+      "name": null,
+      "meaning": "V1.1b3 的 MODBUS Exception Codes 表中不存在异常码 07（表从 06 直接跳到 08）。后续规范或实现中该码有定义，但无法从本次提取的三份文本获得其名称与含义。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 48,
+        "quote": "06 SERVER DEVICE BUSY ... 08 MEMORY PARITY ERROR（表中 06 与 08 之间无 07 条目）"
+      },
+      "provenance": "judgment",
+      "needs": "manual_check"
+    },
+    {
+      "code": 8,
+      "code_hex": "0x08",
+      "name": "MEMORY PARITY ERROR",
+      "meaning": "与功能码 20、21 及引用类型 6 配合使用，指示扩展文件区未通过一致性检查；服务器读记录文件时检测到内存奇偶错误，客户端可重试但可能需要检修服务器。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 48,
+        "quote": "Specialized use in conjunction with function codes 20 and 21 and reference type 6, to indicate that the extended file area failed to pass a consistency check."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 9,
+      "code_hex": "0x09",
+      "name": null,
+      "meaning": "V1.1b3 的 MODBUS Exception Codes 表中不存在异常码 09（表中 08 之后直接是 0A）。无法从本次提取的三份文本获得其名称与含义。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 49,
+        "quote": "08 MEMORY PARITY ERROR ... 0A GATEWAY PATH UNAVAILABLE（表中 08 与 0A 之间无 09 条目）"
+      },
+      "provenance": "judgment",
+      "needs": "manual_check"
+    },
+    {
+      "code": 10,
+      "code_hex": "0x0A",
+      "name": "GATEWAY PATH UNAVAILABLE",
+      "meaning": "与网关配合的专用用法：网关无法为处理请求分配从输入端口到输出端口的内部通信路径；通常意味着网关配置错误或过载。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 49,
+        "quote": "Specialized use in conjunction with gateways, indicates that the gateway was unable to allocate an internal communication path from the input port to the output port for processing the request."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "code": 11,
+      "code_hex": "0x0B",
+      "name": "GATEWAY TARGET DEVICE FAILED TO RESPOND",
+      "meaning": "与网关配合的专用用法：未从目标设备获得响应；通常意味着设备不在网络上。",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7 (MODBUS Exception Codes 表)",
+        "page": 49,
+        "quote": "Specialized use in conjunction with gateways, indicates that no response was obtained from the target device. Usually means that the device is not present on the network."
+      },
+      "provenance": "mechanical"
+    }
+  ],
+  "register_model": {
+    "primary_tables": [
+      {
+        "table": "Discretes Input",
+        "object_type": "Single bit",
+        "access": "Read-Only",
+        "comment": "This type of data can be provided by an I/O system.",
+        "spec_ref": {
+          "doc": "MODBUS Application Protocol Specification V1.1b3",
+          "section": "4.3",
+          "page": 6,
+          "quote": "Discretes Input Single bit Read-Only This type of data can be provided by an I/O system."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "table": "Coils",
+        "object_type": "Single bit",
+        "access": "Read-Write",
+        "comment": "可由应用程序改变。",
+        "spec_ref": {
+          "doc": "MODBUS Application Protocol Specification V1.1b3",
+          "section": "4.3",
+          "page": 6,
+          "quote": "Coils Single bit Read-Write This type of data can be alterable by an application program."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "table": "Input Registers",
+        "object_type": "16-bit word",
+        "access": "Read-Only",
+        "comment": "This type of data can be provided by an I/O system.",
+        "spec_ref": {
+          "doc": "MODBUS Application Protocol Specification V1.1b3",
+          "section": "4.3",
+          "page": 6,
+          "quote": "Input Registers 16-bit word Read-Only This type of data can be provided by an I/O system"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "table": "Holding Registers",
+        "object_type": "16-bit word",
+        "access": "Read-Write",
+        "comment": "可由应用程序改变。",
+        "spec_ref": {
+          "doc": "MODBUS Application Protocol Specification V1.1b3",
+          "section": "4.3",
+          "page": 6,
+          "quote": "Holding Registers 16-bit word Read-Write This type of data can be alterable by an application program."
+        },
+        "provenance": "mechanical"
+      }
+    ],
+    "size_and_addressing": {
+      "items_per_table": 65536,
+      "pdu_address_range": "0 to 65535（PDU 中每表数据从 0 到 65535 寻址）",
+      "data_model_numbering": "1 to n（数据模型内元素从 1 编号）",
+      "mapping_rule": "数据模型中编号 X 的数据在 MODBUS PDU 中寻址为 X-1",
+      "reference_numbers": "MODBUS 逻辑引用号是从 0 开始的无符号整数索引",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "4.3",
+        "page": 6,
+        "quote": "For each of the primary tables, the protocol allows individual selection of 65536 data items, and the operations of read or write of those items are designed to span multiple consecutive"
+      },
+      "spec_ref_pdu_range": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "4.4",
+        "page": 7,
+        "quote": "In a MODBUS PDU each data is addressed from 0 to 65535."
+      },
+      "spec_ref_mapping": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "4.4 / Figure 8",
+        "page": 8,
+        "quote": "a MODBUS data numbered X is addressed in the MODBUS PDU X-1"
+      },
+      "provenance": "mechanical"
+    },
+    "encoding": {
+      "byte_order": "big-endian：多字节数值最高有效字节先发送（例：16 位 0x1234 先发 0x12 再发 0x34）",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "4.2",
+        "page": 5,
+        "quote": "MODBUS uses a ‘big-Endian’ representation for addresses and data items. This means that when a numerical quantity larger than a single byte is transmitted, the most significant byte is sent first."
+      },
+      "provenance": "mechanical"
+    },
+    "overlay_note": "四个表可以在目标设备上视为相互覆盖（同一数据经多种功能访问），这不隐含任何应用行为。",
+    "overlay_spec_ref": {
+      "doc": "MODBUS Application Protocol Specification V1.1b3",
+      "section": "4.3",
+      "page": 6,
+      "quote": "It is perfectly acceptable, and very common, to regard all four tables as overlaying one another, if this is the most natural interpretation on the target machine in question."
+    },
+    "provenance": "mechanical"
+  },
+  "framing": {
+    "pdu_adu_sizes": {
+      "pdu_max_bytes": 253,
+      "serial_adu_max_bytes": 256,
+      "tcp_adu_max_bytes": 260,
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "4.1",
+        "page": 5,
+        "quote": "MODBUS PDU for serial line communication = 256 - Server address (1 byte) - CRC (2 bytes) = 253 bytes . Consequently: RS232 / RS485 ADU = 253 bytes + Server address (1 byte) + CRC (2 bytes) = 256 bytes . TCP MODBUS ADU = 253 bytes + MBAP (7 bytes) = 260 bytes ."
+      },
+      "provenance": "mechanical"
+    },
+    "tcp": {
+      "adu_structure": "MBAP header (7 bytes) + PDU（Function code + Data）；无 Modbus CRC（以太网 CRC-32）",
+      "mbap_header": {
+        "size_bytes": 7,
+        "fields": [
+          {
+            "field": "Transaction Identifier",
+            "size": "2 Bytes",
+            "semantic": "事务配对标识；客户端初始化，服务器从请求复制到响应"
+          },
+          {
+            "field": "Protocol Identifier",
+            "size": "2 Bytes",
+            "semantic": "0 = MODBUS protocol；用于系统内多路复用"
+          },
+          {
+            "field": "Length",
+            "size": "2 Bytes",
+            "semantic": "后续字节数（含 Unit Identifier 与数据域）"
+          },
+          {
+            "field": "Unit Identifier",
+            "size": "1 Byte",
+            "semantic": "串行线/其他总线上远程 slave 的标识；网关路由用"
+          }
+        ],
+        "fields_quote": "Transaction Identifier 2 Bytes Identification of a MODBUS Request / Response transaction. Protocol Identifier 2 Bytes 0 = MODBUS protocol Length 2 Bytes Number of following bytes Unit Identifier 1 Byte Identification of a remote slave connected on a serial line or on other buses.",
+        "spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "3.1.3",
+          "page": 4,
+          "quote": "A dedicated header is used on TCP/IP to identify the MODBUS Application Data Unit. It is called the MBAP header (MODBUS Application Protocol header)."
+        },
+        "size_quote": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "3.1.3",
+          "page": 5,
+          "quote": "The header is 7 bytes long:"
+        },
+        "provenance": "mechanical"
+      },
+      "transaction_identifier_semantics": {
+        "uniqueness": "同一时刻、同一 TCP 连接上必须唯一；可用递增计数器（简单 TCP 序列号），也可作指向事务上下文的智能索引",
+        "spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "4.3.1",
+          "page": 23,
+          "quote": "The transaction identifier is used to associate the future response with the request. So, at a time, on a TCP connection, this identifier must be unique."
+        },
+        "example_quote": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "4.3.1",
+          "page": 23,
+          "quote": "For example, it can be used as a simple \"TCP sequence number\" with a counter which is incremented at each request."
+        },
+        "response_matching": "响应到达时按 Transaction Identifier 关联原请求；不指向任何 pending 事务的响应必须丢弃",
+        "response_matching_spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "4.4.1.3",
+          "page": 24,
+          "quote": "If the Transaction Identifier doesn't refer to any MODBUS pending transaction, the response must be discarded."
+        },
+        "pipelining": "TCP/MODBUS 上可对同一服务器连续发多个请求而不等确认；网关负责与串行线一问一答行为兼容",
+        "pipelining_spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "4.3.1",
+          "page": 23,
+          "quote": "On TCP/MODBUS, several requests can be sent without waiting for a confirmation to the same server."
+        },
+        "provenance": "mechanical"
+      },
+      "length_field_semantics": {
+        "value": "客户端在请求中初始化；服务器在响应中填 'PDU 大小 + Unit Identifier 字节'",
+        "spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "4.5.2",
+          "page": 32,
+          "quote": "The server calculates the size of the MODBUS PDU plus the Unit Identifier byte. This value is set in the \"Length\" field."
+        },
+        "definition_quote": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "3.1.3",
+          "page": 5,
+          "quote": "The length field is a byte count of the following fields, including the Unit Identifier and data fields."
+        },
+        "provenance": "mechanical"
+      },
+      "unit_identifier_tcp": {
+        "value": "直连 TCP/IP 的服务器 Unit Identifier 无意义，须用 0xFF；经网关访问串行线从站时携带 1-247 从站地址；0 亦可被直连 TCP 设备接受",
+        "spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "4.3.2",
+          "page": 23,
+          "quote": "On TCP/IP, the MODBUS server is addressed using its IP address; therefore, the MODBUS Unit Identifier is useless. The value 0xFF has to be used."
+        },
+        "zero_note_spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "4.3.2",
+          "page": 23,
+          "quote": "Remark : The value 0 is also accepted to communicate directly to a MODBUS/TCP device ."
+        },
+        "serial_range_spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "4.3.2",
+          "page": 23,
+          "quote": "The MODBUS slave device addresses on serial line are assigned from 1 to 247 (decimal). Address 0 is used as broadcast address."
+        },
+        "provenance": "mechanical"
+      },
+      "port": 502,
+      "port_spec_ref": {
+        "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+        "section": "3.1.3",
+        "page": 6,
+        "quote": "All MODBUS/TCP ADU are sent via TCP to registered port 502."
+      },
+      "endianness": {
+        "value": "MBAP 各字段大端编码",
+        "spec_ref": {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+          "section": "3.1.3",
+          "page": 6,
+          "quote": "Remark : the different fields are encoded in Big-endian."
+        },
+        "provenance": "mechanical"
+      },
+      "provenance": "mechanical"
+    },
+    "rtu": {
+      "frame_structure": [
+        {
+          "field": "Slave Address",
+          "size": "1 byte"
+        },
+        {
+          "field": "Function Code",
+          "size": "1 byte"
+        },
+        {
+          "field": "Data",
+          "size": "0 up to 252 byte(s)"
+        },
+        {
+          "field": "CRC",
+          "size": "2 bytes（CRC Low 先发，CRC Hi 后发）"
+        }
+      ],
+      "frame_spec_ref": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.5.1 / Figure 12",
+        "page": 13,
+        "quote": "Slave Address Function Code Data CRC 1 byte 1 byte 0 up to 252 byte(s) 2 bytes ... The maximum size of a MODBUS RTU frame is 256 bytes."
+      },
+      "character_format": {
+        "value": "11 位字符帧：1 起始位 + 8 数据位（LSB 先发）+ 1 奇偶位 + 1 停止位；无校验时 2 个停止位补足 11 位；默认偶校验",
+        "spec_ref": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "2.5.1",
+          "page": 12,
+          "quote": "Bits per Byte: 1 start bit 8 data bits, least significant bit sent first 1 bit for parity completion 1 stop bit Even parity is required,"
+        },
+        "no_parity_spec_ref": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "2.5.1",
+          "page": 12,
+          "quote": "Remark : the use of no parity requires 2 stop bits."
+        },
+        "provenance": "mechanical"
+      },
+      "inter_frame_delay_t3_5": {
+        "value": "≥ 3.5 字符时间（t3.5）：帧间静默间隔，用于界定帧结束；整帧必须连续发送",
+        "spec_ref": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "2.5.1.1",
+          "page": 13,
+          "quote": "In RTU mode, message frames are separated by a silent interval of at least 3.5 character times. In the following sections, this time interval is called t3,5."
+        },
+        "provenance": "mechanical"
+      },
+      "inter_char_timeout_t1_5": {
+        "value": "> 1.5 字符时间的字符间静默 → 帧宣告不完整并被接收方丢弃",
+        "spec_ref": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "2.5.1.1",
+          "page": 13,
+          "quote": "If a silent interval of more than 1.5 character times occurs between two characters, the message frame is declared incomplete and should be discarded by the receiver."
+        },
+        "high_baud_fixed_values": "波特率 > 19200 Bps 时建议固定值：t1.5 = 750µs，t3.5 = 1.750ms",
+        "high_baud_spec_ref": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "2.5.1.1",
+          "page": 13,
+          "quote": "it is recommended to use a value of 750µs for the inter-character time-out (t1.5) and a value of 1.750ms for inter-frame delay (t3.5)."
+        },
+        "provenance": "mechanical"
+      },
+      "crc16": {
+        "name": "CRC-16（Modbus）",
+        "width": 16,
+        "init": "0xFFFF（16 位寄存器预置全 1）",
+        "polynomial": "0xA001（反射 / LSB-first）",
+        "generating_polynomial": "1 + x^2 + x^15 + x^16",
+        "algorithm": "每字节与 CRC 低字节异或 → 右移 8 次（MSB 补零），移出 LSB=1 时与 0xA001 异或；全部字节处理完后寄存器内容即 CRC；起始位、停止位与奇偶位不参与",
+        "byte_order_on_wire": "低字节在前，高字节在后",
+        "spec_ref_init": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "2.5.1.2",
+          "page": 14,
+          "quote": "The CRC calculation is started by first pre-loading a 16–bit register to all 1’s."
+        },
+        "spec_ref_poly": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "Appendix B (6.2.2)",
+          "page": 40,
+          "quote": "POLY = calculation polynomial of the CRC 16 = 1010 0000 0000 0001 (Generating polynomial = 1 + x2 + x15 + x16)"
+        },
+        "spec_ref_algorithm": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "6.2.2 Appendix B",
+          "page": 39,
+          "quote": "(If the LSB was 1): Exclusive OR the CRC register with the polynomial value 0xA001 (1010 0000 0000 0001)."
+        },
+        "spec_ref_byte_order": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "2.5.1.2",
+          "page": 14,
+          "quote": "When this is done, the low–order byte of the field is appended first, followed by the high–order byte."
+        },
+        "spec_ref_coverage": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "6.2.2",
+          "page": 39,
+          "quote": "Only the eight bits of data in each character are used for generating the CRC. Start and stop bits and the parity bit, do not apply to the CRC."
+        },
+        "provenance": "mechanical"
+      },
+      "ascii_mode_note": {
+        "value": "ASCII 传输模式为可选（冒号起始、LRC 校验、每字节两个 ASCII 字符）；所有设备必须实现 RTU，默认设置必须为 RTU",
+        "spec_ref": {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+          "section": "2.5",
+          "page": 12,
+          "quote": "All devices must implement the RTU Mode. The ASCII transmission mode is an option."
+        },
+        "provenance": "mechanical"
+      },
+      "provenance": "mechanical"
+    },
+    "serial_addressing": {
+      "address_space": "256 个地址：0 = 广播，1-247 = 从站独立地址，248-255 保留",
+      "master": "主站无特定地址；同一时刻仅一个主站；主站同一时刻只发起一个 MODBUS 事务",
+      "spec_ref": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.1",
+        "page": 7,
+        "quote": "Each slave must have an unique address (from 1 to 247) so that it can be addressed independently from other nodes."
+      },
+      "spec_ref_space": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.2",
+        "page": 8,
+        "quote": "The MODBUS addressing space comprises 256 different addresses."
+      },
+      "spec_ref_reserved": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.2",
+        "page": 8,
+        "quote": "he Address 0 is reserved as the broadcast address. All slave nodes must recognise the broadcast address."
+      },
+      "spec_ref_single_transaction": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.1",
+        "page": 7,
+        "quote": "The master node initiates only one MODBUS transaction at the same time."
+      },
+      "provenance": "mechanical"
+    }
+  },
+  "limits_and_timeouts": {
+    "serial_response_timeout": {
+      "value": "应用相关；典型值为 9600 bps 下 1 秒至数秒（Turnaround delay 100-200ms）",
+      "spec_ref": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.4.1",
+        "page": 10,
+        "quote": "Typically the Response time-out is from 1s to several second at 9600 bps; and the Turnaround delay is from 100 ms to 200ms."
+      },
+      "provenance": "mechanical"
+    },
+    "serial_response_timeout_semantics": {
+      "value": "单播请求发出后启动 Response Time-out，防止主站无限等待 'Waiting for reply'；超时值应用相关",
+      "spec_ref": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.4.1",
+        "page": 9,
+        "quote": "It prevents the Master from staying indefinitely in “Waiting for reply” state. Value of the Response time-out is application dependant."
+      },
+      "provenance": "mechanical"
+    },
+    "serial_turnaround_delay_after_broadcast": {
+      "value": "广播后无响应，但主站须等待一段延迟（典型 100-200ms）再发新请求，让各从站处理完当前请求",
+      "spec_ref": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.4.1",
+        "page": 10,
+        "quote": "When a broadcast request is sent on the serial bus, no response is returned from the slaves. Nevertheless a delay is respected by the Master in order to allow any slave to process the current request before sending a new one."
+      },
+      "provenance": "mechanical"
+    },
+    "tcp_response_timeout": {
+      "value": "MODBUS/TCP 故意不规定事务响应时间；客户端超时应大于预期最大合理响应时间（重试阈值过小会造成拥塞）；非时间关键应用可用 TCP 默认超时（多数平台数秒后报告通信失败）",
+      "spec_ref": {
+        "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+        "section": "4.4.1.4",
+        "page": 25,
+        "quote": "There is deliberately NO specification of required response time for a transaction over MODBUS/TCP."
+      },
+      "retry_spec_ref": {
+        "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+        "section": "4.4.1.4",
+        "page": 25,
+        "quote": "In turn, any ‘timeout’ time used at a client to initiate an application retry should be larger than the expected maximum ‘reasonable’ response time."
+      },
+      "tcp_default_spec_ref": {
+        "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+        "section": "4.4.1.4",
+        "page": 26,
+        "quote": "Applications which are not time critical can often leave timeout values to the normal TCP defaults, which will report communication failure after several seconds on most platforms."
+      },
+      "provenance": "mechanical"
+    },
+    "tcp_concurrency": {
+      "value": "客户端同时初始化的事务数取决于资源容量；实现参数 NumberMaxOfClientTransaction 取值 1 到 16",
+      "spec_ref": {
+        "doc": "MODBUS Messaging on TCP/IP Implementation Guide V1.0b",
+        "section": "4.3.1",
+        "page": 23,
+        "quote": "This implementation parameter is called \" NumberMaxOfClientTransaction \" and must be described as one of the MODBUS client features. Depending of the device type this parameter can take a value from 1 to 16."
+      },
+      "provenance": "mechanical"
+    },
+    "broadcast_semantics": {
+      "address": 0,
+      "no_response": true,
+      "writes_only": true,
+      "spec_ref": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "2.1",
+        "page": 7,
+        "quote": "No response is returned to broadcast requests sent by the master. The broadcast requests are necessarily writing commands. All devices must accept the broadcast for writing function . The address 0 is reserved to identify a broadcast exchange."
+      },
+      "provenance": "mechanical"
+    },
+    "no_response_on_comm_error": {
+      "value": "服务器因通信错误未收到请求、或检测到通信错误（奇偶/LRC/CRC）时均不返回响应；客户端最终以超时处理",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "7",
+        "page": 47,
+        "quote": "If the server does not receive the request due to a communication error, no response is returned. The client program will eventually process a timeout condition for the request."
+      },
+      "provenance": "mechanical"
+    },
+    "exception_response_format": {
+      "value": "异常响应功能码 = 请求功能码 + 0x80（MSB 置 1），数据域为 1 字节异常码；异常响应 PDU = {exception-function_code, exception_code}",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "4.5 / 7",
+        "page": 47,
+        "quote": "In an exception response, the server sets the MSB of the function code to 1. This makes the function code value in an exception response exactly 80 hexadecimal higher than the value would be for a normal response."
+      },
+      "pdu_quote": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "4.5",
+        "page": 9,
+        "quote": "exception-function_code = [1 byte] MODBUS function code + 0x80"
+      },
+      "provenance": "mechanical"
+    },
+    "fc_quantity_limits_summary": {
+      "read_coils": "1..2000 (0x7D0)",
+      "read_discrete_inputs": "1..2000 (0x7D0)",
+      "read_holding_registers": "1..125 (0x7D)",
+      "read_input_registers": "1..125 (0x7D)",
+      "write_multiple_coils": "1..1968 (0x7B0)",
+      "write_multiple_registers": "1..123 (0x7B)",
+      "read_write_multiple_registers": "read 1..125 (0x7D), write 1..121 (0x79)",
+      "read_fifo_queue": "最多 32（计数 + 最多 31 个数据寄存器），FIFO Count > 31 → 异常码 03",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "6.1-6.18 各节 Request 表（聚合引用）",
+        "page": 11,
+        "quote": "Quantity of coils 2 Bytes 1 to 2000 (0x7D0)"
+      },
+      "provenance": "judgment",
+      "needs": "manual_check",
+      "needs_note": "2026-10-21 从 mechanical 降为 judgment：本条是对 §6.1-6.18 各节请求表的聚合汇总，非逐字原文（原 spec_ref.quote 内混入编辑性括注已剔除，仅保留逐字片段）；各项上限的逐字引文以 function_codes 各条目为准"
+    },
+    "serial_baud_rates": {
+      "value": "9600 bps 与 19.2 Kbps 为必需，19.2 Kbps 为必需默认；可选 1200/2400/4800/.../38400/56K/115K；发送精度须优于 1%，接收须容忍 2% 误差",
+      "spec_ref": {
+        "doc": "MODBUS over Serial Line Specification and Implementation Guide V1.02",
+        "section": "3.2",
+        "page": 20,
+        "quote": "9600 bps and 19.2 Kbps are required and 19.2 is the required default"
+      },
+      "provenance": "mechanical"
+    },
+    "user_defined_fc_ranges": {
+      "value": "用户自定义功能码范围 65-72 与 100-110（十进制）；保留功能码/子码见 Annex A（8/19; 8/21-65535, 9, 10, 13, 14, 41, 42, 90, 91, 125, 126, 127）",
+      "spec_ref": {
+        "doc": "MODBUS Application Protocol Specification V1.1b3",
+        "section": "5 / Annex A",
+        "page": 10,
+        "quote": "there are two ranges of user-defined function codes, i.e. 65 to 72 and from 100 to 110 decimal."
+      },
+      "provenance": "mechanical"
+    }
+  }
+}

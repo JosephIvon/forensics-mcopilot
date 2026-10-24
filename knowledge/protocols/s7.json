@@ -1,0 +1,3879 @@
+{
+  "protocol": "s7",
+  "schema_version": "s7_extract/1",
+  "generated": "2026-10-21",
+  "note": "本文件由 Snap7 Reference Manual（逆向工程文档，非西门子官方 S7 规范）机械提取产出，schema 风格对齐同目录 modbus.json。各条目均带 spec_ref（文档名/章节/PDF 物理页码/逐字引文）与 provenance；judgment 项原带 needs:manual_check 与 judgment_note（2026-10-21 源码取证后全部升级，见下）。引文复制自 out/_protocols_s7/Snap7-refman.txt（允许行折断点合并，未改动词句）；表格/列表型引文以 quote 片段数组给出（每个片段均逐字且取自同一页，按原文顺序排列）。手册为 API 参考：线缆级字节布局缺口原以 judgment 条目如实标注。2026-10-21 增补 Snap7 1.4.3 源码取证：evidence_source:\"snap7_source\" 的条目带 src_ref{file,line,quote}（file 为源码仓库相对路径，line 为 1-based 行号/行段；quote 为该行段全部非空行的逐字内容，\\n 连接、行首缩进裁剪）；原 7 条 judgment 全部被源码证实，升级为 provenance:\"mechanical-evidence\" 并移除 needs:manual_check，升级明细见 s7_提取说明.md「源码取证」一节。",
+  "spec_version": {
+    "documents": [
+      {
+        "doc": "Snap7 Reference Manual",
+        "doc_short": "S7RM",
+        "author": "Davide Nardella",
+        "version": "Rev. 8（对应 Snap7 1.4.2，页眉 Snap7 1.4.2 - Reference manual）",
+        "doc_date": "December 3, 2016（标题页）",
+        "pdf_pages": 289,
+        "sha256": "52D870F8ED767E73C20E00E1B0C312764D089B26E327CA7CB48AE0B135117279",
+        "source_pdf": "knowledge/protocols/specs/Snap7-refman.pdf",
+        "extracted_text": "out/_protocols_s7/Snap7-refman.txt（323,541 字符，289 个 ===== [PAGE n] ===== 页标记，与 PDF 物理页一一对应；页脚 Pag.n 与标记 n 一致）",
+        "nature": "第三方逆向工程文档（社区/作者对 S7 协议的描述与 Snap7 库 API 参考），非西门子官方规范；西门子未公开 S7 内部协议规范（见 p18 引文）"
+      }
+    ],
+    "note": "spec_ref.page 为 PDF 物理页码，与手册页脚 Pag.n 一致（已抽查）。"
+  },
+  "source_version": {
+    "sources": [
+      {
+        "project": "Snap7（开源 C++ 实现，truth source）",
+        "version": "1.4.3（全部源文件页眉 PROJECT SNAP7 1.4.3；HISTORY.txt 最新条目 [2016-12-04] Version 1.4.3 - Small bugfix, repository change, repository split）",
+        "url": "https://github.com/davenardella/snap7/archive/refs/heads/master.tar.gz（作者官方 GitHub 镜像 master tarball，readme 声明 This is the official Snap7 repository starting with release 1.4.3；与 SourceForge snap7 项目同源）",
+        "archive": "out/_protocols_s7/src/snap7-master.tar.gz",
+        "archive_sha256": "E8CC1164D1A6A1DFB9B644E99915DFB4AB3A13232551DF0E8E6A0F8184134738",
+        "extracted_to": "out/_protocols_s7/src/snap7-main/",
+        "download_date": "2026-10-21",
+        "license": "LGPL-3.0（仓库 lgpl-3.0.txt / gpl.txt）",
+        "layout_note": "1.4.3 仓库布局为 src/core + src/sys + src/lib（1.4.2 全量包为 Core/Client 布局，核心文件同名）；src_ref.file 均为仓库根相对路径。任务提示中提到的 clSocket.cpp 在 snap7 中不存在：TCP 传输类为 src/sys/snap_msgsock.cpp 的 TMsgSocket，ISO/TPKT/COTP 类为 src/core/s7_isotcp.cpp 的 TIsoTcpSocket。",
+        "key_files": [
+          {
+            "file": "src/core/s7_isotcp.h",
+            "bytes": 12655,
+            "sha256": "B5824BE72E60B39268C8FC1E5AEE7FED05F4A4BE93399FA1BAC5333147273F6B",
+            "role": "TPKT/TCOTP_CO/TCOTP_DT 结构体、TPDU 类型常量（CR 0xE0/CC 0xD0/DT 0xF0）、errIso* 常量"
+          },
+          {
+            "file": "src/core/s7_isotcp.cpp",
+            "bytes": 17281,
+            "sha256": "267B491359AF62BBACC2DC9EE7FD86DAB9C04F3D09BDD5041F35921383987B8A",
+            "role": "BuildControlPDU（CR 参数 0xC0/0xC1/0xC2）、isoConnect（CR→CC 序列）、IsoConfirmConnection、isoSendBuffer（DT 帧封头）"
+          },
+          {
+            "file": "src/core/s7_types.h",
+            "bytes": 34445,
+            "sha256": "BEE4013A518284A3199B662B275A683168426CAC00708233595068B0B1388987",
+            "role": "TS7ReqHeader/TS7ResHeader23、读写参数项/数据项结构体、pduFuncRead/pduFuncWrite/pduNegotiate、TS_Res*、Code7*、S7Area*/S7WL*、公开参数号 p_*/MinPduSize"
+          },
+          {
+            "file": "src/core/s7_micro_client.cpp",
+            "bytes": 121789,
+            "sha256": "D42D94C458B6534A1070EE5506CE3F784BE3AF5BB91DE4F88EA4F9DEA7C0C486",
+            "role": "opReadArea/opWriteArea/opReadMultiVars/opWriteMultiVars 组帧解析、ConnectTo（RemoteTSAP 公式）、CpuError/DataSizeByte 映射"
+          },
+          {
+            "file": "src/core/s7_micro_client.h",
+            "bytes": 13943,
+            "sha256": "2C1A9EEA0290AD72669D13F3DB52883641076285652DBAA39FD7EC9DCB1F897C",
+            "role": "errCli* 完整 32 位常量、CONNTYPE_PG/OP/BASIC"
+          },
+          {
+            "file": "src/core/s7_peer.cpp",
+            "bytes": 5126,
+            "sha256": "E58D973F15A1595BAB09F1E77256FF0DA1ED8415D631750C99571CC13878F8DE",
+            "role": "PeerConnect（isoConnect+NegotiatePDULength）、PDU 协商电报组帧、PDURequest=480 默认值"
+          },
+          {
+            "file": "src/core/s7_client.cpp",
+            "bytes": 16769,
+            "sha256": "233989AFCEC90172E41CE35DE23E18DD8C2AB6B48DD19698ECDDDB47C3C370CA",
+            "role": "TSnap7Client 异步作业层（区域便捷函数到 ReadArea/WriteArea 的固定 Area/WordLen 映射）"
+          },
+          {
+            "file": "src/core/s7_server.cpp",
+            "bytes": 80679,
+            "sha256": "69F1CDF9199442DA7BB588FCEB05226ED614F2B86199D21CD86D0AFE4F1B350F",
+            "role": "服务器侧 ExecuteRecv：CR→IsoConfirmConnection(pdu_type_CC)；应答组帧侧对照"
+          },
+          {
+            "file": "src/core/s7_partner.cpp",
+            "bytes": 34445,
+            "sha256": "65A9D3FA205428500635A17920314E52F841CFEEB3D7EA360ADD3C9207B56136",
+            "role": "Partner 默认超时 BSend/BRecv=3000、RecoveryTime=500、KeepAliveTime=5000"
+          },
+          {
+            "file": "src/sys/snap_msgsock.cpp",
+            "bytes": 27586,
+            "sha256": "0F1D2D7C5BF319F04723DFD56AC3D486C26FF6C97457E2C5C83087FB9432BF7A",
+            "role": "TMsgSocket 默认超时（Send 10/Recv 500/Ping 750/WorkInterval 100）、SckConnect（先 ping 后 TCP connect）"
+          },
+          {
+            "file": "release/wrappers/dot.net/snap7.net.cs",
+            "bytes": 110910,
+            "sha256": "F0C917F51A8938A1A9A752B6821CF11857214479A4542901C9225A5E46765B16",
+            "role": "官方 .NET 包装：S7 String（2 字节头 max/cur + 字符）与 DATE_AND_TIME（8 字节 BCD）布局实现"
+          }
+        ],
+        "note": "key_files.sha256 为文件 sha256 前 32 位十六进制（完整审计可用 out/_protocols_s7/src/ 重算）；src_ref.line 对应 2026-10-21 快照，多行 quote 以 \\n 连接并裁剪行首缩进空白，代码 token 逐字保留（含原文拼写如 lenght/EoT_Num）。"
+      }
+    ]
+  },
+  "connection": [
+    {
+      "id": "conn_roles",
+      "name": "Client/Server/Partner 角色分工",
+      "description": "S7 通信模型三方角色：客户端只发起查询，服务器（PLC 的 CP）只应答，Partner 双向主动发送。本提取聚焦 Client/Server 模型。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Client",
+        "page": 19,
+        "quote": [
+          "The client can only query.",
+          "The server can only reply.",
+          "The partners can speak both on their own initiative."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_request_answer",
+      "name": "S7 Request / S7 answer 问答模型",
+      "description": "客户端连接 CP 内部服务器发出 S7 Request，服务器回 S7 answer；服务器侧无需配置（由 CP 固件自动处理，见 p20）。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "The Siemens theatre",
+        "page": 19,
+        "quote": "All three components on the left are Clients, they connect to the internal server of the Communication Processor (CP), and make an S7 Request. The server replies with a S7 answer telegram."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_iso_tcp",
+      "name": "传输底座 ISO TCP (RFC1006)",
+      "description": "S7 协议以太网实现基于 ISO TCP（RFC1006），面向报文块。文档全文未出现 TPKT/COTP 字样，底层分层细节未给出（见 judgment 项）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › S7 Protocol",
+        "page": 17,
+        "quote": "S7 Protocol, is the backbone of the Siemens communications, its Ethernet implementation relies on ISO TCP (RFC1006) which, by design, is block oriented."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_port_102",
+      "name": "TCP 端口 102",
+      "description": "S7 ISO TCP 监听 TCP 端口 102（本句为 Snap7Server 与 Step7 端口冲突场景，但明确指出 S7 服务监听 102 端口）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Server › Troubleshooting",
+        "page": 53,
+        "quote": "Step 7 has a server listening onto the port 102 : s7oiehsx."
+      },
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "34",
+          "quote": "#define isoTcpPort    \t\t102    // RFC 1006"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "31",
+          "quote": "RemotePort  = isoTcpPort;"
+        }
+      ],
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_port_102_privileged",
+      "name": "端口 102 为 well-known 端口",
+      "description": "端口 102 <1024，Unix 绑定需 root/SUID（旁证 102 为 ISO TCP 公认端口）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Server › Troubleshooting",
+        "page": 53,
+        "quote": "ISO TCP port is a well-known port, so in Unix you need root rights, or your application must have the SUID flag set, to bind a socket to this port."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_three_params",
+      "name": "建连三参数 IP + Local TSAP + Remote TSAP",
+      "description": "连接 PLC 需指定 IP、本地 TSAP、远端 TSAP 三个参数。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "PLC connection",
+        "page": 37,
+        "quote": "To connect a PLC, a client or an Active Partner must specificate three params : IP, Local TSAP, Remote TSAP."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_tsap_16bit",
+      "name": "S7 TSAP 为 16 位字",
+      "description": "S7 连接中 TSAP 是 16 bit 字（非任意字符串）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "PLC connection",
+        "page": 37,
+        "quote": "In accord to the specifications, the TSAP is a generic indicator and could be also a string, in the S7 connection it’s a 16 bit word."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_tsap_crossed",
+      "name": "TSAP 交叉对应",
+      "description": "PC 侧 Local TSAP = PLC 侧 Remote TSAP，反之亦然。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "PLC connection",
+        "page": 38,
+        "quote": "Remember that the TSAPs are crossed : Local TSAP PC-side is the Remote TSAP PLC-Side and vice-versa."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_remotetsap_formula",
+      "name": "RemoteTSAP 计算公式",
+      "description": "RemoteTSAP = (ConnectionType<<8) + (Rack*0x20) + Slot；即高字节=连接类型，低字节=Rack*0x20+Slot。Pascal 版：RemoteTSAP:=(ConnectionType SHL 8)+(Rack*$20)+Slot;",
+      "formula": "RemoteTSAP = (ConnectionType << 8) + (Rack * 0x20) + Slot",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "PLC connection",
+        "page": 38,
+        "quote": "RemoteTSAP=(ConnectionType<<8)+(Rack*0x20)+Slot;"
+      },
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "2678-2683",
+          "quote": "int TSnap7MicroClient::ConnectTo(const char *RemAddress, int Rack, int Slot)\n{\nword RemoteTSAP = (ConnectionType<<8)+(Rack*0x20)+Slot;\nSetConnectionParams(RemAddress, SrcTSap, RemoteTSAP);\nreturn Connect();\n}"
+        }
+      ],
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_connection_types",
+      "name": "连接类型表（ConnectionType）",
+      "description": "PG=0x01（编程器，默认）、OP=0x02（HMI）、S7 Basic=0x03..0x10（通用数据传输连接）。同一张表亦出现于 p95 Cli_SetConnectionType。",
+      "table_merge": true,
+      "values": [
+        {
+          "name": "PG",
+          "value": "0x01",
+          "meaning": "编程设备（programming console）"
+        },
+        {
+          "name": "OP",
+          "value": "0x02",
+          "meaning": "HMI 操作面板"
+        },
+        {
+          "name": "S7 Basic",
+          "value": "0x03..0x10",
+          "meaning": "通用数据传输连接"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "PLC connection",
+        "page": 38,
+        "quote": "Connection Type Value PG 0x01 OP 0x02 S7 Basic 0x03..0x10"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_default_pg",
+      "name": "默认连接类型 PG",
+      "description": "默认以 PG 身份连接；连接类型通过 Cli_SetConnectionType()（须在 Cli_ConnectTo() 之前调用）修改。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "PLC connection",
+        "page": 37,
+        "quote": "By default the client connects as a PG (the programming console), with this function is possible change the connection resource type to OP (the Siemens HMI panel) or S7 Basic (a generic data transfer connection)."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_set_connection_type",
+      "name": "Cli_SetConnectionType()",
+      "description": "设置连接资源类型；参数 ConnectionType 为 16 位无符号整数，取值见 conn_connection_types。",
+      "signature": "int Cli_SetConnectionType(S7Object Client, word ConnectionType);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_SetConnectionType",
+        "page": 95,
+        "quote": "Sets the connection resource type, i.e the way in which the Clients connects to a PLC."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_settype_tsap_conflict",
+      "name": "SetConnectionType 与自定义 TSAP 互斥",
+      "description": "使用 Cli_SetConnectionParams() 显式指定 TSAP 时不要再调用 Cli_SetConnectionType()，后者会改写 Remote TSAP 高字节。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "PLC connection",
+        "page": 38,
+        "quote": "Note : when you use these functions don’t call Cli_SetConnectionType (), it modifies the HI byte of the Remote TSAP !!!."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_connectto",
+      "name": "Cli_ConnectTo()",
+      "description": "按 (IP, Rack, Slot) 坐标连接；内部计算 TSAP 并连接。断线重连可直接用无参 Cli_Connect()。",
+      "signature": "int Cli_ConnectTo(S7Object Client, const char *Address, int Rack, int Slot);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ConnectTo",
+        "page": 96,
+        "quote": "Connects the client to the hardware at (IP, Rack, Slot) Coordinates."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_rack_slot_ranges",
+      "name": "Rack/Slot 取值范围",
+      "description": "Rack 0..7，Slot 1..31，取自硬件配置（Station Configuration）。",
+      "values": [
+        {
+          "name": "Rack",
+          "range": "0..7"
+        },
+        {
+          "name": "Slot",
+          "range": "1..31"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ConnectTo",
+        "page": 96,
+        "quote": "Rack (0..7) and Slot (1..31)"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_rack_slot_defaults",
+      "name": "Rack/Slot 典型值表",
+      "description": "Rack/Slot 默认/典型值：S7-300 固定 0/2；S7-1200/1500 与 CP343/WinAC IE 为 0/0 或按硬件配置；S7-400/CP443 不固定。",
+      "table_merge": true,
+      "values": [
+        {
+          "target": "S7 300 CPU",
+          "rack": 0,
+          "slot": 2,
+          "note": "Always"
+        },
+        {
+          "target": "S7 400 CPU",
+          "rack": null,
+          "slot": null,
+          "note": "Not fixed, follow the hardware configuration"
+        },
+        {
+          "target": "WinAC CPU",
+          "rack": null,
+          "slot": null,
+          "note": "Not fixed, follow the hardware configuration"
+        },
+        {
+          "target": "S7 1200 CPU",
+          "rack": 0,
+          "slot": 0,
+          "note": "Or 0, 1"
+        },
+        {
+          "target": "S7 1500 CPU",
+          "rack": 0,
+          "slot": 0,
+          "note": "Or 0, 1"
+        },
+        {
+          "target": "CP 343",
+          "rack": 0,
+          "slot": 0,
+          "note": "Or follow hardware configuration"
+        },
+        {
+          "target": "CP 443",
+          "rack": null,
+          "slot": null,
+          "note": "Not fixed, follow the hardware configuration"
+        },
+        {
+          "target": "WinAC IE",
+          "rack": 0,
+          "slot": 0,
+          "note": "Or follow hardware configuration"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ConnectTo",
+        "page": 96,
+        "quote": "S7 300 CPU 0 2 Always S7 400 CPU Not fixed Follow the hardware configuration. WinAC CPU Not fixed Follow the hardware configuration. S7 1200 CPU 0 0 Or 0, 1 S7 1500 CPU 0 0 Or 0, 1 CP 343 0 0 Or follow Hardware configuration. CP 443 Not fixed Follow the hardware configuration. WinAC IE 0 0 Or follow Hardware configuration."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_slot_scan_tip",
+      "name": "未知 Rack/Slot 的排查建议",
+      "description": "仅知 IP 时：Rack=0 并遍历 Slot 1..31 尝试连接。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ConnectTo",
+        "page": 96,
+        "quote": "In the worst case, if you know the IP address, run ClientDemo, set 0 as Rack and try to connect with different values of Slot (1..31)."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_set_connection_params",
+      "name": "Cli_SetConnectionParams()",
+      "description": "直接设置 (IP, LocalTSAP, RemoteTSAP)；LocalTSAP/RemoteTSAP 为 16 位无符号整数（Local TSAP=PC 侧，Remote TSAP=PLC 侧）。随后必须调用 Cli_Connect() 执行实际连接。",
+      "signature": "int Cli_SetConnectionParams(S7Object Client, const char *Address, word LocalTSAP, word RemoteTSAP);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_SetConnectionParams",
+        "page": 98,
+        "quote": "Sets internally (IP, LocalTSAP, RemoteTSAP) Coordinates."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_connect",
+      "name": "Cli_Connect()",
+      "description": "以先前设置的参数执行连接；只能在 Cli_ConnectTo()/Cli_SetConnectionParams() 之后调用。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_Connect",
+        "page": 99,
+        "quote": "Connects the client to the PLC with the parameters specified in the previous call of Cli_ConnectTo() or Cli_SetConnectionParams()."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_smart_connect",
+      "name": "SmartConnect：先 ping 后 TCP 建连",
+      "description": "Cli_ConnectTo() 先 ICMP ping，成功才建立 TCP 连接，避免 PLC 断电/拔线时长时间等待 TCP 连接超时（见 limits_and_timeouts）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Client › SmartConnect",
+        "page": 26,
+        "quote": "When we call Cli_ConnectTo(), or when an active Snap7 Partner needs to connect, first the PLC is “pinged”, then, if the ping result was ok, the TCP connection is performed."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_logo_tsaps",
+      "name": "LOGO! 0BA7/0BA8 连接 TSAP 示例",
+      "description": "示例：Client->SetConnectionParams(\"192.168.0.73\", 0x0300, 0x0200); 即 PC LocalTSAP=0x0300、RemoteTSAP=0x0200（与 LOGO 配置交叉对应）。LOGO 的 V 区对外表现为 DB 1（见 addressing.logo_v_area_db1）。",
+      "example": {
+        "local_tsap": "0x0300",
+        "remote_tsap": "0x0200"
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "News from 1.1.0 › LOGO! 0BA7/0BA8",
+        "page": 78,
+        "quote": "Notice that the Local TSAP of the Client corresponds to the Remote TSAP of the LOGO and vice-versa. This is the key concept for the S7 connections."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_s7200_tsaps",
+      "name": "S7-200（经 CP243）TSAP",
+      "description": "S7-200 两种场景：HMI/OP 方式 LocalTSAP=0x1000 + RemoteTSAP=0x0200；对等方式 LocalTSAP=0x1000 + RemoteTSAP=0x1000。",
+      "values": [
+        {
+          "scenario": "OP/HMI",
+          "local_tsap": "0x1000",
+          "remote_tsap": "0x0200"
+        },
+        {
+          "scenario": "peer",
+          "local_tsap": "0x1000",
+          "remote_tsap": "0x1000"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "News from 1.1.0 › S7 200 (via CP243)",
+        "page": 84,
+        "quote": "In the first case the PLC expects to be connected to an OP and you must supply LocalTSAP = 0x1000 and RemoteTSAP = 0x0200 to the SetConnectionParams function. If you make a S7200 HMI project, the runtime of WinCC itself uses these parameters. In the second case you should use LocalTSAP = 0x1000 and RemoteTSAP = 0x1000."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_isotcp_params",
+      "name": "IsoTCP 层可调参数（SrcRef/DstRef/SrcTSap）",
+      "description": "通过 Get/SetParam 可调的 IsoTCP 层参数：p_u16_SrcRef(7)、p_u16_DstRef(8)、p_u16_SrcTSap(9)、p_u16_LocalPort(1)（Socket local Port）。",
+      "table_merge": true,
+      "values": [
+        {
+          "param": "p_u16_LocalPort",
+          "number": 1,
+          "meaning": "Socket local Port"
+        },
+        {
+          "param": "p_u16_SrcRef",
+          "number": 7,
+          "meaning": "ISOTcp Source reference"
+        },
+        {
+          "param": "p_u16_DstRef",
+          "number": 8,
+          "meaning": "ISOTcp Destination reference"
+        },
+        {
+          "param": "p_u16_SrcTSap",
+          "number": 9,
+          "meaning": "ISOTcp Source TSAP"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Accessing internal parameters",
+        "page": 89,
+        "quote": [
+          "p_u16_SrcRef 7",
+          "ISOTcp Source reference.",
+          "p_u16_DstRef 8",
+          "ISOTcp Destination reference.",
+          "p_u16_SrcTSap 9",
+          "ISOTcp Source TSAP."
+        ]
+      },
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_types.h",
+          "line": "158-172",
+          "quote": "const int p_u16_LocalPort  \t    = 1;\nconst int p_u16_RemotePort \t    = 2;\nconst int p_i32_PingTimeout\t    = 3;\nconst int p_i32_SendTimeout     = 4;\nconst int p_i32_RecvTimeout     = 5;\nconst int p_i32_WorkInterval    = 6;\nconst int p_u16_SrcRef          = 7;\nconst int p_u16_DstRef          = 8;\nconst int p_u16_SrcTSap         = 9;\nconst int p_i32_PDURequest      = 10;\nconst int p_i32_MaxClients      = 11;\nconst int p_i32_BSendTimeout    = 12;\nconst int p_i32_BRecvTimeout    = 13;\nconst int p_u32_RecoveryTime    = 14;\nconst int p_u32_KeepAliveTime   = 15;"
+        }
+      ],
+      "provenance": "mechanical"
+    },
+    {
+      "id": "conn_wire_tpkt_header",
+      "name": "线缆级：TPKT 头 4 字节（RFC1006）",
+      "description": "每个 ISO on TCP 帧以 4 字节 TPKT 头开始：Version 恒为 3，Reserved 为 0，HI_Lenght/LO_Lenght 为整帧长度（含 TPKT 与 TPDU）的大端 16 位；帧长最小 7、最大 65535。发送侧按 (IsoSize>>8)&0xFF 与 IsoSize&0xFF 填入；接收侧先收 4 字节 TPKT 再按长度字段收余下字节（isoConnect）。",
+      "structure": [
+        {
+          "field": "Version",
+          "size_bytes": 1,
+          "value": "0x03",
+          "meaning": "RFC 1006 版本号，恒 3"
+        },
+        {
+          "field": "Reserved",
+          "size_bytes": 1,
+          "value": "0x00",
+          "meaning": "保留"
+        },
+        {
+          "field": "HI_Lenght",
+          "size_bytes": 1,
+          "meaning": "整帧长度高字节"
+        },
+        {
+          "field": "LO_Lenght",
+          "size_bytes": 1,
+          "meaning": "整帧长度低字节"
+        }
+      ],
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "64-70",
+          "quote": "// TPKT Header - ISO on TCP - RFC 1006 (4 bytes)\ntypedef struct{\nu_char Version;    // Always 3 for RFC 1006\nu_char Reserved;   // 0\nu_char HI_Lenght;  // High part of packet lenght (entire frame, payload and TPDU included)\nu_char LO_Lenght;  // Low part of packet lenght (entire frame, payload and TPDU included)\n} TTPKT;               // Packet length : min 7 max 65535"
+        },
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "33",
+          "quote": "#define isoTcpVersion    \t3      // RFC 1006"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "262-265",
+          "quote": "PDU.TPKT.Version  = isoTcpVersion;\nPDU.TPKT.Reserved = 0;\nPDU.TPKT.HI_Lenght= (u_short(IsoSize)>> 8) & 0xFF;\nPDU.TPKT.LO_Lenght= u_short(IsoSize) & 0xFF;"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "149-152",
+          "quote": "int TIsoTcpSocket::PDUSize(void *pPDU)\n{\nreturn PIsoHeaderInfo(pPDU)->TPKT.HI_Lenght*256+PIsoHeaderInfo( pPDU )->TPKT.LO_Lenght;\n}"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "conn_wire_cotp_cr",
+      "name": "线缆级：COTP CR 建连请求（TPDU 代码 0xE0）",
+      "description": "客户端建连请求帧共 22 字节 = TPKT(4) + COTP 固定头(7) + 参数(11)。COTP：HLength=参数长+6（本实现=0x11，源码注释 6=7-1 即 COTP 头长减 1）；PDUType=0xE0(CR)；DstRef=0x0000、SrcRef 默认 0x0100（各 2 字节）；CO_R=0x00（Class+Option，源码注：RFC0983 要求 0x40，S7 设备却要求 0）。参数区 11 字节 = 0xC1 源 TSAP（len=2，HI/LO）+ 0xC2 目的 TSAP（len=2，HI/LO）+ 0xC0 TPDU-size（len=1，1024→0x0A）。",
+      "structure": [
+        {
+          "field": "HLength",
+          "size_bytes": 1,
+          "value": "0x11",
+          "meaning": "参数长+6（COTP 头长-1）"
+        },
+        {
+          "field": "PDUType",
+          "size_bytes": 1,
+          "value": "0xE0",
+          "meaning": "Connection Request"
+        },
+        {
+          "field": "DstRef",
+          "size_bytes": 2,
+          "value": "0x0000",
+          "meaning": "目的引用"
+        },
+        {
+          "field": "SrcRef",
+          "size_bytes": 2,
+          "value": "0x0100（默认）",
+          "meaning": "源引用；RFC 称双方忽略，S7 要求非 0（见 conn_wire_connect_sequence）"
+        },
+        {
+          "field": "CO_R",
+          "size_bytes": 1,
+          "value": "0x00",
+          "meaning": "CR 时为 Class+Option"
+        },
+        {
+          "field": "Params",
+          "size_bytes": 11,
+          "meaning": "0xC1 SrcTSAP(2) + 0xC2 DstTSAP(2) + 0xC0 TPDU-size(1)"
+        }
+      ],
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "113-121",
+          "quote": "FControlPDU.COTP.Params.TSAP[0]=0xC1;   // code that identifies source TSAP\nFControlPDU.COTP.Params.TSAP[1]=2;      // source TSAP Len\nFControlPDU.COTP.Params.TSAP[2]=(SrcTSap>>8) & 0xFF; // HI part\nFControlPDU.COTP.Params.TSAP[3]=SrcTSap & 0xFF; // LO part\nFControlPDU.COTP.Params.TSAP[4]=0xC2; // code that identifies dest TSAP\nFControlPDU.COTP.Params.TSAP[5]=2;    // dest TSAP Len\nFControlPDU.COTP.Params.TSAP[6]=(DstTSap>>8) & 0xFF; // HI part\nFControlPDU.COTP.Params.TSAP[7]=DstTSap & 0xFF; // LO part"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "124-145",
+          "quote": "ParLen=11;            // 2 Src TSAP (Code+field Len)      +\n// 2 Src TSAP len                   +\n// 2 Dst TSAP (Code+field Len)      +\n// 2 Src TSAP len                   +\n// 3 PDU size (Code+field Len+Val)  = 11\n// Telegram length\nIsoLen=sizeof(TTPKT)+ // TPKT Header\n7 +           // COTP Header Size without params\nParLen;       // COTP params\nFControlPDU.TPKT.Version  =isoTcpVersion;\nFControlPDU.TPKT.Reserved =0;\nFControlPDU.TPKT.HI_Lenght=0; // Connection Telegram size cannot exced 255 bytes, so\n// this field is always 0\nFControlPDU.TPKT.LO_Lenght=IsoLen;\nFControlPDU.COTP.HLength  =ParLen + 6;  // <-- 6 = 7 - 1 (COTP Header size - 1)\nFControlPDU.COTP.PDUType  =pdu_type_CR; // Connection Request\nFControlPDU.COTP.DstRef   =DstRef;      // Destination reference\nFControlPDU.COTP.SrcRef   =SrcRef;      // Source reference\nFControlPDU.COTP.CO_R     =0x00;        // Class + Option : RFC0983 states that it must be always 0x40\n// but for some equipment (S7) must be 0 in disaccord of specifications !!!"
+        },
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "172",
+          "quote": "const byte pdu_type_CR    \t= 0xE0;  // Connection request"
+        },
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "97-109",
+          "quote": "u_char  HLength;     // Header length : initialized to 6 (length without params - 1)\n// descending classes that add values in params field must update it.\nu_char  PDUType;     // 0xE0 Connection request\n// 0xD0 Connection confirm\n// 0x80 Disconnect request\n// 0xDC Disconnect confirm\nu_short DstRef;      // Destination reference : Always 0x0000\nu_short SrcRef;      // Source reference : Always 0x0000\nu_char  CO_R;        // If the telegram is used for Connection request/Confirm,\n// the meaning of this field is CLASS+OPTION :\n//   Class (High 4 bits) + Option (Low 4 bits)\n//   Class : Always 4 (0100) but is ignored in input (RFC States this)\n//   Option : Always 0, also this in ignored."
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "31-38",
+          "quote": "SrcRef =0x0100; // RFC0983 states that SrcRef and DetRef should be 0\n// and, in any case, they are ignored.\n// S7 instead requires a number != 0\n// Libnodave uses 0x0100\n// S7Manager uses 0x0D00\n// TIA Portal V12 uses 0x1D00\n// WinCC     uses 0x0300\n// Seems that every non zero value is good enough..."
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "conn_wire_cotp_cc",
+      "name": "线缆级：COTP CC 建连确认（TPDU 代码 0xD0）",
+      "description": "服务器（PLC）收到 CR 后回 CC：IsoConfirmConnection() 将收到的建连电报 PDUType 改为 0xD0、交换 SrcRef/DstRef（SrcRef 置 0x0100）后原样回发；客户端 isoConnect() 收应答时先收 4 字节 TPKT、再按长度收余下字节，最后 CheckPDU(ControlPDU, pdu_type_CC) 校验 0xD0。DR(0x80)/DC(0xC0) 仅用于断连场景，源码注明 S7 不使用 DR/DC。",
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "160-173",
+          "quote": "int TIsoTcpSocket::IsoConfirmConnection(u_char PDUType)\n{\nPIsoControlPDU CPDU = PIsoControlPDU(&PDU);\nu_short TempRef;\nClrIsoError();\nPDU.COTP.PDUType=PDUType;\n// Exchange SrcRef<->DstRef, not strictly needed by COTP 8073 but S7PLC as client needs it.\nTempRef=CPDU->COTP.DstRef;\nCPDU->COTP.DstRef=CPDU->COTP.SrcRef;\nCPDU->COTP.SrcRef=0x0100;//TempRef;\nreturn SendPacket(&PDU,PDUSize(&PDU));\n}"
+        },
+        {
+          "file": "src/core/s7_server.cpp",
+          "line": "61-66",
+          "quote": "// Connection request incoming\nif (PduKind==pkConnectionRequest)\n{\nIsoConfirmConnection(pdu_type_CC); // <- Connection confirm\nreturn LastTcpError!=WSAECONNRESET;\n};"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "205-223",
+          "quote": "TmpControlPDU = pbyte(ControlPDU);\n// Receives TPKT header (4 bytes)\nRecvPacket(TmpControlPDU, sizeof(TTPKT));\nif (LastTcpError==0)\n{\n// Calc the packet length\nLength =PDUSize(TmpControlPDU);\n// Check if it fits in the buffer and if it's greater then TTPKT size\nif ((Length<=sizeof(TIsoControlPDU)) && (Length>sizeof(TTPKT)))\n{\n// Points to COTP\nTmpControlPDU+=sizeof(TTPKT);\nLength -= sizeof(TTPKT);\n// Receives remainin bytes 4 bytes after\nRecvPacket(TmpControlPDU, Length);\nif (LastTcpError==0)\n{\n// Finally checks the Connection Confirm telegram\nResult =CheckPDU(ControlPDU, pdu_type_CC);"
+        },
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "88-92",
+          "quote": "// **  $80 DR : Disconnect request (note : S7 doesn't use it)\n// **  $C0 DC : Disconnect confirm (note : S7 doesn't use it)\n// **  $D0 CC : Connection confirm\n// **  $E0 CR : Connection request\n// **  $F0 DT : Data"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "conn_wire_cotp_dt",
+      "name": "线缆级：COTP DT 数据帧（TPDU 代码 0xF0）与 EoT 分片",
+      "description": "建连后的每个数据帧 = TPKT(4) + COTP-DT(3) + payload：COTP-DT 仅 HLength=3、PDUType=0xF0、EoT_Num 三字节；EoT_Num=0x80（bit7=End of Transmission，1 表示本包完整；bit0..6 PDU Number 恒 0）。ISO 层超长电报按分片重组（isoRecvPDU），连续无 EoT 分片 >64 报 errIsoTooManyFragments，与手册 lim_fragments_64 一致。",
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "151-158",
+          "quote": "// COTP Header for DATA EXCHANGE\ntypedef struct {\nu_char HLength;   // Header length : 3 for this header\nu_char PDUType;   // 0xF0 for this header\nu_char EoT_Num;   // EOT (bit 7) + PDU Number (bits 0..6)\n// EOT = 1 -> End of Trasmission Packet (This packet is complete)\n// PDU Number : Always 0\n} TCOTP_DT;"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "267-269",
+          "quote": "PDU.COTP.HLength   =sizeof(TCOTP_DT)-1;\nPDU.COTP.PDUType   =pdu_type_DT;\nPDU.COTP.EoT_Num   =pdu_EoT;"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "387-391",
+          "quote": "case pdu_type_DT:\nEoT = (PDU.COTP.EoT_Num & 0x80) == 0x80;  // EoT flag\nbreak;\ndefault:\nreturn SetIsoError(errIsoInvalidPDU);"
+        },
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "178",
+          "quote": "const byte pdu_EoT    \t\t= 0x80;  // End of Trasmission Packet (This packet is complete)"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "conn_wire_cotp_tpdu_size",
+      "name": "线缆级：COTP TPDU-size 参数（code 0xC0）编码",
+      "description": "CR/CC 参数区的 TPDU size 项：code=0xC0、len=0x01、value 按 2^n 编码：128→0x07、256→0x08、512→0x09、1024→0x0A、2048→0x0B、4096→0x0C、8192→0x0D（未列出值默认 0x0B）。snap7 客户端默认请求 IsoPDUSize=1024。注意：此为 ISO/COTP 传输层 TPDU 尺寸，与 S7 层 PDU 协商（pduNegotiate 0xF0，240..960）相互独立。",
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "84-111",
+          "quote": "FControlPDU.COTP.Params.PduSizeCode=0xC0; // code that identifies TPDU size\nFControlPDU.COTP.Params.PduSizeLen =0x01; // 1 byte this field\nswitch(IsoPDUSize)\n{\ncase 128:\nFControlPDU.COTP.Params.PduSizeVal =0x07;\nbreak;\ncase 256:\nFControlPDU.COTP.Params.PduSizeVal =0x08;\nbreak;\ncase 512:\nFControlPDU.COTP.Params.PduSizeVal =0x09;\nbreak;\ncase 1024:\nFControlPDU.COTP.Params.PduSizeVal =0x0A;\nbreak;\ncase 2048:\nFControlPDU.COTP.Params.PduSizeVal =0x0B;\nbreak;\ncase 4096:\nFControlPDU.COTP.Params.PduSizeVal =0x0C;\nbreak;\ncase 8192:\nFControlPDU.COTP.Params.PduSizeVal =0x0D;\nbreak;\ndefault:\nFControlPDU.COTP.Params.PduSizeVal =0x0B;  // Our Default\n};"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "36-37",
+          "quote": "// PDU size requested\nIsoPDUSize =1024;"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "conn_wire_connect_sequence",
+      "name": "线缆级：完整建连序列（TCP 102 → CR/CC → S7 协商 F0 00）",
+      "description": "Cli_ConnectTo → ConnectTo()：先算 RemoteTSAP=(ConnectionType<<8)+(Rack*0x20)+Slot，再 Connect() → PeerConnect()。序列：① SckConnect()（Windows 实现先 ICMP ping 再 TCP connect 到 102 端口；PingTimeout=0 跳过 ping）→ ② isoConnect()：发 COTP CR(0xE0)、收 CC(0xD0)，失败即断开 → ③ NegotiatePDULength()：S7 头(32 01 …) + 参数(F0 00 01 00 01 00 + 请求 PDU 字，默认 480=0x01E0)，应答头(32 03 … + Error) + F0 00 … + 协商后 PDULength；协商失败断开并报 errNegotiatingPDU。",
+      "sequence": [
+        "TCP connect（RemotePort=102，先 ping 后连，PingTimeout=0 时跳过 ping）",
+        "C → P：TPKT + COTP CR(0xE0)，参数 0xC1 SrcTSAP / 0xC2 DstTSAP / 0xC0 TPDU-size=0x0A",
+        "P → C：TPKT + COTP CC(0xD0)（SrcRef/DstRef 交换）",
+        "C → P：TPKT + COTP DT(0xF0) + S7 请求头{P=0x32, ROSCTR=0x01, AB_EX=0x0000, Sequence 自增, ParLen=0x0008, DataLen=0x0000} + 参数{0xF0, 0x00, 0x0100, 0x0100, PDURequest}",
+        "P → C：TPKT + COTP DT(0xF0) + S7 应答头{P=0x32, ROSCTR=0x03, …, Error} + 参数{0xF0, 0x00, jobs, 协商后 PDULength}"
+      ],
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "2678-2683",
+          "quote": "int TSnap7MicroClient::ConnectTo(const char *RemAddress, int Rack, int Slot)\n{\nword RemoteTSAP = (ConnectionType<<8)+(Rack*0x20)+Slot;\nSetConnectionParams(RemAddress, SrcTSap, RemoteTSAP);\nreturn Connect();\n}"
+        },
+        {
+          "file": "src/core/s7_peer.cpp",
+          "line": "109-122",
+          "quote": "int TSnap7Peer::PeerConnect( )\n{\nint Result;\nClrError();\nResult = isoConnect();\nif (Result == 0)\n{\nResult = NegotiatePDULength();\nif (Result != 0)\nPeerDisconnect();\n}\nreturn Result;\n}"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "28-40",
+          "quote": "TIsoTcpSocket::TIsoTcpSocket()\n{\nRecvTimeout = 3000; // Some old equipments are a bit slow to answer....\nRemotePort  = isoTcpPort;\n// These fields should be $0000 and in any case RFC says that they are not considered.\n// But some equipment...need a non zero value for the source reference.\nDstRef = 0x0000;\nSrcRef = 0x0100;\n// PDU size requested\nIsoPDUSize =1024;\nIsoMaxFragments=MaxIsoFragments;\nLastIsoError=0;\n}"
+        },
+        {
+          "file": "src/sys/snap_msgsock.cpp",
+          "line": "423-448",
+          "quote": "int TMsgSocket::SckConnect()\n{\nint Result;\nSetSin(RemoteSin, RemoteAddress, RemotePort);\nif (LastTcpError==0)\n{\nif (Ping(RemoteSin))\n{\nCreateSocket();\nif (LastTcpError==0)\n{\nResult=connect(FSocket, (struct sockaddr*)&RemoteSin, sizeof(RemoteSin));\nif (SockCheck(Result)==0)\n{\nGetLocal();\n// Client handle is self_address (here the connection is ACTIVE)\nClientHandle=LocalSin.sin_addr.s_addr;\n}\n}\n}\nelse\nLastTcpError=WSAEHOSTUNREACH;\n}\nConnected=LastTcpError==0;\nreturn LastTcpError;\n}"
+        },
+        {
+          "file": "src/sys/snap_msgsock.cpp",
+          "line": "511-517",
+          "quote": "bool TMsgSocket::Ping(sockaddr_in Addr)\n{\nif (PingTimeout == 0)\nreturn true;\nelse\nreturn Pinger->Ping(Addr.sin_addr.s_addr, PingTimeout);\n}"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "conn_judg_tpkt_cotp",
+      "name": "TPKT/COTP 建连序列（源码已证实，手册未覆盖）",
+      "description": "手册层面该缺口仍然成立（手册全文无 TPKT/COTP 字样与建连序列）；但 snap7 1.4.3 源码完整给出线缆序列，见 conn_wire_tpkt_header / conn_wire_cotp_cr / conn_wire_cotp_cc / conn_wire_cotp_dt / conn_wire_cotp_tpdu_size / conn_wire_connect_sequence。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › S7 Protocol",
+        "page": 17,
+        "quote": "S7 Protocol, is the backbone of the Siemens communications, its Ethernet implementation relies on ISO TCP (RFC1006) which, by design, is block oriented."
+      },
+      "src_ref": [
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "186-207",
+          "quote": "// Build the default connection telegram\nBuildControlPDU();\nControlPDU =&FControlPDU;\n// Checks the format\nResult =CheckPDU(ControlPDU, pdu_type_CR);\nif (Result!=0)\nreturn Result;\nResult =SckConnect();\nif (Result==noError)\n{\n// Calcs the length\nLength =PDUSize(ControlPDU);\n// Send connection telegram\nSendPacket(ControlPDU, Length);\nif (LastTcpError==0)\n{\nTmpControlPDU = pbyte(ControlPDU);\n// Receives TPKT header (4 bytes)\nRecvPacket(TmpControlPDU, sizeof(TTPKT));"
+        },
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "64-70",
+          "quote": "// TPKT Header - ISO on TCP - RFC 1006 (4 bytes)\ntypedef struct{\nu_char Version;    // Always 3 for RFC 1006\nu_char Reserved;   // 0\nu_char HI_Lenght;  // High part of packet lenght (entire frame, payload and TPDU included)\nu_char LO_Lenght;  // Low part of packet lenght (entire frame, payload and TPDU included)\n} TTPKT;               // Packet length : min 7 max 65535"
+        }
+      ],
+      "provenance": "mechanical-evidence",
+      "evidence_source": "snap7_source",
+      "src_note": "原 judgment（手册未覆盖 TPKT/COTP，manual_check 待查）已由 snap7 源码闭合：BuildControlPDU/isoConnect/IsoConfirmConnection/NegotiatePDULength 直接给出 CR/CC/DT 与 S7 协商的线缆序列，needs:manual_check 移除。原 spec_ref 保留，仅说明手册侧仍无此内容。"
+    }
+  ],
+  "pdu": [
+    {
+      "id": "pdu_definition",
+      "name": "PDU 定义与协商时机",
+      "description": "S7 以 PDU（Protocol Data Unit）为传输块，最大长度取决于 CP，并在连接建立期间协商。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › S7 Protocol",
+        "page": 17,
+        "quote": "Each block is named PDU (Protocol Data Unit), its maximum length depends on the CP and is negotiated during the connection."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_size_range",
+      "name": "PDU 大小范围 240..960 字节",
+      "description": "与 PLC 交换的每个数据包必须装进一个 PDU，PDU 大小固定于连接内，范围 240~960 字节（因 CP 型号而异）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Client › PDU independence",
+        "page": 26,
+        "quote": "As said, every data packet exchanged with a PLC must fit in a PDU, whose size is fixed and varies from 240 up to 960 bytes."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_negotiation",
+      "name": "PDU 协商：Client 请求 × PLC 上限",
+      "description": "连接期间客户端与 PLC 协商 PDU 长度；请求值可用 Cli_SetParam(p_i32_PDURequest) 修改，协商结果用 Cli_GetPduLength() 读取。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_GetPduLength",
+        "page": 165,
+        "quote": "During the S7 connection Client and Server (the PLC) negotiate the PDU length. PDU requested can be modified with Cli_SetParam()."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_request_param",
+      "name": "p_i32_PDURequest（参数号 10）",
+      "description": "内部参数 p_i32_PDURequest（i32，参数号 10）= 建连时携带的初始 PDU 长度请求；从 1.4.0 起可用于 Cli/Srv/Par。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Accessing internal parameters",
+        "page": 89,
+        "quote": [
+          "p_i32_PDURequest 10",
+          "Initial PDU length request."
+        ]
+      },
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_types.h",
+          "line": "167",
+          "quote": "const int p_i32_PDURequest      = 10;"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "2713-2714",
+          "quote": "case p_i32_PDURequest:\n*Pint32_t(pValue)=PDURequest;"
+        }
+      ],
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_isotcp_concept",
+      "name": "max pdu size 属于 IsoTCP 层",
+      "description": "max pdu size 概念属于 IsoTCP 协议，在 S7 建连时协商。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Client › Asynchronous data transfer",
+        "page": 28,
+        "quote": "Each block transmitted is called PDU (protocol data unit) which is the greatest block that can be handled per transmission. The “max pdu size” concept belongs to the IsoTCP protocol and it’s negotiated during the S7 connection."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_command_structure",
+      "name": "S7 命令结构：header + parameters + parameters data + data block",
+      "description": "每条 S7 命令由 header、参数集、参数数据、数据块组成（原文为列表，以逐字片段给出）。",
+      "list_merge": true,
+      "structure": [
+        "header",
+        "parameters",
+        "parameters data",
+        "data block"
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › S7 Protocol",
+        "page": 17,
+        "quote": [
+          "Each command consists of",
+          "A header.",
+          "A set of parameters.",
+          "A parameters data.",
+          "A data block."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_command_required_parts",
+      "name": "header 与参数恒存在，数据部分可选",
+      "description": "上述四要素中前两个（header、参数）总是存在，其余可选。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › S7 Protocol",
+        "page": 18,
+        "quote": "The first two elements are always present, the other are optional."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_command_categories",
+      "name": "S7 命令类别",
+      "description": "命令类别共 9 类；Snap7Client 函数按同类组织（Cyclic Data I/O 与 Programming 未实现）。（原文为列表，以逐字片段给出）",
+      "list_merge": true,
+      "values": [
+        "Data Read/Write",
+        "Cyclic Data Read/Write",
+        "Directory info",
+        "System Info",
+        "Blocks move",
+        "PLC Control",
+        "Date and Time",
+        "Security",
+        "Programming"
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › S7 Protocol",
+        "page": 18,
+        "quote": [
+          "S7 Commands are divided into categories :",
+          "Data Read/Write",
+          "Cyclic Data Read/Write",
+          "Directory info",
+          "System Info",
+          "Blocks move",
+          "PLC Control",
+          "Date and Time",
+          "Security",
+          "Programming"
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_auto_split",
+      "name": "超长自动分包",
+      "description": "数据超过协商 PDU 大小时，Snap7 自动拆分为多次连续传输（除 MultiVars 外，见 pdu_multivars_nosplit）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Client › PDU independence",
+        "page": 26,
+        "quote": "If this data size exceeds the PDU size, the packet is automatically split across more subsequent transfers."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_multivars_nosplit",
+      "name": "MultiVars 不自动分包",
+      "description": "ReadMultiVars/WriteMultiVars 无自动分包，数据总长不得超过协商 PDU；调用前可查 Cli_GetPduLength()。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadMultiVars",
+        "page": 119,
+        "quote": "Due the different kind of variables involved , there is no split feature available for this function, so the maximum data size must not exceed the PDU size."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_get_pdu_length",
+      "name": "Cli_GetPduLength()",
+      "description": "返回请求值 Requested 与协商值 Negotiated（二者均为 int32 指针出参）。其余数据传输函数自动处理 PDU 并按需分包，MultiVars 需自行保证不超限。",
+      "signature": "int Cli_GetPduLength(S7Object Client, int *Requested, int *Negotiated);",
+      "response_fields": [
+        {
+          "field": "Requested",
+          "dir": "Out",
+          "meaning": "建连时发出的 PDU 长度请求"
+        },
+        {
+          "field": "Negotiated",
+          "dir": "Out",
+          "meaning": "协商后的 PDU 长度"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_GetPduLength",
+        "page": 165,
+        "quote": "Returns info about the PDU length."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_isotcp_encapsulation",
+      "name": "S7 PDU 与 IsoTCP 电报的封装关系",
+      "description": "S7 PDU 被封装进 IsoTCP 电报发送，应答电报中再提取 S7 PDU——证实 S7 PDU 是 IsoTCP 载荷（encapsulation 规则见 p18）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Low level functions › Cli_IsoExchangeBuffer",
+        "page": 161,
+        "quote": "The S7 PDU supplied is encapsulated into an IsoTCP telegram then is sent to the CPU. Finally, the S7 PDU is extracted from the reply telegram and is copied into the user buffer."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "pdu_wire_s7_header",
+      "name": "线缆级：S7 头（ROSCTR/AB_EX/Sequence/ParLen/DataLen）",
+      "description": "S7 PDU 头（ISO payload 首部）：请求头 10 字节 TS7ReqHeader{P=0x32（恒定电报 ID）, PDUType（即 ROSCTR：request=0x01/response=0x03/userdata=0x07）, AB_EX=0x0000（冗余/扩展标识，恒 0）, Sequence（PDU 引用，客户端自增 GetNextWord，0xFFFF 回绕）, ParLen（参数区长度，大端）, DataLen（数据区长度，大端）}；类型 2/3 应答头 12 字节 TS7ResHeader23 在其后追加 Error 字（word，大端）。",
+      "structure": [
+        {
+          "field": "P",
+          "size_bytes": 1,
+          "value": "0x32",
+          "meaning": "Telegram ID，恒 32"
+        },
+        {
+          "field": "PDUType (ROSCTR)",
+          "size_bytes": 1,
+          "value": "0x01/0x02/0x03/0x07",
+          "meaning": "request=1, response=3, userdata=7（2 为错误时 Response，pduResponse 常量）"
+        },
+        {
+          "field": "AB_EX",
+          "size_bytes": 2,
+          "value": "0x0000",
+          "meaning": "冗余/扩展标识，恒 0（源码注 AB currently unknown）"
+        },
+        {
+          "field": "Sequence",
+          "size_bytes": 2,
+          "meaning": "PDU 引用/消息 ID，应答按此回填配对"
+        },
+        {
+          "field": "ParLen",
+          "size_bytes": 2,
+          "meaning": "参数区长度（大端）"
+        },
+        {
+          "field": "DataLen",
+          "size_bytes": 2,
+          "meaning": "数据区长度（大端）"
+        },
+        {
+          "field": "Error（仅应答头 type 2/3）",
+          "size_bytes": 2,
+          "meaning": "全局错误码，Code7 值经 CpuError 映射为 errCli*"
+        }
+      ],
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_types.h",
+          "line": "279-289",
+          "quote": "// Incoming header, it will be mapped onto IsoPDU payload\ntypedef struct {\nbyte    P;        // Telegram ID, always 32\nbyte    PDUType;  // Header type 1 or 7\nword    AB_EX;    // AB currently unknown, maybe it can be used for long numbers.\nword    Sequence; // Message ID. This can be used to make sure a received answer\nword    ParLen;   // Length of parameters which follow this header\nword    DataLen;  // Length of data which follow the parameters\n}TS7ReqHeader;\ntypedef TS7ReqHeader* PS7ReqHeader;"
+        },
+        {
+          "file": "src/core/s7_types.h",
+          "line": "291-302",
+          "quote": "// Outcoming 12 bytes header , response for Request type 1\ntypedef struct{\nbyte    P;        // Telegram ID, always 32\nbyte    PDUType;  // Header type 2 or 3\nword    AB_EX;    // AB currently unknown, maybe it can be used for long numbers.\nword    Sequence; // Message ID. This can be used to make sure a received answer\nword    ParLen;   // Length of parameters which follow this header\nword    DataLen;  // Length of data which follow the parameters\nword    Error;    // Error code\n} TS7ResHeader23;\ntypedef TS7ResHeader23* PS7ResHeader23;"
+        },
+        {
+          "file": "src/core/s7_types.h",
+          "line": "231-240",
+          "quote": "// PDU Type\nconst byte PduType_request      = 1;      // family request\nconst byte PduType_response     = 3;      // family response\nconst byte PduType_userdata     = 7;      // family user data\n// PDU Functions\nconst byte pduResponse    \t= 0x02;   // Response (when error)\nconst byte pduFuncRead    \t= 0x04;   // Read area\nconst byte pduFuncWrite   \t= 0x05;   // Write area\nconst byte pduNegotiate   \t= 0xF0;   // Negotiate PDU length"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "101-106",
+          "quote": "PDUH_out->P = 0x32;                    // Always 0x32\nPDUH_out->PDUType = PduType_request;   // 0x01\nPDUH_out->AB_EX = 0x0000;              // Always 0x0000\nPDUH_out->Sequence = GetNextWord();    // AutoInc\nPDUH_out->ParLen = SwapWord(RPSize);   // 14 bytes params\nPDUH_out->DataLen = 0x0000;            // No data"
+        },
+        {
+          "file": "src/core/s7_peer.cpp",
+          "line": "59-64",
+          "quote": "word TSnap7Peer::GetNextWord()\n{\nif (cntword==0xFFFF)\ncntword=0;\nreturn cntword++;\n}"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "pdu_wire_negotiation_frame",
+      "name": "线缆级：PDU 协商电报（功能 0xF0 / 子项 0x00）",
+      "description": "协商电报 = S7 请求头（ParLen=8, DataLen=0）+ 8 字节参数 TReqFunNegotiateParams{FunNegotiate=0xF0, Unknown=0x00, ParallelJobs_1=0x0100, ParallelJobs_2=0x0100, PDULength=SwapWord(请求值)}。应答 = 12 字节应答头 + 同构 8 字节参数；应答 Error 非 0 报 errNegotiatingPDU，客户端取 SwapWord(应答 PDULength) 为协商结果。请求值默认 480（见 pdu_judg_default_480）；0x0100 即并行作业数 1（大端），即常见外部资料所述 01 00 01 00 01 E0 序列。",
+      "structure": [
+        {
+          "field": "FunNegotiate",
+          "size_bytes": 1,
+          "value": "0xF0",
+          "meaning": "协商 PDU 长度功能码"
+        },
+        {
+          "field": "Unknown",
+          "size_bytes": 1,
+          "value": "0x00",
+          "meaning": "恒 0（对应外部资料的子功能 00）"
+        },
+        {
+          "field": "ParallelJobs_1",
+          "size_bytes": 2,
+          "value": "0x0100",
+          "meaning": "min 并行作业数 = 1（大端 01 00）"
+        },
+        {
+          "field": "ParallelJobs_2",
+          "size_bytes": 2,
+          "value": "0x0100",
+          "meaning": "max 并行作业数 = 1（大端 01 00）"
+        },
+        {
+          "field": "PDULength",
+          "size_bytes": 2,
+          "meaning": "请求侧=请求 PDU 长度（默认 480=0x01E0）；应答侧=协商结果"
+        }
+      ],
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_peer.cpp",
+          "line": "74-99",
+          "quote": "ReqNegotiate = PReqFunNegotiateParams(pbyte(PDUH_out) + sizeof(TS7ReqHeader));\n// Header\nPDUH_out->P        = 0x32;            // Always $32\nPDUH_out->PDUType  = PduType_request; // $01\nPDUH_out->AB_EX    = 0x0000;          // Always $0000\nPDUH_out->Sequence = GetNextWord();   // AutoInc\nPDUH_out->ParLen   = SwapWord(sizeof(TReqFunNegotiateParams)); // 8 bytes\nPDUH_out->DataLen  = 0x0000;\n// Params\nReqNegotiate->FunNegotiate = pduNegotiate;\nReqNegotiate->Unknown = 0x00;\nReqNegotiate->ParallelJobs_1 = 0x0100;\nReqNegotiate->ParallelJobs_2 = 0x0100;\nReqNegotiate->PDULength = SwapWord(PDURequest);\nIsoSize = sizeof( TS7ReqHeader ) + sizeof( TReqFunNegotiateParams );\nResult = isoExchangeBuffer(NULL, IsoSize);\nif ((Result == 0) && (IsoSize == int(sizeof(TS7ResHeader23) + sizeof(TResFunNegotiateParams))))\n{\n// Setup pointers\nAnswer = PS7ResHeader23(&PDU.Payload);\nResNegotiate = PResFunNegotiateParams(pbyte(Answer) + sizeof(TS7ResHeader23));\nif ( Answer->Error != 0 )\nResult = SetError(errNegotiatingPDU);\nif ( Result == 0 )\nPDULength = SwapWord(ResNegotiate->PDULength);\n}"
+        },
+        {
+          "file": "src/core/s7_types.h",
+          "line": "378-396",
+          "quote": "typedef struct {\nbyte    FunNegotiate;\nbyte    Unknown;\nword    ParallelJobs_1;\nword    ParallelJobs_2;\nword    PDULength;\n}TReqFunNegotiateParams;\ntypedef TReqFunNegotiateParams* PReqFunNegotiateParams;\ntypedef struct {\nbyte    FunNegotiate;\nbyte    Unknown;\nword    ParallelJobs_1;\nword    ParallelJobs_2;\nword    PDULength;\n}TResFunNegotiateParams;\ntypedef TResFunNegotiateParams* PResFunNegotiateParams;"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "pdu_wire_read_frame",
+      "name": "线缆级：读请求/应答帧（功能码 0x04）",
+      "description": "读请求 = S7 头（ParLen=14, DataLen=0）+ 参数：FunRead=0x04 + ItemsCount + 每项 12 字节 TReqFunReadItem{ItemHead=12 0A 10, TransportSize=S7WL*（WordLen 编码）, Length=元素数（大端）, DBNumber（大端，非 DB 区置 0）, Area（0x81/0x82/0x83/0x84/0x1C/0x1D）, Address[3]=起始地址右对齐大端（非 bit/CT/TM 时 Start*8）}。应答 = 12 字节应答头 + FunRead + ItemCount + 每项数据项{ReturnCode, TransportSize, DataLength（大端）, Data}；ReturnCode=0xFF 成功，TransportSize 非 09/07/03 时 DataLength 单位为 bit 需 >>3 得字节数。",
+      "structure": [
+        {
+          "field": "参数区：FunRead + ItemsCount",
+          "size_bytes": 2,
+          "value": "0x04 + N",
+          "meaning": "N=项数（1..20，MaxVars）"
+        },
+        {
+          "field": "参数项 ItemHead",
+          "size_bytes": 3,
+          "value": "0x12 0x0A 0x10",
+          "meaning": "项头（长度 0x0A、规格 0x10）"
+        },
+        {
+          "field": "参数项 TransportSize",
+          "size_bytes": 1,
+          "meaning": "= 请求 WordLen（S7WL 编码 0x01..0x08/0x1C/0x1D）"
+        },
+        {
+          "field": "参数项 Length",
+          "size_bytes": 2,
+          "meaning": "元素（word）数量，大端"
+        },
+        {
+          "field": "参数项 DBNumber",
+          "size_bytes": 2,
+          "meaning": "DB 号，大端；非 S7AreaDB 时 0x0000"
+        },
+        {
+          "field": "参数项 Area",
+          "size_bytes": 1,
+          "meaning": "区域码 0x81/0x82/0x83/0x84/0x1C/0x1D"
+        },
+        {
+          "field": "参数项 Address[3]",
+          "size_bytes": 3,
+          "meaning": "起始地址：Address=Start*8（S7WLBit/S7WLCounter/S7WLTimer 除外，直接用 Start），3 字节右对齐大端（低字节在前填充）"
+        },
+        {
+          "field": "应答数据项 ReturnCode",
+          "size_bytes": 1,
+          "value": "0xFF",
+          "meaning": "0xFF=成功；其余为 Code7 错误码（见 pdu_wire_item_return_codes）"
+        },
+        {
+          "field": "应答数据项 TransportSize",
+          "size_bytes": 1,
+          "meaning": "TS_Res* 编码（见 pdu_wire_transport_size）"
+        },
+        {
+          "field": "应答数据项 DataLength",
+          "size_bytes": 2,
+          "meaning": "大端；TransportSize∈{09,07,03} 时为字节数，否则为 bit 数（>>3）"
+        }
+      ],
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "79-85",
+          "quote": "// Request Params size\nRPSize    =sizeof(TReqFunReadItem)+2; // 1 item + FunRead + ItemsCount\n// Setup pointers (note : PDUH_out and PDU.Payload are the same pointer)\nReqParams =PReqFunReadParams(pbyte(PDUH_out)+sizeof(TS7ReqHeader));\nAnswer    =PS7ResHeader23(&PDU.Payload);\nResParams =PResFunReadParams(pbyte(Answer)+ResHeaderSize23);\nResData   =PResFunReadItem(pbyte(ResParams)+sizeof(TResFunReadParams));"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "108-130",
+          "quote": "ReqParams->FunRead = pduFuncRead;      // 0x04\nReqParams->ItemsCount = 1;\nReqParams->Items[0].ItemHead[0] = 0x12;\nReqParams->Items[0].ItemHead[1] = 0x0A;\nReqParams->Items[0].ItemHead[2] = 0x10;\nReqParams->Items[0].TransportSize = Job.WordLen;\nReqParams->Items[0].Length = SwapWord(NumElements);\nReqParams->Items[0].Area = Job.Area;\nif (Job.Area==S7AreaDB)\nReqParams->Items[0].DBNumber = SwapWord(Job.Number);\nelse\nReqParams->Items[0].DBNumber = 0x0000;\n// Adjusts the offset\nif ((Job.WordLen==S7WLBit) || (Job.WordLen==S7WLCounter) || (Job.WordLen==S7WLTimer))\nAddress = Start;\nelse\nAddress = Start*8;\nReqParams->Items[0].Address[2] = Address & 0x000000FF;\nAddress = Address >> 8;\nReqParams->Items[0].Address[1] = Address & 0x000000FF;\nAddress = Address >> 8;\nReqParams->Items[0].Address[0] = Address & 0x000000FF;"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "138-150",
+          "quote": "// Item level error\nif (ResData->ReturnCode==0xFF) // <-- 0xFF means Result OK\n{\n// Calcs data size in bytes\nSize = SwapWord(ResData->DataLength);\n// Adjust Size in accord of TransportSize\nif ((ResData->TransportSize != TS_ResOctet) && (ResData->TransportSize != TS_ResReal) && (ResData->TransportSize != TS_ResBit))\nSize = Size >> 3;\nmemcpy(Target, &ResData->Data[0], Size);\n}\nelse\nResult = CpuError(ResData->ReturnCode);\nOffset+=Size;"
+        },
+        {
+          "file": "src/core/s7_types.h",
+          "line": "401-432",
+          "quote": "typedef struct {\nbyte    ItemHead[3];\nbyte    TransportSize;\nword    Length;\nword    DBNumber;\nbyte    Area;\nbyte    Address[3];\n}TReqFunReadItem, * PReqFunReadItem;\n//typedef TReqFunReadItem;\ntypedef struct {\nbyte   FunRead;\nbyte   ItemsCount;\nTReqFunReadItem Items[MaxVars];\n}TReqFunReadParams;\ntypedef TReqFunReadParams* PReqFunReadParams;\ntypedef struct {\nbyte   FunRead;\nbyte   ItemCount;\n}TResFunReadParams;\ntypedef TResFunReadParams* PResFunReadParams;\ntypedef struct {\nbyte    ReturnCode;\nbyte    TransportSize;\nword    DataLength;\nbyte    Data[IsoPayload_Size - 17]; // 17 = header + params + data header - 1\n}TResFunReadItem, *PResFunReadItem;"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "410-427",
+          "quote": "if (ResData[c]->ReturnCode==0xFF) // <-- 0xFF means Result OK\n{\n// Calcs data size in bytes\nSlice=SwapWord(ResData[c]->DataLength);\n// Adjust Size in accord of TransportSize\nif ((ResData[c]->TransportSize != TS_ResOctet) && (ResData[c]->TransportSize != TS_ResReal) && (ResData[c]->TransportSize != TS_ResBit))\nSlice=Slice >> 3;\nmemcpy(Item->pdata, ResData[c]->Data, Slice);\nItem->Result=0;\n}\nelse\nItem->Result=CpuError(ResData[c]->ReturnCode);\nif ((Slice % 2)!=0)\nSlice++; // Skip fill byte for Odd frame\nOffset+=(4+Slice);"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "pdu_wire_write_frame",
+      "name": "线缆级：写请求/应答帧（功能码 0x05）",
+      "description": "写请求 = S7 头（ParLen=14, DataLen=数据长+4）+ 参数（FunWrite=0x05 + ItemsCount + 同读的 12 字节项）+ 数据区：每项 4 字节头{ReturnCode=0x00（保留，恒 0）, TransportSize=TS_Res* 映射, DataLength（大端；TS_ResByte/TS_ResInt 时为 Size*8 bit 数，TS_ResOctet/Real/Bit 时为字节数）}+ 数据。应答 = 12 字节应答头 + FunWrite + ItemCount + 每项 1 字节返回码（0xFF 成功；首片失败报 CPU 错误，非首片失败报 errCliPartialDataWritten）。",
+      "structure": [
+        {
+          "field": "数据项 ReturnCode（请求）",
+          "size_bytes": 1,
+          "value": "0x00",
+          "meaning": "请求方向恒 0（保留）"
+        },
+        {
+          "field": "数据项 TransportSize（请求）",
+          "size_bytes": 1,
+          "meaning": "S7WLBit→0x03、S7WLInt/DInt→0x05、S7WLReal→0x07、S7WLChar/Counter/Timer→0x09、其余→0x04"
+        },
+        {
+          "field": "数据项 DataLength（请求）",
+          "size_bytes": 2,
+          "meaning": "TransportSize∈{09,07,03} 时=字节数 Size，否则=bit 数 Size*8（大端）"
+        },
+        {
+          "field": "应答返回码",
+          "size_bytes": 1,
+          "value": "0xFF",
+          "meaning": "0xFF=成功；其余 CpuError 映射"
+        }
+      ],
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "191-202",
+          "quote": "RHSize =sizeof(TS7ReqHeader)+    // Request header\n2+                       // FunWrite+ItemCount (of TReqFunWriteParams)\nsizeof(TReqFunWriteItem)+// 1 item reference\n4;                       // ReturnCode+TransportSize+DataLength\nRPSize =sizeof(TReqFunWriteItem)+2;\n// Setup pointers (note : PDUH_out and PDU.Payload are the same pointer)\nReqParams=PReqFunWriteParams(pbyte(PDUH_out)+sizeof(TS7ReqHeader));\nReqData  =PReqFunWriteDataItem(pbyte(ReqParams)+sizeof(TReqFunWriteItem)+2); // 2 = FunWrite+ItemsCount\nTarget   =pbyte(ReqData)+4; // 4 = ReturnCode+TransportSize+DataLength\nAnswer   =PS7ResHeader23(&PDU.Payload);\nResParams=PResFunWrite(pbyte(Answer)+ResHeaderSize23);"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "217-235",
+          "quote": "PDUH_out->P=0x32;                    // Always 0x32\nPDUH_out->PDUType=PduType_request;   // 0x01\nPDUH_out->AB_EX=0x0000;              // Always 0x0000\nPDUH_out->Sequence=GetNextWord();    // AutoInc\nPDUH_out->ParLen  =SwapWord(RPSize); // 14 bytes params\nPDUH_out->DataLen =SwapWord(Size+4);\nReqParams->FunWrite=pduFuncWrite;    // 0x05\nReqParams->ItemsCount=1;\nReqParams->Items[0].ItemHead[0]=0x12;\nReqParams->Items[0].ItemHead[1]=0x0A;\nReqParams->Items[0].ItemHead[2]=0x10;\nReqParams->Items[0].TransportSize=Job.WordLen;\nReqParams->Items[0].Length=SwapWord(NumElements);\nReqParams->Items[0].Area=Job.Area;\nif (Job.Area==S7AreaDB)\nReqParams->Items[0].DBNumber=SwapWord(Job.Number);\nelse\nReqParams->Items[0].DBNumber=0x0000;"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "249-276",
+          "quote": "ReqData->ReturnCode=0x00;\nswitch(Job.WordLen)\n{\ncase S7WLBit:\nReqData->TransportSize=TS_ResBit;\nbreak;\ncase S7WLInt:\ncase S7WLDInt:\nReqData->TransportSize=TS_ResInt;\nbreak;\ncase S7WLReal:\nReqData->TransportSize=TS_ResReal;\nbreak;\ncase S7WLChar   :\ncase S7WLCounter:\ncase S7WLTimer:\nReqData->TransportSize=TS_ResOctet;\nbreak;\ndefault:\nReqData->TransportSize=TS_ResByte;\nbreak;\n};\nif ((ReqData->TransportSize!=TS_ResOctet) && (ReqData->TransportSize!=TS_ResReal) && (ReqData->TransportSize!=TS_ResBit))\nReqData->DataLength=SwapWord(Size*8);\nelse\nReqData->DataLength=SwapWord(Size);"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "282-296",
+          "quote": "if (Result==0) // 1St check : Iso result\n{\nResult=CpuError(SwapWord(Answer->Error)); // 2nd level global error\nif (Result==0)\n{     // 2th check : item error\nif (ResParams->Data[0] == 0xFF) // <-- 0xFF means Result OK\nResult=0;\nelse\n// Now we check the error : if it's the first part we report the cpu error\n// otherwise we warn that the function failed but some data were written\nif (First)\nResult=CpuError(ResParams->Data[0]);\nelse\nResult=errCliPartialDataWritten;\n};"
+        },
+        {
+          "file": "src/core/s7_types.h",
+          "line": "439-471",
+          "quote": "typedef struct {\nbyte    ItemHead[3];\nbyte    TransportSize;\nword    Length;\nword    DBNumber;\nbyte    Area;\nbyte    Address[3];\n}TReqFunWriteItem, * PReqFunWriteItem;\ntypedef struct {\nbyte   FunWrite;\nbyte   ItemsCount;\nTReqFunWriteItem Items[MaxVars];\n}TReqFunWriteParams;\ntypedef TReqFunWriteParams* PReqFunWriteParams;\ntypedef struct {\nbyte    ReturnCode;\nbyte    TransportSize;\nword    DataLength;\nbyte    Data [IsoPayload_Size - 17]; // 17 = header + params + data header -1\n}TReqFunWriteDataItem, *PReqFunWriteDataItem;\ntypedef PReqFunWriteDataItem TReqFunWriteData[MaxVars];\ntypedef struct {\nbyte   FunWrite;\nbyte   ItemCount;\nbyte   Data[MaxVars];\n}TResFunWrite;\ntypedef TResFunWrite* PResFunWrite;"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "pdu_wire_transport_size",
+      "name": "线缆级：应答 TransportSize 编码（TS_Res*）与 DataLength 单位规则",
+      "description": "数据项/写数据头的 TransportSize 线缆编码（区别于请求参数项中的 S7WL* 编码）：TS_ResBit=0x03、TS_ResByte=0x04、TS_ResInt=0x05、TS_ResReal=0x07、TS_ResOctet=0x09。DataLength 单位规则：TransportSize∈{0x09 Octet, 0x07 Real, 0x03 Bit} 时为字节数；否则（0x04/0x05）为 bit 数，客户端 >>3 折算字节（odd 帧多 1 个填充字节，解析时跳过）。请求侧映射：S7WLBit→03、Int/DInt→05、Real→07、Char/Counter/Timer→09、Byte/Word/DWord→04。",
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_types.h",
+          "line": "211-216",
+          "quote": "// Result transport size\nconst byte TS_ResBit   = 0x03;\nconst byte TS_ResByte  = 0x04;\nconst byte TS_ResInt   = 0x05;\nconst byte TS_ResReal  = 0x07;\nconst byte TS_ResOctet = 0x09;"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "143-145",
+          "quote": "// Adjust Size in accord of TransportSize\nif ((ResData->TransportSize != TS_ResOctet) && (ResData->TransportSize != TS_ResReal) && (ResData->TransportSize != TS_ResBit))\nSize = Size >> 3;"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "424-425",
+          "quote": "if ((Slice % 2)!=0)\nSlice++; // Skip fill byte for Odd frame"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "pdu_wire_item_return_codes",
+      "name": "线缆级：数据项返回码（0xFF 成功 / Code7 错误值）",
+      "description": "应答头 Error 与数据项 ReturnCode 使用 Code7 值：0x0000 成功；0x0005 地址越界、0x0006 传输尺寸非法、0x0007 写数据长度不符、0x000A（0x0A）项不可用、0x0209/0xD209 项不可用变体、0x8500 数据超 PDU、0x8104 功能不可用、0xDC01 值非法、0xD241 需要口令、0xD602 口令错、0xD604/D605 无口令可清/设。客户端 CpuError() 将其映射为 errCli* 32 位错误码（未列出值→errCliFunctionRefused）。",
+      "values": [
+        {
+          "code": "0x0000",
+          "meaning": "Code7Ok：成功（数据项方向以 0xFF 表示成功）"
+        },
+        {
+          "code": "0x0005",
+          "meaning": "地址越界 → errCliAddressOutOfRange"
+        },
+        {
+          "code": "0x0006",
+          "meaning": "传输尺寸非法 → errCliInvalidTransportSize"
+        },
+        {
+          "code": "0x0007",
+          "meaning": "写数据长度不符 → errCliWriteDataSizeMismatch"
+        },
+        {
+          "code": "0x000A",
+          "meaning": "项不可用（ResItemNotAvailable，即 0x0A）→ errCliItemNotAvailable"
+        },
+        {
+          "code": "0xD209",
+          "meaning": "ResItemNotAvailable1 → errCliItemNotAvailable"
+        },
+        {
+          "code": "0x8500",
+          "meaning": "数据超 PDU（DataOverPDU）→ errCliSizeOverPDU"
+        },
+        {
+          "code": "0x8104",
+          "meaning": "功能不可用（FunNotAvailable）→ errCliFunNotAvailable"
+        },
+        {
+          "code": "0xDC01",
+          "meaning": "值非法（InvalidValue）→ errCliInvalidValue"
+        },
+        {
+          "code": "0xD241",
+          "meaning": "需要口令（NeedPassword）→ errCliNeedPassword"
+        },
+        {
+          "code": "0xD602",
+          "meaning": "口令错误（InvalidPassword）→ errCliInvalidPassword"
+        },
+        {
+          "code": "0xD604/0xD605",
+          "meaning": "无口令可清/可设 → errCliNoPasswordToSetOrClear"
+        }
+      ],
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_types.h",
+          "line": "196-209",
+          "quote": "// S7 outcoming Error code\nconst word Code7Ok                      = 0x0000;\nconst word Code7AddressOutOfRange       = 0x0005;\nconst word Code7InvalidTransportSize    = 0x0006;\nconst word Code7WriteDataSizeMismatch   = 0x0007;\nconst word Code7ResItemNotAvailable   \t= 0x000A;\nconst word Code7ResItemNotAvailable1    = 0xD209;\nconst word Code7InvalidValue   \t        = 0xDC01;\nconst word Code7NeedPassword            = 0xD241;\nconst word Code7InvalidPassword         = 0xD602;\nconst word Code7NoPasswordToClear   \t= 0xD604;\nconst word Code7NoPasswordToSet         = 0xD605;\nconst word Code7FunNotAvailable         = 0x8104;\nconst word Code7DataOverPDU             = 0x8500;"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "2449-2468",
+          "quote": "int TSnap7MicroClient::CpuError(int Error)\n{\nswitch(Error)\n{\ncase 0                          : return 0;\ncase Code7AddressOutOfRange     : return errCliAddressOutOfRange;\ncase Code7InvalidTransportSize  : return errCliInvalidTransportSize;\ncase Code7WriteDataSizeMismatch : return errCliWriteDataSizeMismatch;\ncase Code7ResItemNotAvailable   :\ncase Code7ResItemNotAvailable1  : return errCliItemNotAvailable;\ncase Code7DataOverPDU           : return errCliSizeOverPDU;\ncase Code7InvalidValue          : return errCliInvalidValue;\ncase Code7FunNotAvailable       : return errCliFunNotAvailable;\ncase Code7NeedPassword          : return errCliNeedPassword;\ncase Code7InvalidPassword       : return errCliInvalidPassword;\ncase Code7NoPasswordToSet       :\ncase Code7NoPasswordToClear     : return errCliNoPasswordToSetOrClear;\ndefault:\nreturn errCliFunctionRefused;\n};"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "pdu_wire_address_encoding",
+      "name": "线缆级：参数项起始地址 3 字节编码（Byte.Bit 公式的线缆实现）",
+      "description": "参数项 Address[3] 为右对齐大端 3 字节：常规 WordLen 先 Address=Start*8（byte→bit），S7WLBit/S7WLCounter/S7WLTimer 直接用 Start（bit/原始值）；随后逐字节填 Address[2]=低 8 位、Address[1]=中 8 位、Address[0]=高 8 位。手册 addr_byte_bit 的 DB4.DBX10.3→(10*8)+3=83 即此编码的 API 层形式。",
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "120-130",
+          "quote": "// Adjusts the offset\nif ((Job.WordLen==S7WLBit) || (Job.WordLen==S7WLCounter) || (Job.WordLen==S7WLTimer))\nAddress = Start;\nelse\nAddress = Start*8;\nReqParams->Items[0].Address[2] = Address & 0x000000FF;\nAddress = Address >> 8;\nReqParams->Items[0].Address[1] = Address & 0x000000FF;\nAddress = Address >> 8;\nReqParams->Items[0].Address[0] = Address & 0x000000FF;"
+        }
+      ],
+      "provenance": "mechanical-evidence"
+    },
+    {
+      "id": "pdu_judg_wire_layout",
+      "name": "读/写 PDU 线缆级字节布局（源码已证实，手册未覆盖）",
+      "description": "手册层面该缺口仍然成立（手册无 S7 头/功能码/参数项/数据项的字节定义）；snap7 1.4.3 源码完整给出，见 pdu_wire_s7_header / pdu_wire_negotiation_frame / pdu_wire_read_frame / pdu_wire_write_frame / pdu_wire_transport_size / pdu_wire_item_return_codes / pdu_wire_address_encoding。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea",
+        "page": 104,
+        "quote": [
+          "Area identifier.",
+          "DB Number if Area = S7AreaDB, otherwise is ignored.",
+          "Offset to start",
+          "Amount of words to read (1)",
+          "Word size (2)"
+        ]
+      },
+      "src_ref": [
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "101-115",
+          "quote": "PDUH_out->P = 0x32;                    // Always 0x32\nPDUH_out->PDUType = PduType_request;   // 0x01\nPDUH_out->AB_EX = 0x0000;              // Always 0x0000\nPDUH_out->Sequence = GetNextWord();    // AutoInc\nPDUH_out->ParLen = SwapWord(RPSize);   // 14 bytes params\nPDUH_out->DataLen = 0x0000;            // No data\nReqParams->FunRead = pduFuncRead;      // 0x04\nReqParams->ItemsCount = 1;\nReqParams->Items[0].ItemHead[0] = 0x12;\nReqParams->Items[0].ItemHead[1] = 0x0A;\nReqParams->Items[0].ItemHead[2] = 0x10;\nReqParams->Items[0].TransportSize = Job.WordLen;\nReqParams->Items[0].Length = SwapWord(NumElements);\nReqParams->Items[0].Area = Job.Area;"
+        },
+        {
+          "file": "src/core/s7_types.h",
+          "line": "279-302",
+          "quote": "// Incoming header, it will be mapped onto IsoPDU payload\ntypedef struct {\nbyte    P;        // Telegram ID, always 32\nbyte    PDUType;  // Header type 1 or 7\nword    AB_EX;    // AB currently unknown, maybe it can be used for long numbers.\nword    Sequence; // Message ID. This can be used to make sure a received answer\nword    ParLen;   // Length of parameters which follow this header\nword    DataLen;  // Length of data which follow the parameters\n}TS7ReqHeader;\ntypedef TS7ReqHeader* PS7ReqHeader;\n// Outcoming 12 bytes header , response for Request type 1\ntypedef struct{\nbyte    P;        // Telegram ID, always 32\nbyte    PDUType;  // Header type 2 or 3\nword    AB_EX;    // AB currently unknown, maybe it can be used for long numbers.\nword    Sequence; // Message ID. This can be used to make sure a received answer\nword    ParLen;   // Length of parameters which follow this header\nword    DataLen;  // Length of data which follow the parameters\nword    Error;    // Error code\n} TS7ResHeader23;\ntypedef TS7ResHeader23* PS7ResHeader23;"
+        }
+      ],
+      "provenance": "mechanical-evidence",
+      "evidence_source": "snap7_source",
+      "src_note": "原 judgment（线缆级布局需以源码核对）已由 snap7 1.4.3 源码闭合：S7 请求头 10 字节（0x32/ROSCTR/AB_EX/Sequence/ParLen/DataLen）、应答头 12 字节（+Error）、功能码 0x04/0x05、参数项（0x12 0x0A 0x10 头、S7WL*、数量、DB 号、Area、Address[3]）与数据项（ReturnCode/TransportSize/DataLength）全部有源码级定义，needs:manual_check 移除。原 spec_ref 保留，仅说明手册侧仍无此内容。"
+    },
+    {
+      "id": "pdu_judg_default_480",
+      "name": "默认 PDU 请求值 480（源码已证实）",
+      "description": "TSnap7Peer 构造函数中 PDURequest=480，即协商电报携带的初始 PDU 长度请求；协商结果写入 PDULength。手册 p47 仅为示例日志旁证，现以源码为准。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Server › Control flow",
+        "page": 47,
+        "quote": "The client requires a PDU size of 480 bytes"
+      },
+      "src_ref": [
+        {
+          "file": "src/core/s7_peer.cpp",
+          "line": "29-36",
+          "quote": "TSnap7Peer::TSnap7Peer()\n{\nPDUH_out=PS7ReqHeader(&PDU.Payload);\nPDURequest=480; // Our request, FPDULength will contain the CPU answer\nLastError=0;\ncntword = 0;\nDestroying = false;\n}"
+        },
+        {
+          "file": "src/core/s7_peer.cpp",
+          "line": "87",
+          "quote": "ReqNegotiate->PDULength = SwapWord(PDURequest);"
+        }
+      ],
+      "provenance": "mechanical-evidence",
+      "evidence_source": "snap7_source",
+      "src_note": "原 judgment 的开放问题（默认值以源码 p_i32_PDURequest 初始值核实）已核实：s7_peer.cpp L32 PDURequest=480；可通过 Cli_SetParam(p_i32_PDURequest) 修改（s7_micro_client.cpp L2752-2753）。needs:manual_check 移除。"
+    }
+  ],
+  "functions": [
+    {
+      "id": "fn_read_area",
+      "name": "Cli_ReadArea() — 主读函数",
+      "description": "核心读函数：可读 DB/Inputs/Outputs/Merkers/Timers/Counters。Amount 为元素（word）个数而非字节数；WordLen=S7WLBit 时 Start 以 bit 计；CT/TM 区 WordLen 会被内部修正为 S7WLCounter/S7WLTimer。超出 PDU 自动分包。",
+      "signature": "int Cli_ReadArea(S7Object Client, int Area, int DBNumber, int Start, int Amount, int WordLen, void *pUsrData);",
+      "request": {
+        "note": "API 层参数（手册未给线缆字节布局）",
+        "fields": [
+          {
+            "field": "Area",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "区域标识（S7AreaPE/PA/MK/DB/CT/TM，见 addressing）"
+          },
+          {
+            "field": "DBNumber",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "DB 号，仅 Area=S7AreaDB 时有效，否则忽略"
+          },
+          {
+            "field": "Start",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "起始偏移；WordLen=S7WLBit 时单位为 bit（DB4.DBX10.3 → (10*8)+3=83）"
+          },
+          {
+            "field": "Amount",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "读取的 word 数量（非字节）"
+          },
+          {
+            "field": "WordLen",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "传输宽度 S7WLBit/Byte/Word/DWord/Real/Counter/Timer"
+          },
+          {
+            "field": "pUsrData",
+            "type": "pointer",
+            "dir": "In",
+            "meaning": "用户缓冲区，须 ≥ Word size × Amount 字节"
+          }
+        ]
+      },
+      "response": {
+        "note": "API 层返回",
+        "fields": [
+          {
+            "field": "return",
+            "type": "int32",
+            "dir": "Out",
+            "meaning": "0=成功；其他见 error_codes.client_errors"
+          },
+          {
+            "field": "pUsrData",
+            "type": "buffer",
+            "dir": "Out",
+            "meaning": "读回数据（word_size × Amount 字节）"
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea",
+        "page": 104,
+        "quote": "This is the main function to read data from a PLC. With it you can read DB, Inputs, Outputs, Merkers, Timers and Counters."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_write_area",
+      "name": "Cli_WriteArea() — 主写函数",
+      "description": "Cli_ReadArea 的补函数，参数语义相同，数据方向为 pUsrData → PLC。",
+      "signature": "int Cli_WriteArea(S7Object Client, int Area, int DBNumber, int Start, int Amount, int WordLen, void *pUsrData);",
+      "request": {
+        "note": "同 Cli_ReadArea，另 pUsrData 为输入数据",
+        "fields": [
+          {
+            "field": "Area/DBNumber/Start/Amount/WordLen",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "同 Cli_ReadArea"
+          },
+          {
+            "field": "pUsrData",
+            "type": "pointer",
+            "dir": "In",
+            "meaning": "待写数据缓冲区（word_size × Amount 字节）"
+          }
+        ]
+      },
+      "response": {
+        "note": "API 层返回",
+        "fields": [
+          {
+            "field": "return",
+            "type": "int32",
+            "dir": "Out",
+            "meaning": "0=成功；其他见 error_codes.client_errors"
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_WriteArea",
+        "page": 106,
+        "quote": "This is the main function to write data into a PLC. It’s the complementary function of Cli_ReadArea(), the parameters and their meanings are the same. The only difference is that the data is transferred from the buffer pointed by pUsrData into PLC."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_area_wrappers",
+      "name": "区域便捷读写函数（DB/AB/EB/MB/TM/CT × Read/Write）",
+      "description": "12 个便捷函数：内部调用 Cli_ReadArea/Cli_WriteArea 并固定 Area（及 TM/CT 的 WordLen）。DBNumber 范围 0..0xFFFF，Size 单位为字节。",
+      "signature": "int Cli_DBRead(S7Object Client, int DBNumber, int Start, int Size, void *pUsrData);",
+      "values": [
+        {
+          "fn": "Cli_DBRead/Cli_DBWrite",
+          "page": "107/108",
+          "fixed": "Area=S7AreaDB, WordLen=S7WLBytes"
+        },
+        {
+          "fn": "Cli_ABRead/Cli_ABWrite",
+          "page": "109/110",
+          "fixed": "Area=S7AreaPA (Outputs)"
+        },
+        {
+          "fn": "Cli_EBRead/Cli_EBWrite",
+          "page": "111/112",
+          "fixed": "Area=S7AreaPE (Inputs)"
+        },
+        {
+          "fn": "Cli_MBRead/Cli_MBWrite",
+          "page": "113/114",
+          "fixed": "Area=S7AreaMK (Merkers)"
+        },
+        {
+          "fn": "Cli_TMRead/Cli_TMWrite",
+          "page": "115/116",
+          "fixed": "Area=S7AreaTM, WordLen=S7WLTimer"
+        },
+        {
+          "fn": "Cli_CTRead/Cli_CTWrite",
+          "page": "117/118",
+          "fixed": "Area=S7AreaCT, WordLen=S7WLCounter"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_DBRead",
+        "page": 107,
+        "quote": [
+          "This is a lean function of Cli_ReadArea() to read PLC DB.",
+          "It simply internally calls Cli_ReadArea() with",
+          "Area = S7AreaDB.",
+          "WordLen = S7WLBytes."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_read_multivars",
+      "name": "Cli_ReadMultiVars() — 多变量读",
+      "description": "单次调用读多个不同类型变量；每项为 TS7DataItem 结构。无自动分包，总量不得超过 PDU；单项成败须逐项检查 Result 字段；最多 20 项（超出报 errCliTooManyItems，见 error_codes）。",
+      "signature": "int Cli_ReadMultiVars(S7Object Client, PS7DataItem Item, int ItemsCount);",
+      "request": {
+        "note": "TS7DataItem 结构（p119）",
+        "fields": [
+          {
+            "field": "Area",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "区域标识"
+          },
+          {
+            "field": "WordLen",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "word 大小"
+          },
+          {
+            "field": "Result",
+            "type": "int32",
+            "dir": "Out",
+            "meaning": "单项操作结果（逐项检查）"
+          },
+          {
+            "field": "DBNumber",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "仅 Area=S7AreaDB 时有效"
+          },
+          {
+            "field": "Start",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "起始偏移"
+          },
+          {
+            "field": "Amount",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "word 数量（非字节）"
+          },
+          {
+            "field": "pData",
+            "type": "pointer",
+            "dir": "In",
+            "meaning": "用户缓冲区地址"
+          }
+        ]
+      },
+      "response": {
+        "note": "API 层返回",
+        "fields": [
+          {
+            "field": "return",
+            "type": "int32",
+            "dir": "Out",
+            "meaning": "0=成功；其他见 error_codes.client_errors"
+          },
+          {
+            "field": "Items[i].Result",
+            "type": "int32[]",
+            "dir": "Out",
+            "meaning": "每个变量的独立结果码"
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadMultiVars",
+        "page": 119,
+        "quote": "This is function allows to read different kind of variables from a PLC in a single call. With it you can read DB, Inputs, Outputs, Merkers, Timers and Counters."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_write_multivars",
+      "name": "Cli_WriteMultiVars() — 多变量写",
+      "description": "Cli_ReadMultiVars 的补函数，参数语义相同。",
+      "signature": "int Cli_WriteMultiVars(S7Object Client, PS7DataItem Item, int ItemsCount);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_WriteMultiVars",
+        "page": 121,
+        "quote": [
+          "This is function allows to write different kind of variables into a PLC in a single call.",
+          "It’s the complementary function of Cli_ReadMultiVars(), the parameters and their meanings are the same."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_plc_control_overview",
+      "name": "PLC 控制函数组",
+      "description": "PLC 控制函数组：Cli_PlcHotStart / Cli_PlcColdStart / Cli_PlcStop / Cli_CopyRamToRom / Cli_Compress / Cli_GetPlcStatus。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › PLC control functions",
+        "page": 149,
+        "quote": "With these control function it’s possible to Start/Stop a CPU and perform some other maintenance tasks."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_plc_hot_start",
+      "name": "Cli_PlcHotStart() — 热启动",
+      "description": "CPU 热启动进入 RUN；受所设安全级别约束。",
+      "signature": "int Cli_PlcHotStart(S7Object Client);",
+      "request": {
+        "note": "仅 Client 句柄",
+        "fields": []
+      },
+      "response": {
+        "note": "API 层返回",
+        "fields": [
+          {
+            "field": "return",
+            "type": "int32",
+            "dir": "Out",
+            "meaning": "0=成功；errCliCannotStartPLC/errCliAlreadyRun 等（p253）"
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_PlcHotStart",
+        "page": 150,
+        "quote": [
+          "Puts the CPU in RUN mode performing an HOT START.",
+          "This function is subject to the security level set."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_plc_cold_start",
+      "name": "Cli_PlcColdStart() — 冷启动",
+      "description": "CPU 冷启动进入 RUN；受所设安全级别约束。",
+      "signature": "int Cli_PlcColdStart(S7Object Client);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_PlcColdStart",
+        "page": 151,
+        "quote": [
+          "Puts the CPU in RUN mode performing a COLD START.",
+          "This function is subject to the security level set."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_plc_stop",
+      "name": "Cli_PlcStop() — 停机",
+      "description": "CPU 进入 STOP；受所设安全级别约束。对 Snap7Server 虚拟 CPU 亦有效（Srv_SetCpuStatus，p43 注(1)：Stop 后 get status 显示 stopped）。",
+      "signature": "int Cli_PlcStop(S7Object Client);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_PlcStop",
+        "page": 152,
+        "quote": [
+          "Puts the CPU in STOP mode.",
+          "This function is subject to the security level set."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_copy_ram_to_rom",
+      "name": "Cli_CopyRamToRom()",
+      "description": "执行 Copy Ram to Rom；Timeout 为预期最大完成时间(ms)；并非所有 CPU 支持，且 CPU 必须处于 STOP。",
+      "signature": "int Cli_CopyRamToRom(S7Object Client, int Timeout);",
+      "request": {
+        "note": "API 层参数",
+        "fields": [
+          {
+            "field": "Timeout",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "Maximum time expected to complete the operation (ms)."
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_CopyRamToRom",
+        "page": 153,
+        "quote": "Performs the Copy Ram to Rom action."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_compress",
+      "name": "Cli_Compress()",
+      "description": "执行内存压缩；Timeout 为预期最大完成时间(ms)；并非所有 CPU 支持，且 CPU 必须处于 STOP。",
+      "signature": "int Cli_Compress(S7Object Client, int Timeout);",
+      "request": {
+        "note": "API 层参数",
+        "fields": [
+          {
+            "field": "Timeout",
+            "type": "int32",
+            "dir": "In",
+            "meaning": "Maximum time expected to complete the operation (ms)."
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_Compress",
+        "page": 154,
+        "quote": "Performs the Memory compress action."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_get_plc_status",
+      "name": "Cli_GetPlcStatus() — 系统状态",
+      "description": "返回 CPU 状态值：S7CpuStatusUnknown=0x00 / S7CpuStatusRun=0x08 / S7CpuStatusStop=0x04。服务器侧同值表见 Srv_SetCpuStatus(p225)。",
+      "signature": "int Cli_GetPlcStatus(S7Object Client, int *Status);",
+      "response": {
+        "note": "Status 取值表（p155）",
+        "fields": [
+          {
+            "field": "S7CpuStatusUnknown",
+            "value": "0x00",
+            "meaning": "The CPU status is unknown."
+          },
+          {
+            "field": "S7CpuStatusRun",
+            "value": "0x08",
+            "meaning": "The CPU is running."
+          },
+          {
+            "field": "S7CpuStatusStop",
+            "value": "0x04",
+            "meaning": "The CPU is stopped."
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_GetPlcStatus",
+        "page": 155,
+        "quote": "Returns the CPU status (running/stopped)."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_szl_overview",
+      "name": "SZL/SSL 系统状态列表（System Info）",
+      "description": "系统状态列表描述 PLC 当前状态，只读；部分列表为虚拟列表，按需生成。PLC 侧亦可用 SFC51 \"RDSYSST\" 读取；读取需指定 ID 与 Index。详情见《System Software for S7-300/400 System and Standard Functions》§33。",
+      "values": [
+        {
+          "fn": "Cli_ReadSZL",
+          "purpose": "Reads a partial list of given ID and Index."
+        },
+        {
+          "fn": "Cli_ReadSZLList",
+          "purpose": "Reads the list of partial lists available in the CPU."
+        },
+        {
+          "fn": "Cli_GetOrderCode",
+          "purpose": "Returns the CPU order code."
+        },
+        {
+          "fn": "Cli_GetCpuInfo",
+          "purpose": "Returns some information about the AG."
+        },
+        {
+          "fn": "Cli_GetCpInfo",
+          "purpose": "Returns some information about the CP (communication processor)"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › System info functions",
+        "page": 141,
+        "quote": "The system status list (SSL) describes the current status of a programmable logic controller. The contents of the SSL can only be read using information functions but cannot be modified. The partial lists are virtual lists, in other words, they are only created by the operating system of the CPUs when specifically requested."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_read_szl",
+      "name": "Cli_ReadSZL()",
+      "description": "按 ID+INDEX 读部分系统状态列表。返回头部 SZL_HEADER{LENTHDR:word, N_DR:word}（LENTHDR=部分列表单条数据记录长度(字节)，N_DR=记录条数），数据区最大 0x4000-4 字节。注意：LENTHDR/N_DR 为 HI-LOW 交换序，数据缓冲区保持不变；缓冲区过小截断并返回 errCliPartialDataRead。",
+      "signature": "int Cli_ReadSZL(S7Object Client, int ID, int Index, TS7SZL *pUsrData, int *Size);",
+      "response": {
+        "note": "TS7SZL 结构（p142）",
+        "fields": [
+          {
+            "field": "Header.LENTHDR",
+            "type": "u16",
+            "dir": "Out",
+            "meaning": "Length of a data record of the partial list in bytes（HI-LOW 交换）"
+          },
+          {
+            "field": "Header.N_DR",
+            "type": "u16",
+            "dir": "Out",
+            "meaning": "Number of data records contained in the partial list.（HI-LOW 交换）"
+          },
+          {
+            "field": "Data[0x4000-4]",
+            "type": "byte[]",
+            "dir": "Out",
+            "meaning": "部分列表数据（原样）"
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadSZL",
+        "page": 142,
+        "quote": "Reads a partial list of given ID and INDEX."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_read_szl_list",
+      "name": "Cli_ReadSZLList()",
+      "description": "读部分列表目录（ID 列表，word 数组最大 0x2000-2，HI-LO 交换序）；ItemsCount 入参=缓冲容量，出参=命中条数；不是所有 ID 都对应有效部分列表。",
+      "signature": "int Cli_ReadSZLList(S7Object Client, TS7SZLList *pUsrData, int *ItemsCount);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadSZLList",
+        "page": 144,
+        "quote": "Reads the directory of the partial lists."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_get_order_code",
+      "name": "Cli_GetOrderCode()",
+      "description": "返回 CPU 订货号与版本（TS7OrderCode{Code[21], V1, V2, V3}）。",
+      "signature": "int Cli_GetOrderCode(S7Object Client, TS7OrderCode *pUsrData);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_GetOrderCode",
+        "page": 146,
+        "quote": "Gets CPU order code and version info."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_get_cpu_info",
+      "name": "Cli_GetCpuInfo()",
+      "description": "返回模块名、序列号等（TS7CpuInfo{ModuleTypeName[33], SerialNumber[25], ASName[25], Copyright[27], ModuleName[25]}）。",
+      "signature": "int Cli_GetCpuInfo(S7Object Client, TS7CpuInfo *pUsrData);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_GetCpuInfo",
+        "page": 147,
+        "quote": "Gets CPU module name, serial number and other info."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_get_cp_info",
+      "name": "Cli_GetCpInfo()",
+      "description": "返回 CP 信息（TS7CpInfo{MaxPduLengt:int, MaxConnections:int, MaxMpiRate:int, MaxBusRate:int}，字段名 MaxPduLengt 为原文拼写）。",
+      "signature": "int Cli_GetCpInfo(S7Object Client, TS7CpInfo *pUsrData);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_GetCpInfo",
+        "page": 148,
+        "quote": "Gets CP (communication processor) info."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_datetime",
+      "name": "日期/时间函数组",
+      "description": "读/写 PLC 日期时间：GetPlcDateTime（读）、SetPlcDateTime（写给定值，p139）、SetPlcSystemDateTime（写宿主机时间，p140）。（原文为函数/用途表，以逐字片段给出）",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Date/Time functions",
+        "page": 137,
+        "quote": [
+          "These functions allow to read/modify the date and time of a PLC.",
+          "Cli_GetPlcDateTime Returns the PLC date/time.",
+          "Cli_SetPlcDateTime Sets the PLC date/time with a given value.",
+          "Cli_SetPlcSystemDateTime Sets the PLC date/time with the host (PC) date/time."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_set_session_password",
+      "name": "Cli_SetSessionPassword() — 会话登录",
+      "description": "发送密码以匹配 CPU 安全级别（本质为 Login）。密码为 8 字符字符串：超长截断，不足右补空格。手册明示与口令破解无关，且必须已知正确密码。",
+      "signature": "int Cli_SetSessionPassword(S7Object Client, char *Password);",
+      "request": {
+        "note": "API 层参数",
+        "fields": [
+          {
+            "field": "Password",
+            "type": "AnsiString",
+            "dir": "In",
+            "meaning": "8 chars string（截断/右补空格）"
+          }
+        ]
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Security functions",
+        "page": 157,
+        "quote": "Send the password to the PLC to meet its security level."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_clear_session_password",
+      "name": "Cli_ClearSessionPassword() — 会话登出",
+      "description": "清除当前会话密码（Logout）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ClearSessionPassword",
+        "page": 158,
+        "quote": "Clears the password set for the current session (logout)."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_get_protection",
+      "name": "Cli_GetProtection() — 保护级别",
+      "description": "返回 TS7Protection{sch_schal, sch_par, sch_rel, bart_sch, anl_sch}（各 word）：运行方式开关保护级、口令级（0=无口令）、CPU 有效保护级、模式选择器位置(1:RUN,2:RUN-P,3:STOP,4:MRES)、启动开关位置(1:CRST,2:WRST)。",
+      "signature": "int Cli_GetProtection(S7Object Client, TS7Protection *pUsrData);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_GetProtection",
+        "page": 159,
+        "quote": "Gets the CPU protection level info."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_iso_exchange_buffer",
+      "name": "Cli_IsoExchangeBuffer() — 底层 PDU 透传",
+      "description": "把给定 S7 PDU 封装进 IsoTCP 电报发给 CPU，再从应答电报提取 S7 PDU 复制到用户缓冲；不做大小检查（缓冲须足够大）。可用于实现手册未封装的其他 S7 功能。",
+      "signature": "int Cli_IsoExchangeBuffer(S7Object Client, void *pUsrData, int *Size);",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Low level functions › Cli_IsoExchangeBuffer",
+        "page": 161,
+        "quote": "Exchanges a given S7 PDU (protocol data unit) with the CPU."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "fn_judg_api_level",
+      "name": "字段表为 API 层而非线缆字节层（线缆层已由源码补齐）",
+      "description": "手册字段表仍为 Snap7 API 参数层这一事实不变；其指向的线缆级结构缺口已由 snap7 1.4.3 源码闭合：Cli_ReadArea/Cli_WriteArea 的 API 参数（Area/DBNumber/Start/Amount/WordLen）经 opReadArea/opWriteArea 映射为线缆帧（功能码 0x04/0x05、参数项、数据项），见 pdu_wire_read_frame / pdu_wire_write_frame。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Data I/O functions",
+        "page": 103,
+        "quote": "Data I/O functions"
+      },
+      "src_ref": [
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "51-70",
+          "quote": "int TSnap7MicroClient::opReadArea()\n{\nPReqFunReadParams ReqParams;\nPResFunReadParams ResParams;\nPS7ResHeader23    Answer;\nPResFunReadItem   ResData;\nword              RPSize; // ReqParams size\nint WordSize;\nuintptr_t Offset;\npbyte Target;\nint Address;\nint IsoSize;\nint Start;\nint MaxElements;  // Max elements that we can transfer in a PDU\nword NumElements; // Num of elements that we are asking for this telegram\nint TotElements;  // Total elements requested\nint Size;\nint Result;\nWordSize=DataSizeByte(Job.WordLen); // The size in bytes of an element that we are asking for"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "159-181",
+          "quote": "int TSnap7MicroClient::opWriteArea()\n{\nPReqFunWriteParams   ReqParams;\nPReqFunWriteDataItem ReqData;  // only 1 item for WriteArea Function\nPResFunWrite         ResParams;\nPS7ResHeader23       Answer;\nword RPSize;  // ReqParams size\nword RHSize;  // Request headers size\nbool First = true;\npbyte Source;\npbyte Target;\nint Address;\nint IsoSize;\nint WordSize;\nword Size;\nuintptr_t Offset = 0;\nint Start;        // where we are starting from for this telegram\nint MaxElements;  // Max elements that we can transfer in a PDU\nword NumElements; // Num of elements that we are asking for this telegram\nint TotElements;  // Total elements requested\nint Result = 0;\nWordSize=DataSizeByte(Job.WordLen); // The size in bytes of an element that we are pushing"
+        }
+      ],
+      "provenance": "mechanical-evidence",
+      "evidence_source": "snap7_source",
+      "src_note": "原 judgment 的开放问题（线缆级结构需以 snap7 源码核对）已核实：opReadArea/opWriteArea 直接给出 API 参数 → 线缆字段的映射；needs:manual_check 移除。手册侧字段表为 API 层的陈述保留并仍然成立。"
+    }
+  ],
+  "addressing": [
+    {
+      "id": "addr_area_table",
+      "name": "Area 区域编码表",
+      "description": "Cli_ReadArea/WriteArea/MultiVars 的 Area 编码：I=PE 0x81、Q=PA 0x82、M=MK 0x83、DB=DB 0x84、C=CT 0x1C、T=TM 0x1D。",
+      "table_merge": true,
+      "values": [
+        {
+          "name": "S7AreaPE",
+          "code": "0x81",
+          "meaning": "Process Inputs（I，过程输入）"
+        },
+        {
+          "name": "S7AreaPA",
+          "code": "0x82",
+          "meaning": "Process Outputs（Q，过程输出）"
+        },
+        {
+          "name": "S7AreaMK",
+          "code": "0x83",
+          "meaning": "Merkers（M，位存储器）"
+        },
+        {
+          "name": "S7AreaDB",
+          "code": "0x84",
+          "meaning": "DB（数据块）"
+        },
+        {
+          "name": "S7AreaCT",
+          "code": "0x1C",
+          "meaning": "Counters（C，计数器）"
+        },
+        {
+          "name": "S7AreaTM",
+          "code": "0x1D",
+          "meaning": "Timers（T，定时器）"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea (Area table)",
+        "page": 104,
+        "quote": "S7AreaPE 0x81 Process Inputs. S7AreaPA 0x82 Process Outputs. S7AreaMK 0x83 Merkers. S7AreaDB 0x84 DB S7AreaCT 0x1C Counters. S7AreaTM 0x1D Timers"
+      },
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_types.h",
+          "line": "41-47",
+          "quote": "// Area ID\nconst byte S7AreaPE   =\t0x81;\nconst byte S7AreaPA   =\t0x82;\nconst byte S7AreaMK   =\t0x83;\nconst byte S7AreaDB   =\t0x84;\nconst byte S7AreaCT   =\t0x1C;\nconst byte S7AreaTM   =\t0x1D;"
+        }
+      ],
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_wordlen_table",
+      "name": "WordLen 传输宽度编码表",
+      "description": "数据项传输宽度（WordLen/transport size）编码。",
+      "table_merge": true,
+      "values": [
+        {
+          "name": "S7WLBit",
+          "code": "0x01",
+          "meaning": "Bit (inside a word)",
+          "size_bytes": 1
+        },
+        {
+          "name": "S7WLByte",
+          "code": "0x02",
+          "meaning": "Byte (8 bit)",
+          "size_bytes": 1
+        },
+        {
+          "name": "S7WLWord",
+          "code": "0x04",
+          "meaning": "Word (16 bit)",
+          "size_bytes": 2
+        },
+        {
+          "name": "S7WLDWord",
+          "code": "0x06",
+          "meaning": "Double Word (32 bit)",
+          "size_bytes": 4
+        },
+        {
+          "name": "S7WLReal",
+          "code": "0x08",
+          "meaning": "Real (32 bit float)",
+          "size_bytes": 4
+        },
+        {
+          "name": "S7WLCounter",
+          "code": "0x1C",
+          "meaning": "Counter (16 bit)",
+          "size_bytes": 2
+        },
+        {
+          "name": "S7WLTimer",
+          "code": "0x1D",
+          "meaning": "Timer (16 bit)",
+          "size_bytes": 2
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea (WordLen table)",
+        "page": 104,
+        "quote": "S7WLBit 0x01 Bit (inside a word) S7WLByte 0x02 Byte (8 bit) S7WLWord 0x04 Word (16 bit) S7WLDWord 0x06 Double Word (32 bit) S7WLReal 0x08 Real (32 bit float) S7WLCounter 0x1C Counter (16 bit) S7WLTimer 0x1D Timer (16 bit)"
+      },
+      "provenance": "mechanical",
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_types.h",
+          "line": "51-60",
+          "quote": "const int S7WLBit     = 0x01;\nconst int S7WLByte    = 0x02;\nconst int S7WLChar    = 0x03;\nconst int S7WLWord    = 0x04;\nconst int S7WLInt     = 0x05;\nconst int S7WLDWord   = 0x06;\nconst int S7WLDInt    = 0x07;\nconst int S7WLReal    = 0x08;\nconst int S7WLCounter = 0x1C;\nconst int S7WLTimer   = 0x1D;"
+        },
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "2471-2486",
+          "quote": "int TSnap7MicroClient::DataSizeByte(int WordLength)\n{\nswitch (WordLength){\ncase S7WLBit     : return 1;  // S7 sends 1 byte per bit\ncase S7WLByte    : return 1;\ncase S7WLChar    : return 1;\ncase S7WLWord    : return 2;\ncase S7WLDWord   : return 4;\ncase S7WLInt     : return 2;\ncase S7WLDInt    : return 4;\ncase S7WLReal    : return 4;\ncase S7WLCounter : return 2;\ncase S7WLTimer   : return 2;\ndefault          : return 0;\n}\n}"
+        }
+      ],
+      "src_note": "源码核对：WordLen 常量与手册一致；源码另含 S7WLChar=0x03/S7WLInt=0x05/S7WLDInt=0x07（手册表未列，DataSizeByte 同样给出字节数），为超集不冲突。"
+    },
+    {
+      "id": "addr_amount_semantics",
+      "name": "Amount 语义 = 元素个数",
+      "description": "Amount 为 word（元素）数量，不是字节大小。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea (remark 1)",
+        "page": 104,
+        "quote": "Note the use of the parameter name “amount”, it means quantity of words, not byte size."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_db_number",
+      "name": "DBNumber 仅对 S7AreaDB 有效",
+      "description": "DB 号仅在 Area=S7AreaDB 时使用，其余区域忽略。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea (parameters)",
+        "page": 104,
+        "quote": "DB Number if Area = S7AreaDB, otherwise is ignored."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_db_number_range",
+      "name": "DB 号范围 0..0xFFFF",
+      "description": "DB 编号范围 0..65535。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_DBRead",
+        "page": 107,
+        "quote": "DB Index (0..0xFFFF)."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_byte_bit",
+      "name": "Byte.Bit 寻址（位寻址换算）",
+      "description": "位寻址时 Start 以 bit 表示：byte_offset*8 + bit；手册示例 DB4.DBX 10.3 → (10*8)+3 = 83。",
+      "formula": "Start(bit) = byte_offset * 8 + bit",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea (note 2)",
+        "page": 105,
+        "quote": "When WordLen=S7WLBit the Offset (Start) must be expressed in bits. Ex. The Start for DB4.DBX 10.3 is (10*8)+3 = 83."
+      },
+      "provenance": "mechanical",
+      "evidence_source": "snap7_source",
+      "src_ref": [
+        {
+          "file": "src/core/s7_micro_client.cpp",
+          "line": "120-130",
+          "quote": "// Adjusts the offset\nif ((Job.WordLen==S7WLBit) || (Job.WordLen==S7WLCounter) || (Job.WordLen==S7WLTimer))\nAddress = Start;\nelse\nAddress = Start*8;\nReqParams->Items[0].Address[2] = Address & 0x000000FF;\nAddress = Address >> 8;\nReqParams->Items[0].Address[1] = Address & 0x000000FF;\nAddress = Address >> 8;\nReqParams->Items[0].Address[0] = Address & 0x000000FF;"
+        }
+      ],
+      "src_note": "源码核对：非 Bit/Counter/Timer 的 WordLen 以 Address=Start*8 换算后按 3 字节大端装入参数项（即 Byte.Bit 公式的线缆实现）。"
+    },
+    {
+      "id": "addr_ct_tm_wordlen",
+      "name": "CT/TM 区域的 WordLen 约束",
+      "description": "CT/TM 区域应配 S7WLCounter/S7WLTimer；传错不报错，内部自动修正。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea (remarks)",
+        "page": 105,
+        "quote": "If either S7AreaCT or S7AreaTM is selected, WordLen must be either S7WLCounter or S7WLTimer (However no error is raised and the values are internally fixed)."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_buffer_size",
+      "name": "缓冲区大小公式与 word 尺寸表",
+      "description": "缓冲区字节数 = word size × Amount。word size：S7WLBit=1、S7WLByte=1、S7WLWord=2、S7WLDWord=4、S7WLReal=4、S7WLCounter=2、S7WLTimer=2（与 addr_wordlen_table.size_bytes 一致）。",
+      "formula": "Buffer size (byte) = Word size * Amount",
+      "word_sizes": {
+        "S7WLBit": 1,
+        "S7WLByte": 1,
+        "S7WLWord": 2,
+        "S7WLDWord": 4,
+        "S7WLReal": 4,
+        "S7WLCounter": 2,
+        "S7WLTimer": 2
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_ReadArea (remarks)",
+        "page": 105,
+        "quote": "Buffer size (byte) = Word size * Amount"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_big_endian",
+      "name": "PLC 数据格式 BIG-Endian",
+      "description": "PLC 内部多字节数据按大端存放（示例：DWORD 0x4C21112F 在 PLC 中按 4C 21 11 2F 存放）；PC（x86）为小端，读写需翻转。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › Siemens data format",
+        "page": 22,
+        "quote": "The PLC internal data format is BIG-Endian, i.e. the complex variables (which size is greater than 1 byte) are stored in memory starting from the most significant byte up to least significant one."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_data_types",
+      "name": "基础数据类型（helper class 列表）",
+      "description": "S7 基础数据类型及其宽度：BIT(1位)、WORD(16u)、INT(16i)、DWORD(32u)、DINT(32i)、REAL(32位浮点)、S7 String、char 数组、DATE_AND_TIME（p23 亦支持 S7 DT 与本机时间类型互转）。（原文为列表，以逐字片段给出）",
+      "list_merge": true,
+      "values": [
+        {
+          "type": "BIT",
+          "size": "1 bit"
+        },
+        {
+          "type": "WORD",
+          "size": "16 bit (unsigned)"
+        },
+        {
+          "type": "INT",
+          "size": "16 bit (signed)"
+        },
+        {
+          "type": "DWORD",
+          "size": "32 bit (unsigned)"
+        },
+        {
+          "type": "DINT",
+          "size": "32 bit (signed)"
+        },
+        {
+          "type": "REAL",
+          "size": "32 bit (IEEE float)"
+        },
+        {
+          "type": "S7 String",
+          "size": "见 judgment 项"
+        },
+        {
+          "type": "DATE_AND_TIME",
+          "size": "见 judgment 项"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › Siemens data format",
+        "page": 23,
+        "quote": [
+          "With them you can insert/extract:",
+          "BITS",
+          "WORD (unsigned 16 bit integer)",
+          "INT (signed 16 bit integer)",
+          "DWORD (unsigned 32 bit integer)",
+          "DINT (signed 32 bit integer)",
+          "REAL (32 bit floating point number)",
+          "S7 Strings",
+          "S7 Array of char"
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_logo_v_area_db1",
+      "name": "LOGO! V 区 = DB 1",
+      "description": "LOGO 0BA7/0BA8 的 V 存储区对外统一映射为 DB 1（按 bit/byte/word 组织）。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "News from 1.1.0 › LOGO! 0BA7/0BA8",
+        "page": 78,
+        "quote": "The LOGO memory that we can Read/Write is the V area that is seen by all HMI (and Snap7 too) as DB 1."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_s71200_1500_limits",
+      "name": "S7-1200/1500 访问限制",
+      "description": "1200/1500 使用改造版 S7 协议（扩展电报）；外部设备仅能以 HMI 角色用“base”协议做基本数据传输，控制/目录等 PG 操作需扩展协议。访问 1500 的 DB 还需 PLC 侧：仅全局 DB、关闭优化块访问、访问级别 full 且允许 GET/PUT。",
+      "values": [
+        "Only global DBs can be accessed.",
+        "The optimized block access must be turned off.",
+        "The access level must be “full” and the “connection mechanism” must allow GET/PUT."
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Client › S7 1200/1500 Notes",
+        "page": 34,
+        "quote": "An external equipment can access to S71200/1500 CPU using the S7 “base” protocol, only working as an HMI, i.e. only basic data transfer are allowed. All other PG operations (control/directory/etc..) must follow the extended protocol."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "addr_judg_string_dt_layout",
+      "name": "S7 String / DATE_AND_TIME 字节布局（源码已证实）",
+      "description": "S7 String：2 字节头（[0]=max 长度、[1]=当前长度）+ ASCII 字符（即 2+2' 实现为 2+当前长度，容量 2+max）。DATE_AND_TIME：8 字节 BCD——[0]年、[1]月、[2]日、[3]时、[4]分、[5]秒、[6]毫秒高 2 位、[7]=毫秒末位*10+星期(1..7)；年 <90 → 2000+BCD，否则 1900+BCD。与手册 TS7Time（s7_types.h：bcd_year..bcd_dow 八字段）一致。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Siemens communications overview › Siemens data format",
+        "page": 23,
+        "quote": "S7 Strings"
+      },
+      "src_ref": [
+        {
+          "file": "release/wrappers/dot.net/snap7.net.cs",
+          "line": "526-537",
+          "quote": "public static string GetStringAt(byte[] Buffer, int Pos)\n{\nint size = (int)Buffer[Pos + 1];\nreturn Encoding.ASCII.GetString(Buffer, Pos + 2, size);\n}\npublic static void SetStringAt(byte[] Buffer, int Pos, int MaxLen, string Value)\n{\nint size = Value.Length;\nBuffer[Pos] = (byte)MaxLen;\nBuffer[Pos + 1] = (byte)size;\nEncoding.ASCII.GetBytes(Value, 0, size, Buffer, Pos + 2);\n}"
+        },
+        {
+          "file": "release/wrappers/dot.net/snap7.net.cs",
+          "line": "346-361",
+          "quote": "public static DateTime GetDateTimeAt(byte[] Buffer, int Pos)\n{\nint Year, Month, Day, Hour, Min, Sec, MSec;\nYear = BCDtoByte(Buffer[Pos]);\nif (Year < 90)\nYear += 2000;\nelse\nYear += 1900;\nMonth = BCDtoByte(Buffer[Pos + 1]);\nDay = BCDtoByte(Buffer[Pos + 2]);\nHour = BCDtoByte(Buffer[Pos + 3]);\nMin = BCDtoByte(Buffer[Pos + 4]);\nSec = BCDtoByte(Buffer[Pos + 5]);\nMSec = (BCDtoByte(Buffer[Pos + 6]) * 10) + (BCDtoByte(Buffer[Pos + 7]) / 10);"
+        },
+        {
+          "file": "release/wrappers/dot.net/snap7.net.cs",
+          "line": "379-394",
+          "quote": "int Dow = (int)Value.DayOfWeek + 1;\n// MSecH = First two digits of miliseconds\nint MsecH = Value.Millisecond / 10;\n// MSecL = Last digit of miliseconds\nint MsecL = Value.Millisecond % 10;\nif (Year > 1999)\nYear -= 2000;\nBuffer[Pos] = ByteToBCD(Year);\nBuffer[Pos + 1] = ByteToBCD(Month);\nBuffer[Pos + 2] = ByteToBCD(Day);\nBuffer[Pos + 3] = ByteToBCD(Hour);\nBuffer[Pos + 4] = ByteToBCD(Min);\nBuffer[Pos + 5] = ByteToBCD(Sec);\nBuffer[Pos + 6] = ByteToBCD(MsecH);\nBuffer[Pos + 7] = ByteToBCD(MsecL * 10 + Dow);"
+        },
+        {
+          "file": "src/core/s7_types.h",
+          "line": "347-356",
+          "quote": "typedef struct{\nbyte bcd_year;\nbyte bcd_mon;\nbyte bcd_day;\nbyte bcd_hour;\nbyte bcd_min;\nbyte bcd_sec;\nbyte bcd_himsec;\nbyte bcd_dow;\n}TS7Time, *PS7Time;"
+        }
+      ],
+      "provenance": "mechanical-evidence",
+      "evidence_source": "snap7_source",
+      "src_note": "原 judgment（String/DT 布局需查源码）已核实：官方 .NET 包装（同仓库 release/wrappers）给出 String 2+2 头与 DT 8 字节 BCD 布局；C++ 核心 TS7Time 结构八字段一致。needs:manual_check 移除。"
+    }
+  ],
+  "error_codes": {
+    "composition": {
+      "id": "err_composition",
+      "name": "32 位错误码组合规则",
+      "description": "32 位返回码由三层字段组成：低 16 位（4 个半字节）=OS socket 层 TCP/IP 错误；第 5 个半字节（bit16..19）=ISO TCP 错误；最高 3 个半字节（bit20..31）=S7 协议错误（三层可同时有效，需按位与掩码分离）。",
+      "list_merge": true,
+      "layout": {
+        "bits_15_0": "TCP/IP error (OS socket layer)",
+        "bits_19_16": "ISO TCP error (s7_isotcp.cpp)",
+        "bits_31_20": "S7 protocol error (shared by Cli/Srv/Par)"
+      },
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "API Error codes",
+        "page": 252,
+        "quote": "Due to the classes layering, the result error code (a 32 bit value) is composed by three fields, as in figure: The first 16 bits (4 nibbles) represent a TCP/IP error that is raised by the OS socket layer. It is set in snap_msgsock.cpp. The 5th nibble represent an ISO TCP error and is set in s7_isotcp.cpp. The last three nibbles represent an S7 protocol error, they are shared between the objects TSnap7MicroClient /TSnap7Client, TSnap7Server and TSnap7Partner."
+      },
+      "provenance": "mechanical"
+    },
+    "iso_tcp_errors": [
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoConnect",
+        "hex_field": "1",
+        "meaning_zh": "ISO 连接错误",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Iso Connection error."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoDisconnect",
+        "hex_field": "2",
+        "meaning_zh": "ISO 断开错误",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Iso Disconnection error."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoInvalidPDU",
+        "hex_field": "3",
+        "meaning_zh": "提供了格式错误的 PDU",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Malformatted PDU suppled."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoInvalidDataSize",
+        "hex_field": "4",
+        "meaning_zh": "传给 send/recv 的数据大小非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Bad Datasize passed to send/recv function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoNullPointer",
+        "hex_field": "5",
+        "meaning_zh": "提供了空指针",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Null pointer supplied."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoShortPacket",
+        "hex_field": "6",
+        "meaning_zh": "收到过短的包",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "A short packet received."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoTooManyFragments",
+        "hex_field": "7",
+        "meaning_zh": "无 EoT 标志的包过多（>64）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Too many packets without EoT flag (>64)"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoPduOverflow",
+        "hex_field": "8",
+        "meaning_zh": "分片数据之和超过最大包长",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "The sum of fragments data exceeds the maximum packet size."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoSendPacket",
+        "hex_field": "9",
+        "meaning_zh": "发送时出错",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "An error occurred during send."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoRecvPacket",
+        "hex_field": "A",
+        "meaning_zh": "接收时出错",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "An error occurred during recv."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoInvalidParams",
+        "hex_field": "B",
+        "meaning_zh": "提供了非法 TSAP 参数",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Invalid TSAP params supplied."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoResvd_1",
+        "hex_field": "C",
+        "meaning_zh": "保留（未用）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Reserved (unused)"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoResvd_2",
+        "hex_field": "D",
+        "meaning_zh": "保留（未用）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Reserved (unused)"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoResvd_3",
+        "hex_field": "E",
+        "meaning_zh": "保留（未用）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Reserved (unused)"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "iso_tcp",
+        "scope": "ISO/TCP 层（占第 5 个半字节，bit16..19；如 errIsoConnect 即 0x00010000）",
+        "mnemonic": "errIsoResvd_4",
+        "hex_field": "F",
+        "meaning_zh": "保留（未用）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › ISO TCP Error table",
+          "page": 252,
+          "quote": "Reserved (unused)"
+        },
+        "provenance": "mechanical"
+      }
+    ],
+    "client_errors": [
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errNegotiatingPDU",
+        "hex_field": "001",
+        "meaning_zh": "PDU 协商期间出错",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Error during PDU negotiation."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidParams",
+        "hex_field": "002",
+        "meaning_zh": "向当前函数提供了非法参数",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid param(s) supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliJobPending",
+        "hex_field": "003",
+        "meaning_zh": "有作业挂起：异步函数正在进行",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "A Job is pending : there is an async function in progress."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliTooManyItems",
+        "hex_field": "004",
+        "meaning_zh": "MultiRead/Write 函数传入超过 20 个项",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "More than 20 items where passed to a MultiRead/Write area function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidWordLen",
+        "hex_field": "005",
+        "meaning_zh": "WordLen 参数非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid Wordlen param supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliPartialDataWritten",
+        "hex_field": "006",
+        "meaning_zh": "仅写入部分数据：目标区域小于给定 DataSize",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Partial data where written : The target area is smaller than the DataSize supplied."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliSizeOverPDU",
+        "hex_field": "007",
+        "meaning_zh": "MultiRead/MultiWrite 数据量超过 PDU 大小",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "A MultiRead/MultiWrite function has datasize over the PDU size."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidPlcAnswer",
+        "hex_field": "008",
+        "meaning_zh": "PLC 应答非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid answer from the PLC."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliAddressOutOfRange",
+        "hex_field": "009",
+        "meaning_zh": "指定了越界地址",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "An address out of range was specified."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidTransportSize",
+        "hex_field": "00A",
+        "meaning_zh": "Read/WriteArea 的 Transportsize 参数非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid Transportsize parameter was supplied to a Read/WriteArea function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliWriteDataSizeMismatch",
+        "hex_field": "00B",
+        "meaning_zh": "datasize 参数非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid datasize parameter supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliItemNotAvailable",
+        "hex_field": "00C",
+        "meaning_zh": "请求的项在 PLC 中不存在",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Item requested was not found in the PLC."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidValue",
+        "hex_field": "00D",
+        "meaning_zh": "向当前函数提供了非法值",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid value supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliCannotStartPLC",
+        "hex_field": "00E",
+        "meaning_zh": "无法启动 PLC",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "PLC cannot be started."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliAlreadyRun",
+        "hex_field": "00F",
+        "meaning_zh": "PLC 已处于 RUN 状态（原文 stare 为 state 之误）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "PLC is already in RUN stare."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliCannotStopPLC",
+        "hex_field": "010",
+        "meaning_zh": "无法停止 PLC",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "PLC cannot be stopped."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliCannotCopyRamToRom",
+        "hex_field": "011",
+        "meaning_zh": "无法 RAM→ROM：PLC 运行中或不支持",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Cannot copy RAM to ROM : the PLC is running or doesn’t support this function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliCannotCompress",
+        "hex_field": "012",
+        "meaning_zh": "无法压缩：PLC 运行中或不支持",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Cannot compress : the PLC is running or doesn’t support this function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliAlreadyStop",
+        "hex_field": "013",
+        "meaning_zh": "PLC 已处于 STOP 状态",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "PLC is already in STOP state."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliFunNotAvailable",
+        "hex_field": "014",
+        "meaning_zh": "功能不可用",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Function not available."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliUploadSequenceFailed",
+        "hex_field": "015",
+        "meaning_zh": "块上传序列失败",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Block upload sequence failed."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidDataSizeRecvd",
+        "hex_field": "016",
+        "meaning_zh": "从 PLC 收到非法数据长度",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid data size received from the PLC."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidBlockType",
+        "hex_field": "017",
+        "meaning_zh": "块类型非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid block type supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidBlockNumber",
+        "hex_field": "018",
+        "meaning_zh": "块号非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid block supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidBlockSize",
+        "hex_field": "019",
+        "meaning_zh": "块大小非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid block size supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliDownloadSequenceFailed",
+        "hex_field": "01A",
+        "meaning_zh": "块下载序列失败",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Block download sequence failed."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInsertRefused",
+        "hex_field": "01B",
+        "meaning_zh": "插入命令（块下载后隐式发送）被拒绝",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Insert command (implicit command sent after a block download) refused."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliDeleteRefused",
+        "hex_field": "01C",
+        "meaning_zh": "删除命令被拒绝",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Delete command refused."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliNeedPassword",
+        "hex_field": "01D",
+        "meaning_zh": "该操作受口令保护",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "This operation is password protected."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidPassword",
+        "hex_field": "01E",
+        "meaning_zh": "口令错误",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid password supplied."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliNoPasswordToSetOrClear",
+        "hex_field": "01F",
+        "meaning_zh": "无口令可设/清：保护未启用",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "There is no password to set or clear : the protection is OFF."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliJobTimeout",
+        "hex_field": "020",
+        "meaning_zh": "作业超时",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Job timeout."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliPartialDataRead",
+        "hex_field": "021",
+        "meaning_zh": "仅读到部分数据：源区域大于给定 DataSize",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Partial data where read : The source area is greater than the DataSize supplied."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliBufferTooSmall",
+        "hex_field": "022",
+        "meaning_zh": "提供的缓冲区过小",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "The buffer supplied is too small."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliFunctionRefused",
+        "hex_field": "023",
+        "meaning_zh": "功能被 PLC 拒绝",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Function refused by the PLC."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliInvalidParamNumber",
+        "hex_field": "024",
+        "meaning_zh": "Get/SetParam 的参数号非法（原文 suppilied 为 supplied 之误）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Invalid param number suppilied to Get/SetParam."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliDestroying",
+        "hex_field": "025",
+        "meaning_zh": "无法执行：客户端正在销毁",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Cannot perform : the client is destroying."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "client",
+        "scope": "Client/S7 协议层（占最高 3 个半字节，bit20..31；如 002 即 0x00200000）",
+        "mnemonic": "errCliCannotChangeParam",
+        "hex_field": "026",
+        "meaning_zh": "已连接状态下不能改参数",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Client Errors Table",
+          "page": 253,
+          "quote": "Cannot change parameter because connected."
+        },
+        "provenance": "mechanical"
+      }
+    ],
+    "server_errors": [
+      {
+        "group": "server",
+        "scope": "Server/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errSrvCannotStart",
+        "hex_field": "001",
+        "meaning_zh": "服务器无法启动",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Server Errors Table",
+          "page": 254,
+          "quote": "The server cannot be started."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "server",
+        "scope": "Server/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errSrvDBNullPointer",
+        "hex_field": "002",
+        "meaning_zh": "区域指针为空",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Server Errors Table",
+          "page": 254,
+          "quote": "A null was passed as area pointer."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "server",
+        "scope": "Server/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errSrvAreaAlreadyExists",
+        "hex_field": "003",
+        "meaning_zh": "试图重复注册区域",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Server Errors Table",
+          "page": 254,
+          "quote": "Trying to re-registering an area."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "server",
+        "scope": "Server/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errSrvUnknownArea",
+        "hex_field": "004",
+        "meaning_zh": "区域码未知",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Server Errors Table",
+          "page": 254,
+          "quote": "Area code unknown."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "server",
+        "scope": "Server/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errSrvInvalidParams",
+        "hex_field": "005",
+        "meaning_zh": "非法参数",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Server Errors Table",
+          "page": 254,
+          "quote": "Invalid param(s) supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "server",
+        "scope": "Server/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errSrvTooManyDB",
+        "hex_field": "006",
+        "meaning_zh": "注册 DB 过多（>2048）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Server Errors Table",
+          "page": 254,
+          "quote": "Trying to registering too many DB (>2048)"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "server",
+        "scope": "Server/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errSrvInvalidParamNumber",
+        "hex_field": "007",
+        "meaning_zh": "Get/SetParam 的参数号非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Server Errors Table",
+          "page": 254,
+          "quote": "Invalid param number suppilied to Get/SetParam."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "server",
+        "scope": "Server/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errSrvCannotChangeParam",
+        "hex_field": "008",
+        "meaning_zh": "运行中不能改参数",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Server Errors Table",
+          "page": 254,
+          "quote": "Cannot change parameter because running."
+        },
+        "provenance": "mechanical"
+      }
+    ],
+    "partner_errors": [
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParAddressInUse",
+        "hex_field": "002",
+        "meaning_zh": "另一被动伙伴在等同一主动地址",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Another passive partner is waiting for the same active address."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParNoRoom",
+        "hex_field": "003",
+        "meaning_zh": "当前连接服务器的伙伴过多（>256）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Trying to create too many partners for the current connection server.(>256)"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errServerNoRoom",
+        "hex_field": "004",
+        "meaning_zh": "连接服务器分配过多（>256）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Trying to allocate too many connection servers (>256)"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParInvalidParams",
+        "hex_field": "005",
+        "meaning_zh": "非法参数",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Invalid param(s) supplied to the current function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParNotLinked",
+        "hex_field": "006",
+        "meaning_zh": "无法执行：伙伴未连接",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Cannot execute : the partner is not linked."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParBusy",
+        "hex_field": "007",
+        "meaning_zh": "伙伴忙：Send/Recv 序列进行中",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Partner busy : cannot send (Send or Recv sequence in progress)"
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParFrameTimeout",
+        "hex_field": "008",
+        "meaning_zh": "Send/Recv 序列超时",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Send or Recv sequence timeout."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParInvalidPDU",
+        "hex_field": "009",
+        "meaning_zh": "收到非法 PDU（可能是客户端而非伙伴）",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Invalid PDU received, maybe a client (not a partner) is trying to communicate."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParSendTimeout",
+        "hex_field": "00A",
+        "meaning_zh": "发送函数超时",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Timeout occurred in send function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParRecvTimeout",
+        "hex_field": "00B",
+        "meaning_zh": "接收函数超时",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Timeout occurred in recv function."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParSendRefused",
+        "hex_field": "00C",
+        "meaning_zh": "发送被 PLC 伙伴拒绝",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Send refused by the PLC partner."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParNegotiatingPDU",
+        "hex_field": "00D",
+        "meaning_zh": "PDU 协商期间出错",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Error during PDU negotiation."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParSendingBlock",
+        "hex_field": "00E",
+        "meaning_zh": "块发送出错",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Error during block send."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParRecvingBlock",
+        "hex_field": "00F",
+        "meaning_zh": "块接收出错",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Error during block recv."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errBindError",
+        "hex_field": "010",
+        "meaning_zh": "无法绑定给定地址",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Cannot bind the address supplied."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParDestroying",
+        "hex_field": "011",
+        "meaning_zh": "无法执行：伙伴正在销毁",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Cannot perform : the partner is destroying."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParInvalidParamNumber",
+        "hex_field": "012",
+        "meaning_zh": "Get/SetParam 的参数号非法",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Invalid param number suppilied to Get/SetParam."
+        },
+        "provenance": "mechanical"
+      },
+      {
+        "group": "partner",
+        "scope": "Partner/S7 协议层（同 client 的字段位置）",
+        "mnemonic": "errParCannotChangeParam",
+        "hex_field": "013",
+        "meaning_zh": "运行中不能改参数",
+        "spec_ref": {
+          "doc": "Snap7 Reference Manual",
+          "section": "API Error codes › Partner Errors Table",
+          "page": 254,
+          "quote": "Cannot change parameter because running."
+        },
+        "provenance": "mechanical"
+      }
+    ],
+    "full_32bit_judgment": {
+      "id": "err_judg_full_32bit",
+      "name": "完整 32 位错误码常量（源码已证实）",
+      "description": "推导规则（ISO 层 n→0x000n0000；Cli/Srv/Par 层 xxx→0x0xxx0000）已被源码头文件逐常量证实：errIso* 在 s7_isotcp.h、errCli* 在 s7_micro_client.h、errNegotiatingPDU 在 s7_peer.h、errSrv* 在 s7_server.h 与 snap_tcpsrvr.h、errPar* 在 s7_partner.h。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "API Error codes",
+        "page": 252,
+        "quote": "The three fields can contain contemporary a valid value and normally it is so. To isolate a layer, the error must be “and masked”."
+      },
+      "src_ref": [
+        {
+          "file": "src/core/s7_isotcp.h",
+          "line": "45-59",
+          "quote": "const longword errIsoConnect            = 0x00010000; // Connection error\nconst longword errIsoDisconnect         = 0x00020000; // Disconnect error\nconst longword errIsoInvalidPDU         = 0x00030000; // Bad format\nconst longword errIsoInvalidDataSize    = 0x00040000; // Bad Datasize passed to send/recv : buffer is invalid\nconst longword errIsoNullPointer    \t= 0x00050000; // Null passed as pointer\nconst longword errIsoShortPacket    \t= 0x00060000; // A short packet received\nconst longword errIsoTooManyFragments   = 0x00070000; // Too many packets without EoT flag\nconst longword errIsoPduOverflow    \t= 0x00080000; // The sum of fragments data exceded maximum packet size\nconst longword errIsoSendPacket         = 0x00090000; // An error occurred during send\nconst longword errIsoRecvPacket         = 0x000A0000; // An error occurred during recv\nconst longword errIsoInvalidParams    \t= 0x000B0000; // Invalid TSAP params\nconst longword errIsoResvd_1    \t    = 0x000C0000; // Unassigned\nconst longword errIsoResvd_2    \t    = 0x000D0000; // Unassigned\nconst longword errIsoResvd_3    \t    = 0x000E0000; // Unassigned\nconst longword errIsoResvd_4    \t    = 0x000F0000; // Unassigned"
+        },
+        {
+          "file": "src/core/s7_micro_client.h",
+          "line": "35-45",
+          "quote": "const longword errCliInvalidParams          = 0x00200000;\nconst longword errCliJobPending             = 0x00300000;\nconst longword errCliTooManyItems           = 0x00400000;\nconst longword errCliInvalidWordLen         = 0x00500000;\nconst longword errCliPartialDataWritten     = 0x00600000;\nconst longword errCliSizeOverPDU            = 0x00700000;\nconst longword errCliInvalidPlcAnswer       = 0x00800000;\nconst longword errCliAddressOutOfRange      = 0x00900000;\nconst longword errCliInvalidTransportSize   = 0x00A00000;\nconst longword errCliWriteDataSizeMismatch  = 0x00B00000;\nconst longword errCliItemNotAvailable       = 0x00C00000;"
+        },
+        {
+          "file": "src/core/s7_peer.h",
+          "line": "35",
+          "quote": "const longword errNegotiatingPDU = 0x00100000;"
+        },
+        {
+          "file": "src/core/s7_server.h",
+          "line": "42-48",
+          "quote": "const longword errSrvDBNullPointer      = 0x00200000; // Pssed null as PData\nconst longword errSrvAreaAlreadyExists  = 0x00300000; // Area Re-registration\nconst longword errSrvUnknownArea        = 0x00400000; // Unknown area\nconst longword errSrvInvalidParams      = 0x00500000; // Invalid param(s) supplied\nconst longword errSrvTooManyDB          = 0x00600000; // Cannot register DB\nconst longword errSrvInvalidParamNumber = 0x00700000; // Invalid param (srv_get/set_param)\nconst longword errSrvCannotChangeParam  = 0x00800000; // Cannot change because running"
+        },
+        {
+          "file": "src/sys/snap_tcpsrvr.h",
+          "line": "60",
+          "quote": "const longword errSrvCannotStart      = 0x00100000;"
+        },
+        {
+          "file": "src/core/s7_partner.h",
+          "line": "50",
+          "quote": "const longword errParAddressInUse       = 0x00200000;"
+        }
+      ],
+      "provenance": "mechanical-evidence",
+      "evidence_source": "snap7_source",
+      "src_note": "原 judgment 的核对请求（完整常量以源码头文件核对）已完成：五张错误表对应常量组全部在源码中逐条出现，与 p252 组合规则推导一致（含 errNegotiatingPDU=0x00100000、errSrvCannotStart=0x00100000、errParAddressInUse=0x00200000），needs:manual_check 移除。"
+    }
+  },
+  "limits_and_timeouts": [
+    {
+      "id": "lim_pdu_range",
+      "name": "限制：PDU 大小 240..960 字节",
+      "description": "单连接内 PDU 大小固定，范围 240~960 字节（随 CP 而异）；MultiVars 数据总量不得超限。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Client › PDU independence",
+        "page": 26,
+        "quote": "As said, every data packet exchanged with a PLC must fit in a PDU, whose size is fixed and varies from 240 up to 960 bytes."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "lim_max_items_20",
+      "name": "限制：MultiVars 最多 20 项",
+      "description": "ReadMultiVars/WriteMultiVars 单次调用最多 20 个数据项，超出返回 errCliTooManyItems。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "API Error codes › Client Errors Table",
+        "page": 253,
+        "quote": "More than 20 items where passed to a MultiRead/Write area function."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "lim_fragments_64",
+      "name": "限制：IsoTCP 分片 ≤64（EoT 标志）",
+      "description": "连续收到超过 64 个无 EoT（End of Transmission）标志的包报 errIsoTooManyFragments；分片总长超限报 errIsoPduOverflow。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "API Error codes › ISO TCP Error table",
+        "page": 252,
+        "quote": "Too many packets without EoT flag (>64)"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "lim_server_max_clients",
+      "name": "限制：服务器并发连接默认 1024",
+      "description": "Snap7Server 默认最多接受 1024 连接（可用 Srv_SetParam(p_i32_MaxClients) 修改）；注释(*)：实际最大 TCP 连接数还受宿主 OS 限制。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Server › Specifications",
+        "page": 43,
+        "quote": "Up to 1024 (*) connection can be accepted, this value however can be changed via Srv_SetParam()."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "lim_server_db_2048",
+      "name": "限制：服务器可注册 DB ≤2048",
+      "description": "Snap7Server 注册 DB 超过 2048 个报 errSrvTooManyDB。",
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "API Error codes › Server Errors Table",
+        "page": 254,
+        "quote": "Trying to registering too many DB (>2048)"
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "to_ping_timeout",
+      "name": "超时：p_i32_PingTimeout（参数号 3）",
+      "description": "SmartConnect 的 ping 超时；注释(2)：从 1.4.1 起，传 0 可禁用 ping（smart-connect）功能。手册未给出默认数值。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Accessing internal parameters",
+        "page": 89,
+        "quote": [
+          "p_i32_PingTimeout 3",
+          "Client Ping timeout."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "to_socket_timeouts",
+      "name": "超时：Socket 发送/接收超时与工作间隔",
+      "description": "p_i32_SendTimeout(4)=socket 发送超时；p_i32_RecvTimeout(5)=socket 接收超时；p_i32_WorkInterval(6)=socket 工作线程间隔。默认数值手册未给出。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Accessing internal parameters",
+        "page": 89,
+        "quote": [
+          "p_i32_SendTimeout 4",
+          "Socket Send timeout.",
+          "p_i32_RecvTimeout 5",
+          "Socket Recv timeout.",
+          "p_i32_WorkInterval 6",
+          "Socket worker interval."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "to_job_timeout",
+      "name": "超时：异步作业超时（errCliJobTimeout）",
+      "description": "Cli_WaitAsCompletion(Timeout) 等待异步作业完成或超时；超时返回 errCliJobTimeout（0x020，p253）。轮询模型 Cli_CheckAsCompletion 立即返回作业状态（p30）。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_WaitAsCompletion",
+        "page": 174,
+        "quote": "Waits until the current asynchronous job is done or the timeout expires."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "to_control_timeout",
+      "name": "超时：CopyRamToRom/Compress 操作超时",
+      "description": "Cli_CopyRamToRom 与 Cli_Compress 的 Timeout 入参为“预期最大完成时间(ms)”（Compress 同义，p154）。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Client API Reference › Cli_CopyRamToRom",
+        "page": 153,
+        "quote": "Maximum time expected to complete the operation (ms)."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "to_partner_timeouts",
+      "name": "超时：Partner BSend/BRecv 与恢复/保活时间",
+      "description": "p_i32_BSendTimeout(12)、p_i32_BRecvTimeout(13)=伙伴收发序列超时；p_u32_RecoveryTime(14)=断线恢复时间；p_u32_KeepAliveTime(15)=PLC 伙伴保活时间。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Accessing internal parameters",
+        "page": 89,
+        "quote": [
+          "p_i32_BSendTimeout 12",
+          "BSend completion sequence timeout.",
+          "p_i32_BRecvTimeout 13",
+          "BRecv completion sequence timeout.",
+          "p_u32_RecoveryTime 14",
+          "Disconnection recovery time.",
+          "p_u32_KeepAliveTime 15",
+          "Time for (PLC) partner alive."
+        ]
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "to_tcp_connect_timeout",
+      "name": "超时：TCP 建连超时的规避（SmartConnect）",
+      "description": "PLC 断电/拔线时 TCP 连接超时不可控，SmartConnect 用时长可控且固定的 ping 先行探测（ping 超时即 p_i32_PingTimeout）。",
+      "list_merge": true,
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Snap7Client › SmartConnect",
+        "page": 26,
+        "quote": "The SmartConnect feature relies on this principle to avoid the TCP connection timeout when a PLC is off or the network cable is unwired."
+      },
+      "provenance": "mechanical"
+    },
+    {
+      "id": "to_judg_default_values",
+      "name": "各超时参数默认值（源码已证实）",
+      "description": "默认值（源码构造函数）：PingTimeout=750ms、SendTimeout=10ms、RecvTimeout=500ms（TMsgSocket 基类）、WorkInterval=100ms；注意 ISO 客户端构造函数将 RecvTimeout 覆盖为 3000ms（即 S7 会话实际接收超时 3000ms）；Partner：BSendTimeout=3000ms、BRecvTimeout=3000ms、RecoveryTime=500ms、KeepAliveTime=5000ms。",
+      "values": [
+        {
+          "param": "p_i32_PingTimeout",
+          "default": 750,
+          "unit": "ms",
+          "src": "src/sys/snap_msgsock.cpp L93"
+        },
+        {
+          "param": "p_i32_SendTimeout",
+          "default": 10,
+          "unit": "ms",
+          "src": "src/sys/snap_msgsock.cpp L92"
+        },
+        {
+          "param": "p_i32_RecvTimeout",
+          "default": 500,
+          "unit": "ms",
+          "note": "TMsgSocket 基类默认；TIsoTcpSocket 构造覆盖为 3000（S7 会话实际值）",
+          "src": "src/sys/snap_msgsock.cpp L91；覆盖见 src/core/s7_isotcp.cpp L30"
+        },
+        {
+          "param": "p_i32_WorkInterval",
+          "default": 100,
+          "unit": "ms",
+          "src": "src/sys/snap_msgsock.cpp L90"
+        },
+        {
+          "param": "p_i32_BSendTimeout",
+          "default": 3000,
+          "unit": "ms",
+          "src": "src/core/s7_partner.cpp L412"
+        },
+        {
+          "param": "p_i32_BRecvTimeout",
+          "default": 3000,
+          "unit": "ms",
+          "src": "src/core/s7_partner.cpp L411"
+        },
+        {
+          "param": "p_u32_RecoveryTime",
+          "default": 500,
+          "unit": "ms",
+          "src": "src/core/s7_partner.cpp L413"
+        },
+        {
+          "param": "p_u32_KeepAliveTime",
+          "default": 5000,
+          "unit": "ms",
+          "src": "src/core/s7_partner.cpp L414"
+        }
+      ],
+      "spec_ref": {
+        "doc": "Snap7 Reference Manual",
+        "section": "Accessing internal parameters",
+        "page": 89,
+        "quote": "For further help, the parameter name contains info about the parameter type"
+      },
+      "src_ref": [
+        {
+          "file": "src/sys/snap_msgsock.cpp",
+          "line": "85-98",
+          "quote": "// Set Defaults\nstrcpy(LocalAddress,\"0.0.0.0\");\nLocalPort=0;\nstrcpy(RemoteAddress,\"127.0.0.1\");\nRemotePort=0;\nWorkInterval=100;\nRecvTimeout=500;\nSendTimeout=10;\nPingTimeout=750;\nConnected=false;\nFSocket=INVALID_SOCKET;\nLastTcpError=0;\nLocalBind=0;\n}"
+        },
+        {
+          "file": "src/core/s7_isotcp.cpp",
+          "line": "28-38",
+          "quote": "TIsoTcpSocket::TIsoTcpSocket()\n{\nRecvTimeout = 3000; // Some old equipments are a bit slow to answer....\nRemotePort  = isoTcpPort;\n// These fields should be $0000 and in any case RFC says that they are not considered.\n// But some equipment...need a non zero value for the source reference.\nDstRef = 0x0000;\nSrcRef = 0x0100;\n// PDU size requested\nIsoPDUSize =1024;\nIsoMaxFragments=MaxIsoFragments;"
+        },
+        {
+          "file": "src/core/s7_partner.cpp",
+          "line": "411-414",
+          "quote": "BRecvTimeout  =3000;\nBSendTimeout  =3000;\nRecoveryTime  =500;\nKeepAliveTime =5000;"
+        }
+      ],
+      "provenance": "mechanical-evidence",
+      "evidence_source": "snap7_source",
+      "src_note": "原 judgment（默认数值需以 snap7 源码初始化核实）已核实：8 个超时/保活参数默认值全部取自源码构造函数；needs:manual_check 移除。"
+    }
+  ]
+}

@@ -1,0 +1,1304 @@
+{
+  "vendor": "正运动",
+  "vendor_en": "ZMotion",
+  "model": "ZMotion / ZMC 系列（EtherCAT 总线型控制器）",
+  "dll": "zauxdll.dll",
+  "namespace": "Motion.Adapters.ZMotion",
+  "class_name": "ZMotionMotionController",
+  "card_type": "0",
+  "axis_count": 4,
+  "verified": "official-binding",
+  "source": "官方 SDK 头文件 zauxdll2.h / zmotion.h + 官方 C# 绑定 Zmcaux.cs（随《ZMotion PC 函数库编程手册 V2.1.4》下发）+ 公开 DEMO",
+  "sources": [
+    "**官方 SDK 绑定（2026-10-20 取得，可逐行核对）**：正运动_ZMotion/SDK_头文件/Zmcaux.cs（官方 C# 绑定，ZAux_* 共 399 处 DllImport 全部指向 zauxdll.dll）+ zauxdll2.h（官方 C 原型）+ zmotion.h（低层 ZMC_* API）",
+    "**官方绑定给出的三条硬事实**：①ZAux_* 在 **zauxdll.dll**（zmotion.dll 是低层 ZMC_* 库）；②**没有通用的 SetAxisParam/GetAxisParam** —— 每个轴参数一个专用函数（SetUnits/SetSpeed/SetAccel/SetDecel/SetSramp/SetCreep/SetJerk/GetAxisStatus）；③MoveCircAbs 的参数顺序是**先终点后圆心**、方向 **0=逆时针 1=顺时针**",
+    "《ZMotion函数库编程手册 V2.1》公开章节：ZAux_OpenEth 原型、ZAux_Direct_GetMpos（指令29）、ZAux_Direct_GetIfIdle、ZAux_Direct_MoveAbs 轴列表式、ZAux_Direct_HwPswitch2 的 PSO 模式表",
+    "正运动官方 DEMO（MFC 振镜例程、C# WinForm 例程）：ZAux_OpenEth(buffer, &g_handle) 两参调用、ZAux_Direct_GetIfIdle 判 -1=停止、ZAux_Direct_MoveAbs(g_handle, 2, axislist, dposlist)",
+    "https://blog.csdn.net/qq_42081405/article/details/149067098（ZAux_Direct_GetDpos/GetMpos/GetIfIdle/GetAxisStatus/GetUnits 等函数原型）",
+    "正运动 PSO（位置同步输出）官方说明：HwPswitch2 模式1=单轴比较、模式2=清除比较点、模式3/4=矢量比较、模式5/6=周期比较",
+    "公开资料整理（2026-10-20）：A2 回零后 MPOS 清零规则（ZBasic 手册）· A3 REGIST(imode) 1~16 取值表 · A4 HwPswitch2 比较点取 DPOS/MPOS 的规则 · C1 zauxdll.dll 依赖与 32/64 位说明",
+    "公开资料整理（2026-10-20 第四轮）：**ATYPE 决定 MPOS 真伪**（1/7=DPOS 副本，4/5/50/65/66/67=真反馈）· ZAux_BusCmd_SDORead/SDOWrite 的 7 参签名（多篇官方 DEMO 一致）· CiA402 对象字典 0x6040/0x6041/0x6064/0x60F4 与使能序列 0x06→0x07→0x0F",
+    "**DLL PE 导出表（第三层真值）**：zauxdll.dll 423 个导出、zmotion.dll 232 个导出（knowledge/sdks/official_api/dll_exports.csv）。用它裁决「头文件声明了但 DLL 导不出」这类只在真机上才暴露的问题。"
+  ],
+  "notes": [
+    "错误码 0 表示成功；可用 ZAux_GetErrString 把错误码转成可读文本",
+    "UNITS 轴参数 = 脉冲当量（脉冲/单位），是本品牌做单位换算的官方入口",
+    "**单轴与多轴是两套独立符号**：单轴用 ZAux_Direct_Single_MoveAbs / Single_Move / Single_Vmove / Single_Cancel；多轴插补用 4 参的 ZAux_Direct_MoveAbs(handle, 轴数, 轴列表[], 目标列表[])。抄错就是栈错位",
+    "ZAux_OpenEth 只有 (IP, 输出句柄) 两个参数，没有端口参数",
+    "DPOS=指令位置，MPOS=编码器反馈位置。**反馈位置必须读 MPOS**，拿 DPOS 顶替等于跟随误差恒为 0",
+    "ZAux_Direct_GetIfIdle：-1=已停止，0=运动中",
+    "轴参数单位：UNITS=脉冲当量，SPEED=UNITS/S，ACCEL/DECEL=UNITS/S²，SRAMP=平滑时间(毫秒, 0~250, 0=梯形)，CREEP=回零爬行速度",
+    "AXISSTATUS 位域：bit3(=8)=远程驱动器报错，bit4/5=正/反向硬限位，bit6=找原点中，bit8(=256)=随动误差超限出错",
+    "PSO 硬件比较输出用 ZAux_Direct_HwPswitch2（9 参数）：模式1=单轴比较（4 个比较点），模式2=清除比较点",
+    "PSO 模式1 的比较基准：**带编码器反馈的轴比较 MPOS，不带编码器比较 DPOS**；每个比较点都会触发一次 OP 反转",
+    "位置锁存 imode（ZBasic REGIST 表）：1/2=Z脉冲升降沿，3/4=R0升降沿，14/15=R1升降沿；R0/R1 一般对应输入口 0/1；**总线轴用 R0/R1/Z脉冲锁存，脉冲轴用 R2/R3 锁存**",
+    "上面这张 imode 表与官方 DEMO 的索引换算（1,2,3,4,14,15）**完全一致** —— 两个独立来源互证，不是单点推测",
+    "回零后 DPOS/MPOS 是否自动清零取决于**回零模式与轴类型**：ATYPE=4（接入编码器）的轴标准模式下可能只清 DPOS，需「模式+100」（4系列）或手动 ZAux_Direct_SetMpos",
+    "总线轴的 PSO 必须用 HwPswitch2（不能用 Pswitch）",
+    "**ATYPE 决定 MPOS 的真假**：ATYPE=1（脉冲轴）与 ATYPE=7 上 MPOS 只是 DPOS 的副本（**假反馈**）；ATYPE=4/5（带编码器反馈的脉冲轴）、50（RTEX）、65/66/67（EtherCAT 总线轴）上 MPOS 才是真反馈。**脉冲轴上「跟随误差恒为 0」是正常的，不是适配器写错了** —— 契约测试据此分流，不在开环轴上误报",
+    "CiA402 是国际标准，对象字典固定：0x6040 控制字、0x6041 状态字、0x6064 实际位置、0x60F4 跟随误差、0x607A/0x60FF/0x6071 分别是 CSP/CSV/CST 的目标量。SDO 入口 ZAux_BusCmd_SDORead/SDOWrite（7 参：句柄+槽位+节点+对象号+子号+数据类型+数据）已核实存在",
+    "**总线轴的使能归属未定**：是控制器内部按轴类型自动完成，还是必须主机写 PDO/SDO？公开资料只给了 CiA402 序列 0x06→0x07→0x0F，没说时序要求，也没说主机该不该写 → 未确认前 Enable 显式失败（写控制字属于可能让电机突然动作的机器安全动作）",
+    "运行时依赖：**zauxdll.dll**（ZAux_* 层，官方绑定就是这个名）+ **zmotion.dll**（低层 ZMC_* 库，zauxdll 依赖它）—— 官网按 32/64 位分开下载，两个都要放进输出目录",
+    "**正运动没有通用的 SetAxisParam(name, value)**：官方绑定里每个轴参数一个专用函数（SetUnits/SetSpeed/SetAccel/SetDecel/SetSramp/SetCreep/SetJerk）。凭博客写一个不存在的函数名，真机上就是建连即崩（EntryPointNotFound）",
+    "停止原因用官方专用函数 ZAux_Direct_GetAxisStopReason（out 是 **int***，位域，参考 AXISSTATUS）；读 AXISSTATUS 用 ZAux_Direct_GetAxisStatus",
+    "圆弧插补用 ZAux_Direct_MoveCircAbs（8 参，**先终点后圆心**，**0=逆时针 1=顺时针**）",
+    "总线轴：按轴号读写对象字典用 ZAux_BusCmd_SDOReadAxis / SDOWriteAxis（6 参，不用知道槽位与节点号）；总线轴回零用 ZAux_BusCmd_Datum（脉冲轴才用 ZAux_Direct_Single_Datum）",
+    "**官方 C 头文件 zauxdll2.h 声明了 424 个 zauxdll.dll 函数，官方 C# 绑定 Zmcaux.cs 只有 399 个 DllImport** —— 差出来的 25 个里，**24 个在 zauxdll.dll 的 PE 导出表里能找到，1 个（`ZAux_GetTraceFile`）导不出**。声明一个 DLL 不导出的函数 = 上机必炸 `EntryPointNotFoundException`（它不报错，只在真机上炸，和固高 `GT_GantryHoming`、正运动 `ZAux_Direct_GetNtype` 同一类）。本项目**不绑** ZAux_GetTraceFile。另外那 24 个（MoveSEL / MultiMoveAbsSp / Single_MoveFslimit / GetRegPos2 / GetMark2 等）官方没给托管签名，绑定前须自行核对参数表。"
+  ],
+  "pinvoke": [
+    {
+      "fn": "ZAux_OpenEth",
+      "ret": "int",
+      "args": [
+        {
+          "name": "ip",
+          "type": "string"
+        },
+        {
+          "name": "handle",
+          "type": "IntPtr",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "连接以太网控制器。**只有 2 个参数**（IP + 输出句柄），没有端口。官方原型：int32 __stdcall ZAux_OpenEth(char *ipaddr, ZMC_HANDLE *phandle)"
+    },
+    {
+      "fn": "ZAux_Close",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "断开连接"
+    },
+    {
+      "fn": "ZAux_Direct_SetAtype",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "atype",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置轴类型：0 虚拟轴 / 1 脉冲轴 / 21 振镜轴 / 65 CSP / 66 CSV / 67 CST（总线轴取值需与从站实际模式一致）"
+    },
+    {
+      "fn": "ZAux_Direct_SetUnits",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "float"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置轴脉冲当量 UNITS（单位/脉冲）。**官方没有通用的 SetAxisParam(name,value)** —— 正运动是「一个轴参数一个专用函数」，写不存在的函数名会直接 EntryPointNotFound"
+    },
+    {
+      "fn": "ZAux_Direct_SetSpeed",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "float"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置轴速度 SPEED（单位/秒，随 UNITS 走）"
+    },
+    {
+      "fn": "ZAux_Direct_SetAccel",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "float"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置轴加速度 ACCEL（单位/秒²）"
+    },
+    {
+      "fn": "ZAux_Direct_SetDecel",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "float"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置轴减速度 DECEL（单位/秒²）"
+    },
+    {
+      "fn": "ZAux_Direct_SetSramp",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "float"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置 S 曲线平滑时间 SRAMP（毫秒）"
+    },
+    {
+      "fn": "ZAux_Direct_SetCreep",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "float"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置回零爬行速度 CREEP（单位/秒）"
+    },
+    {
+      "fn": "ZAux_Direct_SetJerk",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "double"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "设置 jerk JERK（单位/秒³，**参数是 double 不是 float**）。与 SRAMP 的换算关系待手册确认"
+    },
+    {
+      "fn": "ZAux_Direct_GetAxisStatus",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取轴状态位域 AXISSTATUS（bit3=远程驱动器报错，bit4/5=正/反向硬限位，bit8=随动误差超限）"
+    },
+    {
+      "fn": "ZAux_Direct_GetAxisStopReason",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取轴停止原因（**官方专用函数，参数是 int* 不是 float***）。按位锁存：读到的是历史原因，需写 0 清除"
+    },
+    {
+      "fn": "ZAux_Direct_GetParam",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "float",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读参数（按名称+轴号）。停止原因请用专用的 ZAux_Direct_GetAxisStopReason"
+    },
+    {
+      "fn": "ZAux_Direct_Single_MoveAbs",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "dist",
+          "type": "float"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "单轴绝对定位（指令93）。单位由 UNITS 决定"
+    },
+    {
+      "fn": "ZAux_Direct_Single_Move",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "dist",
+          "type": "float"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "单轴相对定位（指令92）"
+    },
+    {
+      "fn": "ZAux_Direct_Single_Vmove",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "dir",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "单轴连续点动（指令94）。**第 3 参是方向不是速度**：-1 负向 / 1 正向，速度走 SPEED 轴参数"
+    },
+    {
+      "fn": "ZAux_Direct_Single_Cancel",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "mode",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "停止单轴（指令189）。mode：0=取消当前运动 1=取消缓冲 2=取消当前+缓冲 3=立即中断脉冲发送"
+    },
+    {
+      "fn": "ZAux_Direct_MoveAbs",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "numAxes",
+          "type": "int"
+        },
+        {
+          "name": "axisList",
+          "type": "int[]"
+        },
+        {
+          "name": "destList",
+          "type": "float[]"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "多轴绝对插补（指令2）。**4 参数**：轴数 + 轴列表 + 目标位置列表。官方例程：ZAux_Direct_MoveAbs(g_handle, 2, axislist, dposlist)"
+    },
+    {
+      "fn": "ZAux_Direct_Move",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "numAxes",
+          "type": "int"
+        },
+        {
+          "name": "axisList",
+          "type": "int[]"
+        },
+        {
+          "name": "distList",
+          "type": "float[]"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "多轴相对插补（指令3），4 参数"
+    },
+    {
+      "fn": "ZAux_Direct_SetDatumIn",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "inPort",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置原点输入口（回零前必须指定，否则轴会朝不存在的信号一直跑）。C 原型的参数名是 in，生成 C# 时改名以避开关键字"
+    },
+    {
+      "fn": "ZAux_Direct_Single_Datum",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "mode",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "启动单轴回零（指令78）。mode：0 清错 / 1 CREEP 正向 / 2 CREEP 反向 / 3 SPEED 正向再反找；mode+10=碰限位反找；mode+100=回零后自动清零 MPOS（仅 4 系列）"
+    },
+    {
+      "fn": "ZAux_Direct_GetDpos",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "pos",
+          "type": "float",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读取指令位置 DPOS（单位由 UNITS 决定）"
+    },
+    {
+      "fn": "ZAux_Direct_GetMpos",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "pos",
+          "type": "float",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读取**测量反馈位置** MPOS（指令29）。这是真正的编码器反馈，不能用 DPOS 顶替"
+    },
+    {
+      "fn": "ZAux_Direct_GetIfIdle",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "idle",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读运动状态：-1=已停止，0=运动中（官方例程：if (status == -1) 停止 else 运动中）"
+    },
+    {
+      "fn": "ZAux_Direct_GetIn",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "port",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "uint",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读取输入口状态（官方 out 参数是 uint*）"
+    },
+    {
+      "fn": "ZAux_Direct_SetOp",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "port",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "uint"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置输出口"
+    },
+    {
+      "fn": "ZAux_Direct_GetOp",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "port",
+          "type": "int"
+        },
+        {
+          "name": "value",
+          "type": "uint",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读取输出口状态"
+    },
+    {
+      "fn": "ZAux_Direct_HwPswitch2",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "mode",
+          "type": "int"
+        },
+        {
+          "name": "opnum",
+          "type": "int"
+        },
+        {
+          "name": "opstate",
+          "type": "int"
+        },
+        {
+          "name": "modePara1",
+          "type": "float"
+        },
+        {
+          "name": "modePara2",
+          "type": "float"
+        },
+        {
+          "name": "modePara3",
+          "type": "float"
+        },
+        {
+          "name": "modePara4",
+          "type": "float"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "PSO 硬件比较输出（**9 参数**）。模式1=单轴比较（ModePara1~4 是 4 个轴位置比较点），模式2=清除比较点，模式3/4=矢量比较，模式5/6=周期比较"
+    },
+    {
+      "fn": "ZAux_Direct_SetMpos",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "pos",
+          "type": "float"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "设置编码器反馈位置(MPOS)。**ATYPE=4 的轴回零后不一定自动清零 MPOS**，标准回零模式下用 模式+100（仅 4 系列）才会自动清；否则回零完成后调用本函数手动清零"
+    },
+    {
+      "fn": "ZAux_Direct_Regist",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "imode",
+          "type": "int"
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "位置锁存（3 参数：句柄+轴+锁存方式）。imode 取值表（ZBasic 编程手册 REGIST(mode)）：1=Z脉冲上升沿 2=Z脉冲下降沿 3=R0上升沿 4=R0下降沿 6~9=R0沿锁REG_POS+另一路锁REG_POSB 10~13=R0沿锁REG_POS+R1沿锁REG_POSB 14=R1上升沿(150804后版本，4通道独立锁存) 15=R1下降沿。R0/R1 一般对应输入口 0/1；**总线轴用 R0/R1/Z脉冲锁存，脉冲轴用 R2/R3 锁存**（18~21 未见公开表）"
+    },
+    {
+      "fn": "ZAux_Direct_GetMark",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "mark",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "查询是否产生锁存 mark"
+    },
+    {
+      "fn": "ZAux_Direct_GetRegPos",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "int"
+        },
+        {
+          "name": "pos",
+          "type": "float",
+          "is_ref": true
+        }
+      ],
+      "verified": "public-doc",
+      "doc": "读取锁存时的反馈位置"
+    },
+    {
+      "fn": "ZAux_Direct_MoveCircAbs",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "numAxes",
+          "type": "int"
+        },
+        {
+          "name": "axisList",
+          "type": "int[]"
+        },
+        {
+          "name": "end1",
+          "type": "float"
+        },
+        {
+          "name": "end2",
+          "type": "float"
+        },
+        {
+          "name": "center1",
+          "type": "float"
+        },
+        {
+          "name": "center2",
+          "type": "float"
+        },
+        {
+          "name": "direction",
+          "type": "int"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "平面圆弧插补（8 参，**先终点后圆心**）。direction 的 0/1 对应顺/逆时针待手册确认"
+    },
+    {
+      "fn": "ZAux_BusCmd_SDOWrite",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "slot",
+          "type": "uint"
+        },
+        {
+          "name": "node",
+          "type": "uint"
+        },
+        {
+          "name": "index",
+          "type": "uint"
+        },
+        {
+          "name": "subIndex",
+          "type": "uint"
+        },
+        {
+          "name": "dataType",
+          "type": "uint"
+        },
+        {
+          "name": "value",
+          "type": "int"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "写总线从站的对象字典（CiA402 通用入口，Bus_type==0 即 EtherCAT）。7 参：句柄 + 槽位号 + 节点编号 + 对象字典编号 + 子编号 + 数据类型 + 写入值（**官方原型末参是 int32 值，不是指针**）"
+    },
+    {
+      "fn": "ZAux_BusCmd_SDORead",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "slot",
+          "type": "uint"
+        },
+        {
+          "name": "node",
+          "type": "uint"
+        },
+        {
+          "name": "index",
+          "type": "uint"
+        },
+        {
+          "name": "subIndex",
+          "type": "uint"
+        },
+        {
+          "name": "dataType",
+          "type": "uint"
+        },
+        {
+          "name": "value",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "读总线从站的对象字典。7 参同 SDOWrite，末参是 int32* 出参。**数据类型参数决定对象宽度与解释方式**（0x6040/0x6041 是 16 位，0x6064/0x60F4 通常 32 位）—— 取值表待厂商确认"
+    },
+    {
+      "fn": "ZAux_BusCmd_SDOWriteAxis",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "uint"
+        },
+        {
+          "name": "index",
+          "type": "uint"
+        },
+        {
+          "name": "subIndex",
+          "type": "uint"
+        },
+        {
+          "name": "dataType",
+          "type": "uint"
+        },
+        {
+          "name": "value",
+          "type": "int"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "按**轴号**写总线从站对象字典（6 参：句柄+轴号+对象号+子号+数据类型+值）。比按 slot/node 的版本好用 —— 不用知道槽位与节点号"
+    },
+    {
+      "fn": "ZAux_BusCmd_SDOReadAxis",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "uint"
+        },
+        {
+          "name": "index",
+          "type": "uint"
+        },
+        {
+          "name": "subIndex",
+          "type": "uint"
+        },
+        {
+          "name": "dataType",
+          "type": "uint"
+        },
+        {
+          "name": "value",
+          "type": "int",
+          "is_ref": true
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "按**轴号**读总线从站对象字典（6 参，末参 int32* 出参）。用于现场交叉验证 0x6064 实际位置与 MPOS 是否一致"
+    },
+    {
+      "fn": "ZAux_BusCmd_Datum",
+      "ret": "int",
+      "args": [
+        {
+          "name": "handle",
+          "type": "IntPtr"
+        },
+        {
+          "name": "axis",
+          "type": "uint"
+        },
+        {
+          "name": "homemode",
+          "type": "uint"
+        }
+      ],
+      "verified": "official-binding",
+      "doc": "总线轴回零（3 参：句柄+轴号+回零模式）。脉冲轴用 ZAux_Direct_Single_Datum，总线轴用本函数"
+    }
+  ],
+  "bodies": {
+    "Open": [
+      "// ZAux_OpenEth 只有 IP 一个入参（官方原型：int32 __stdcall ZAux_OpenEth(char *ipaddr, ZMC_HANDLE *phandle)）。",
+      "// 构造函数里的 port 对本品牌无效 —— 正运动以太网走固定协议端口。",
+      "// 运行时需要 **zauxdll.dll**（ZAux_* 层）+ **zmotion.dll**（低层 ZMC_* 库，zauxdll 依赖它），",
+      "// 官网按 32/64 位分开下载，两个都要放进输出目录。位数不符 → DllNotFound / EntryPointNotFound。",
+      "var err = Native.ZAux_OpenEth(_ip, ref _handle);",
+      "if (err != 0) throw new MotionException($\"连接控制器 {_ip} 失败，错误码 {err}。请确认 zauxdll.dll + zmotion.dll 都在输出目录、且与进程位数一致。\");",
+      "_isOpen = true;",
+      "// 总线型：轴类型必须与从站实际模式一致 —— 设错时指令照样返回 0，但电机不动作。",
+      "// Atype: 1=脉冲轴 / 65=CSP / 66=CSV / 67=CST（总线轴还需 PDO 映射，待厂商确认）。",
+      "for (var a = 0; a < AxisCount; a++)",
+      "{",
+      "    var e2 = Native.ZAux_Direct_SetAtype(_handle, a, (int)Atype);",
+      "    if (e2 != 0) throw new MotionException($\"设置轴 {a} 类型失败，错误码 {e2}\");",
+      "    // UNITS = 脉冲当量（脉冲/单位）。正运动速度单位是「单位/秒」不是「脉冲/秒」，",
+      "    // UNITS 设错会让节拍差一个数量级 —— 所以建连时就把默认脉冲当量推给控制器。",
+      "    var e3 = Native.ZAux_Direct_SetUnits(_handle, a, (float)GetPulsePerMm(a));",
+      "    if (e3 != 0) throw new MotionException($\"设置轴 {a} 的 UNITS 失败，错误码 {e3}\");",
+      "}"
+    ],
+    "Close": [
+      "if (!_isOpen) return;",
+      "Native.ZAux_Close(_handle);",
+      "_handle = IntPtr.Zero;",
+      "_isOpen = false;"
+    ],
+    "Enable": [
+      "// CiA402 是国际标准：控制字 0x6040 的使能序列 0x06 → 0x07 → 0x0F 各位含义明确，",
+      "// SDO 入口（ZAux_BusCmd_SDORead / SDOWrite）也已核实存在。",
+      "// 但**总线轴的使能归属还没定死**：是由控制器内部按轴类型自动完成，还是必须主机写 PDO/SDO？",
+      "// 两种做法后果完全不同 —— 主机往驱动写控制字属于「可能让电机突然动作」的机器安全动作，",
+      "// 而且各驱动对 0x06 的停留时间、是否必须走满三步要求不同（公开资料只说序列，不说时序）。",
+      "// 在拿到厂商答复前显式失败：宁可不使能，也不猜一个可能让轴突然动的序列。",
+      "throw new NotSupportedException(",
+      "    \"正运动总线轴的伺服使能暂不自动实现：CiA402 序列（0x6040: 0x06→0x07→0x0F）与 SDO 入口已确认，\"",
+      "    + \"但「使能由控制器内部完成，还是需要主机写 PDO/SDO」必须由厂商按型号确认（见 FAE 清单第 1 条）。\"",
+      "    + \"确认后按该型号的推荐序列实现，不要套用通用序列。\");"
+    ],
+    "IsEnabled": [
+      "// 正运动没有公开的「伺服使能」读取入口（CiA402 状态字需 PDO 映射）。",
+      "// 这里返回的是「驱动器无报错」：AXISSTATUS 的 bit3(=8) 为远程驱动器报错。",
+      "// ⚠ 语义与雷赛适配器的 IsEnabled 不同，调用方不要当成 CiA402 使能状态用。",
+      "var status = ReadAxisStatus(axis);",
+      "return (status & 0x8) == 0;"
+    ],
+    "MoveAbs": [
+      "ApplyProfile(axis, profile);",
+      "// 单轴用 Single_ 符号族；多轴插补才用 4 参的 ZAux_Direct_MoveAbs。抄错就是栈错位。",
+      "var err = Native.ZAux_Direct_Single_MoveAbs(_handle, axis, (float)posMm);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 绝对定位失败，错误码 {err}\");"
+    ],
+    "MoveRel": [
+      "ApplyProfile(axis, profile);",
+      "var err = Native.ZAux_Direct_Single_Move(_handle, axis, (float)distMm);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 相对定位失败，错误码 {err}\");"
+    ],
+    "MoveLinear": [
+      "if (targetsMm.Count < 2) throw new ArgumentException(\"直线插补至少需要 2 个轴\");",
+      "if (targetsMm.Count > AxisCount) throw new ArgumentOutOfRangeException(nameof(targetsMm), $\"轴数 {targetsMm.Count} 超过 {AxisCount}\");",
+      "var axes = new int[targetsMm.Count];",
+      "var dest = new float[targetsMm.Count];",
+      "for (var i = 0; i < targetsMm.Count; i++)",
+      "{",
+      "    axes[i] = i;",
+      "    dest[i] = (float)targetsMm[i];",
+      "    ApplyProfile(i, profile);",
+      "}",
+      "// 多轴绝对插补（指令2）：4 参数 = 轴数 + 轴列表 + 目标列表",
+      "var err = Native.ZAux_Direct_MoveAbs(_handle, axes.Length, axes, dest);",
+      "if (err != 0) throw new MotionException($\"直线插补失败，错误码 {err}\");"
+    ],
+    "MoveArc": [
+      "// 官方 ZAux_Direct_MoveCircAbs：绝对圆心圆弧插补，8 参（官方绑定 XML 注释原文）。",
+      "// ⚠ 官方参数顺序是**先终点、后圆心**（fend1/fend2 在前，fcenter1/fcenter2 在后）—— 写反了就画到镜像圆上。",
+      "// 方向编码：**0 = 逆时针，1 = 顺时针**（官方注释原文）。",
+      "ApplyProfile(0, profile);",
+      "ApplyProfile(1, profile);",
+      "var axes = new int[] { 0, 1 };",
+      "var err = Native.ZAux_Direct_MoveCircAbs(_handle, 2, axes,",
+      "    (float)endXMm, (float)endYMm, (float)centerXMm, (float)centerYMm,",
+      "    counterClockwise ? 0 : 1);",
+      "if (err != 0) throw new MotionException($\"圆弧插补失败，错误码 {err}\");"
+    ],
+    "Jog": [
+      "// 点动速度必须真的下发：Single_Vmove 的第 3 参是**方向**，速度走 SPEED 轴参数。",
+      "var p = new MotionProfile(Math.Abs(speedMmS), 1000.0, 5000.0);",
+      "ApplyProfile(axis, p);",
+      "var err = Native.ZAux_Direct_Single_Vmove(_handle, axis, speedMmS >= 0 ? 1 : -1);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 点动失败，错误码 {err}\");"
+    ],
+    "Stop": [
+      "// Single_Cancel 的 mode：0=取消当前运动（按减速停） 3=立即中断脉冲发送（急停用这个）。",
+      "var err = Native.ZAux_Direct_Single_Cancel(_handle, axis, mode == StopMode.Immediate ? 3 : 0);",
+      "if (err != 0) throw new MotionException($\"轴 {axis} 停止失败，错误码 {err}\");"
+    ],
+    "Home": [
+      "// 回零前必须先指定原点输入口 —— 否则轴会朝一个永远不来的信号一直跑。",
+      "if (DatumIn < 0) throw new MotionException(\"正运动回零必须先设置 DatumIn（原点输入口），否则轴会朝不存在的信号一直跑。\");",
+      "// CREEP = 回零爬行速度（单位/秒），回零速度曲线由它决定。",
+      "CheckParam(Native.ZAux_Direct_SetCreep(_handle, axis, (float)Math.Abs(CreepSpeedMmS)), axis, \"CREEP\");",
+      "var err = Native.ZAux_Direct_SetDatumIn(_handle, axis, DatumIn);",
+      "if (err != 0) throw new MotionException($\"设置轴 {axis} 的原点输入口失败，错误码 {err}\");",
+      "// 模式 +100 = 回零后自动清零 MPOS（仅 4 系列支持）。",
+      "// ⚠ 标准回零模式下的自动清零**不覆盖所有轴类型**：ATYPE=4（接入编码器）的轴可能只清 DPOS，",
+      "//   这时要在回零完成后调 ClearFeedbackPosition(axis) —— 否则回零后的工件坐标是错的。",
+      "var mode = (int)DatumMode + (ClearPositionAfterHome ? 100 : 0);",
+      "err = Native.ZAux_Direct_Single_Datum(_handle, axis, mode);",
+      "if (err != 0) throw new MotionException($\"启动轴 {axis} 回零失败，错误码 {err}\");"
+    ],
+    "GetPositionMm": [
+      "float pos = 0;",
+      "var err = Native.ZAux_Direct_GetDpos(_handle, axis, ref pos);",
+      "if (err != 0) throw new MotionException($\"读取指令位置失败，错误码 {err}\");",
+      "return pos; // 单位由 UNITS 决定，UNITS=脉冲/mm 时读回即 mm"
+    ],
+    "GetFeedbackMm": [
+      "// 反馈位置必须真的读编码器（MPOS），不能拿指令位置（DPOS）顶替 ——",
+      "// 两者恒等就意味着跟随误差永远是 0，伺服整定与飞拍补偿全部失去依据。",
+      "// ⚠ 但 MPOS 本身是不是真反馈，取决于 ATYPE：脉冲轴（ATYPE=1/7）上 MPOS 只是 DPOS 的副本。",
+      "float pos = 0;",
+      "var err = Native.ZAux_Direct_GetMpos(_handle, axis, ref pos);",
+      "if (err != 0) throw new MotionException($\"读取轴 {axis} 反馈位置失败，错误码 {err}\");",
+      "return pos; // 单位由 UNITS 决定"
+    ],
+    "HasRealFeedback": [
+      "// ATYPE 决定 MPOS 的真假：脉冲轴（ATYPE=1/7）上 MPOS 只是 DPOS 的副本 ——",
+      "// 那不是「反馈坏了」，是这台轴根本没有编码器反馈通道。",
+      "// 契约测试据此把「跟随误差必须非零」判为不适用，而不是在脉冲轴上误报。",
+      "return AxisHasRealFeedback(Atype);"
+    ],
+    "IsMoving": [
+      "int idle = 0;",
+      "var err = Native.ZAux_Direct_GetIfIdle(_handle, axis, ref idle);",
+      "if (err != 0) throw new MotionException($\"读取轴 {axis} 运动状态失败，错误码 {err}\");",
+      "return idle == 0; // 官方例程：-1=已停止，0=运动中"
+    ],
+    "IsMotionDone": [
+      "return !IsMoving(axis);"
+    ],
+    "GetStopReason": [
+      "// 停止原因用**官方专用函数**读（ZAux_Direct_GetAxisStopReason，out 是 int*）。",
+      "// 读数是位域（参考 AXISSTATUS），0 = 正常停止。",
+      "// 读失败必须抛异常 —— 静默返回 0 等于把「异常停止」说成「正常完成」。",
+      "int reason = 0;",
+      "var err = Native.ZAux_Direct_GetAxisStopReason(_handle, axis, ref reason);",
+      "if (err != 0) throw new MotionException($\"读取轴 {axis} 停止原因失败，错误码 {err}\");",
+      "return reason;"
+    ],
+    "GetStopReasonText": [
+      "// 正运动的停止原因是**位域**（官方注释：停止原因反馈值 参考 AXISSTATUS），不是一个枚举码。",
+      "// 位含义没在官方绑定里给出 → 只报十六进制，不猜哪一位代表什么。",
+      "var reason = GetStopReason(axis);",
+      "if (reason == 0) return \"（正常停止）\";",
+      "return $\"0x{reason:X4}（停止原因位域，含义参考手册 AXISSTATUS）\";"
+    ],
+    "GetState": [
+      "// 正运动没有雷赛那样的 8 态状态机，只能映射到「运动中 / 已停止」两态。",
+      "return IsMoving(axis) ? AxisState.Started : AxisState.Stopped;"
+    ],
+    "ReadInput": [
+      "uint value = 0;",
+      "var err = Native.ZAux_Direct_GetIn(_handle, port, ref value);",
+      "if (err != 0) throw new MotionException($\"读输入口 {port} 失败，错误码 {err}\");",
+      "return value != 0;"
+    ],
+    "WriteOutput": [
+      "var err = Native.ZAux_Direct_SetOp(_handle, port, on ? 1u : 0u);",
+      "if (err != 0) throw new MotionException($\"写输出口 {port} 失败，错误码 {err}\");"
+    ],
+    "SetCompareOutput": [
+      "// PSO 硬件比较输出：位置到点由硬件翻转输出口，用在飞拍/高速取图。",
+      "// 模式2 = 清除旧比较点（不清会一直按老点触发）。",
+      "var err = Native.ZAux_Direct_HwPswitch2(_handle, axis, 2, outPort, 0, 0f, 0f, 0f, 0f);",
+      "if (err != 0) throw new MotionException($\"清除比较点失败，错误码 {err}\");",
+      "// 模式1 = 单轴比较，ModePara1~4 是 4 个比较点。",
+      "// 比较的基准：**带编码器反馈的轴比较 MPOS，不带编码器比较 DPOS** —— 比较点用的是同一套轴单位。",
+      "// 每个比较点都会触发一次 OP 反转，所以只填第 1 个、其余填 1e9（到不了的距离）避免轴过 0 时误触发。",
+      "err = Native.ZAux_Direct_HwPswitch2(_handle, axis, 1, outPort, 1, (float)posMm, 1e9f, 1e9f, 1e9f);",
+      "if (err != 0) throw new MotionException($\"设置硬件比较输出失败，错误码 {err}\");"
+    ],
+    "SetLatch": [
+      "// 位置锁存：外部信号有效瞬间锁存当前反馈位置（视觉/激光测距的高精度触发）。",
+      "// imode 取值表（ZBasic 编程手册 REGIST(mode)）：1=Z升 2=Z降 3=R0升 4=R0降 14=R1升 15=R1降。",
+      "// R0/R1 一般对应输入口 0/1；**总线轴用 R0/R1/Z脉冲锁存，脉冲轴用 R2/R3 锁存**。",
+      "var mode = RegistMode >= 0 ? RegistMode : RegistModeFor(inPort);",
+      "if (mode < 0) throw new MotionException(\"位置锁存源无法确定：请显式设置 RegistMode（脉冲轴用 R2/R3，编码表 18~21 未公开），或对总线轴传入输入口 0/1。\");",
+      "var err = Native.ZAux_Direct_Regist(_handle, axis, mode);",
+      "if (err != 0) throw new MotionException($\"设置轴 {axis} 位置锁存失败，错误码 {err}\");"
+    ],
+    "SetPulsePerMm": [
+      "if (pulsePerMm <= 0) throw new ArgumentOutOfRangeException(nameof(pulsePerMm), \"脉冲当量必须为正\");",
+      "_pulsePerMm[axis] = pulsePerMm;",
+      "// 正运动用官方 UNITS 轴参数做换算：UNITS = 脉冲/单位（专用函数 ZAux_Direct_SetUnits）",
+      "var err = Native.ZAux_Direct_SetUnits(_handle, axis, (float)pulsePerMm);",
+      "if (err != 0) throw new MotionException($\"设置 UNITS 失败，错误码 {err}\");"
+    ],
+    "GetPulsePerMm": [
+      "return _pulsePerMm[axis];"
+    ]
+  },
+  "helpers": {
+    "ApplyProfile": [
+      "private void ApplyProfile(int axis, MotionProfile profile)",
+      "{",
+      "    // 正运动的速度/加速度是**轴参数**，单位跟着 UNITS 走（UNITS/秒、UNITS/秒²）。",
+      "    // ⚠ 官方绑定里**没有**通用的 SetAxisParam(name, value) —— 正运动是「一个轴参数一个专用函数」，",
+      "    //   写一个不存在的函数名，真机上表现为建连即崩（EntryPointNotFound）。",
+      "    CheckParam(Native.ZAux_Direct_SetSpeed(_handle, axis, (float)profile.VelocityMmS), axis, \"SPEED\");",
+      "    CheckParam(Native.ZAux_Direct_SetAccel(_handle, axis, (float)profile.AccelMmS2), axis, \"ACCEL\");",
+      "    CheckParam(Native.ZAux_Direct_SetDecel(_handle, axis, (float)profile.AccelMmS2), axis, \"DECEL\");",
+      "    // SRAMP = 平滑时间，单位**毫秒**，范围 0~250，0 = 退化成梯形。",
+      "    // 由 jerk 反算只是**近似关系**（厂商未给一一对应公式），需实机标定 —— 故夹在 [0, 250]。",
+      "    var sRampMs = 0.0;",
+      "    if (profile.JerkMmS3 > 0)",
+      "        sRampMs = Math.Min(250.0, Math.Max(0.0, profile.VelocityMmS / profile.JerkMmS3 * 1000.0));",
+      "    CheckParam(Native.ZAux_Direct_SetSramp(_handle, axis, (float)sRampMs), axis, \"SRAMP\");",
+      "    // TODO[需核对厂商手册] 官方另有 ZAux_Direct_SetJerk（jerk 限幅，单位 units/s³，double），",
+      "    //   设置后可能自动替换 SRAMP（资料称 SRAMP = ACCEL*1000/JERK）。",
+      "    //   官方绑定里没给这个换算关系，手册确认前不与 SRAMP 并用 —— 两个都设谁生效说不清，行为不可预期。",
+      "}",
+      "",
+      "private void CheckParam(int err, int axis, string what)",
+      "{",
+      "    if (err != 0) throw new MotionException($\"设置轴 {axis} 的 {what} 失败，错误码 {err}\");",
+      "}",
+      "",
+      "private int ReadAxisStatus(int axis)",
+      "{",
+      "    int value = 0;",
+      "    var err = Native.ZAux_Direct_GetAxisStatus(_handle, axis, ref value);",
+      "    if (err != 0) throw new MotionException($\"读取轴 {axis} 的 AXISSTATUS 失败，错误码 {err}\");",
+      "    return value;",
+      "}",
+      "",
+      "private static int RegistModeFor(int inPort)",
+      "{",
+      "    // R0/R1 一般对应输入口 0/1（上升沿的 imode 分别为 3 与 14，ZBasic 手册 REGIST 表已确认）。",
+      "    // 脉冲轴用 R2/R3 锁存（imode 18~21），该段公开表未覆盖 → 走 -1，强制调用方显式指定。",
+      "    switch (inPort)",
+      "    {",
+      "        case 0: return 3;   // R0 上升沿",
+      "        case 1: return 14;  // R1 上升沿",
+      "        default: return -1;",
+      "    }",
+      "}",
+      "",
+      "/// <summary>把编码器反馈位置(MPOS)清零。</summary>",
+      "/// <remarks>",
+      "/// ATYPE=4（接入编码器）的轴，回零后**不一定自动清零 MPOS**：",
+      "/// 标准回零模式只会清 DPOS/MPOS 的常规情形，4 系列可用「模式+100」自动清，",
+      "/// 否则就要在回零完成、位置稳定后调用本方法。",
+      "/// 注意：本方法只在**回零完成之后**调用才有意义，运动中调用会把反馈位置清成 0。",
+      "/// </remarks>",
+      "public void ClearFeedbackPosition(int axis)",
+      "{",
+      "    var err = Native.ZAux_Direct_SetMpos(_handle, axis, 0f);",
+      "    if (err != 0) throw new MotionException($\"清零轴 {axis} 的反馈位置失败，错误码 {err}\");",
+      "}"
+    ],
+    "ZMotionEnums": [
+      "/// <summary>轴类型（Atype）。必须与从站实际工作模式一致，设错时指令返回 0 但电机不动。</summary>",
+      "/// <remarks>",
+      "/// **Atype 同时决定 MPOS 的真假**（见 AxisHasRealFeedback）：ATYPE=1（脉冲轴）与 ATYPE=7 上，",
+      "/// MPOS 只是 DPOS 的副本 —— 那是假反馈，跟随误差恒为 0。",
+      "/// </remarks>",
+      "public enum ZMotionAxisType : int",
+      "{",
+      "    Virtual = 0,             // 虚拟轴（无反馈）",
+      "    Pulse = 1,              // 脉冲轴（**MPOS = DPOS 副本，假反馈**）",
+      "    PulseWithEncoder = 4,   // 带编码器反馈的脉冲轴（MPOS = 编码器，真反馈）",
+      "    PulseWithEncoder5 = 5,  // 带编码器反馈的脉冲轴（资料与 4 同类；确切定义待厂商确认）",
+      "    Virtual7 = 7,           // 资料归入脉冲轴/虚拟轴一类（**假反馈**）；确切定义待厂商确认",
+      "    Galvo = 21,             // 振镜轴（反馈真伪公开资料未说明 → 按无真反馈处理）",
+      "    RtexBus = 50,           // RTEX 总线轴（MPOS = 驱动器 0x6064，真反馈）",
+      "    Csp = 65,               // 总线周期同步位置（需 PDO 含 607A）",
+      "    Csv = 66,               // 总线周期同步速度（需 PDO 含 60FF）",
+      "    Cst = 67                // 总线周期同步力矩（需 PDO 含 6071）",
+      "}",
+      "",
+      "/// <summary>该轴类型下 MPOS 是不是真实反馈。</summary>",
+      "/// <remarks>",
+      "/// **判错的代价**：把假反馈当真反馈 → 跟随误差恒为 0，伺服整定与飞拍补偿全无依据，",
+      "/// 而且现场看不出任何异常（位置显示一切正常）。",
+      "/// 保守原则：公开资料说不清的一律按「无真反馈」处理 —— 少测一条断言，好过在真机上误报。",
+      "/// </remarks>",
+      "public static bool AxisHasRealFeedback(ZMotionAxisType atype)",
+      "{",
+      "    switch (atype)",
+      "    {",
+      "        case ZMotionAxisType.PulseWithEncoder:",
+      "        case ZMotionAxisType.PulseWithEncoder5:",
+      "        case ZMotionAxisType.RtexBus:",
+      "        case ZMotionAxisType.Csp:",
+      "        case ZMotionAxisType.Csv:",
+      "        case ZMotionAxisType.Cst:",
+      "            return true;",
+      "        default:",
+      "            return false;   // 1/7 脉冲轴与虚拟轴：MPOS 只是 DPOS 的副本",
+      "    }",
+      "}",
+      "",
+      "/// <summary>回零方式。对应 ZAux_Direct_Single_Datum 的 mode。</summary>",
+      "public enum ZMotionDatumMode : int",
+      "{",
+      "    ClearError = 0,      // 清错",
+      "    CreepPositive = 1,   // CREEP 速度正向找原点",
+      "    CreepNegative = 2,   // CREEP 速度反向找原点",
+      "    SpeedPositive = 3    // SPEED 速度正向找原点再反找边沿",
+      "    // TODO[需核对厂商手册] mode 4~9 的确切语义",
+      "}"
+    ],
+    "ZMotionConfig": [
+      "/// <summary>轴类型。默认 CSP（总线周期同步位置）。脉冲输出场景请改成 Pulse。</summary>",
+      "public ZMotionAxisType Atype { get; set; } = ZMotionAxisType.Csp;",
+      "",
+      "/// <summary>回零方式。</summary>",
+      "public ZMotionDatumMode DatumMode { get; set; } = ZMotionDatumMode.CreepPositive;",
+      "",
+      "/// <summary>原点输入口编号。-1 = 未配置（回零会直接抛异常，不允许轴朝不存在的信号跑）。</summary>",
+      "public int DatumIn { get; set; } = -1;",
+      "",
+      "/// <summary>回零爬行速度（mm/s）。</summary>",
+      "public double CreepSpeedMmS { get; set; } = 20.0;",
+      "",
+      "/// <summary>回零完成后是否自动把 MPOS 清零（仅 4 系列控制器支持）。</summary>",
+      "public bool ClearPositionAfterHome { get; set; } = false;",
+      "",
+      "/// <summary>位置锁存源 imode。-1 = 按输入口编号自动推导（0~3）；需要 Z 脉冲沿或下降沿时手动指定。</summary>",
+      "public int RegistMode { get; set; } = -1;"
+    ],
+    "Cia402": [
+      "/// <summary>CiA402（IEC 61800-7-201）常用对象字典与控制字位。跨品牌标准，数值固定。</summary>",
+      "public static class Cia402",
+      "{",
+      "    // ---- 对象字典（CiA402 标准索引）----",
+      "    public const int ControlWord = 0x6040;        // 控制字",
+      "    public const int StatusWord = 0x6041;         // 状态字",
+      "    public const int ActualPosition = 0x6064;     // 实际位置（编码器真反馈）",
+      "    public const int FollowingError = 0x60F4;     // 跟随误差",
+      "    public const int TargetPosition = 0x607A;     // 目标位置（CSP 模式 8）",
+      "    public const int TargetVelocity = 0x60FF;     // 目标速度（CSV 模式 9）",
+      "    public const int TargetTorque = 0x6071;       // 目标力矩（CST 模式 10）",
+      "    public const int ModesOfOperation = 0x6060;    // 运行模式",
+      "    public const int SoftwareLimitHigh = 0x6401;  // 上限软限位",
+      "    public const int SoftwareLimitLow = 0x6402;   // 下限软限位",
+      "",
+      "    // ---- 控制字位（CiA402 位定义）----",
+      "    public const ushort SwitchOn = 0x0001;         // 上电",
+      "    public const ushort EnableVoltage = 0x0002;    // 使能电压",
+      "    public const ushort QuickStop = 0x0004;         // 快速停止（0=不激活）",
+      "    public const ushort EnableOperation = 0x0008;  // 运行使能",
+      "",
+      "    // ---- 常用使能序列（多数驱动器接受；时序要求各型号不同）----",
+      "    public const ushort Shutdown = 0x0006;         // 0x06 = 上电 + 电压就绪",
+      "    public const ushort SwitchOnReady = 0x0007;    // 0x07 = 再加快速停止",
+      "    public const ushort EnableOp = 0x000F;         // 0x0F = 再加运行使能",
+      "}"
+    ],
+    "BusSdo": [
+      "/// <summary>按轴号读总线从站对象字典（CiA402 通用入口，官方 SDOReadAxis，6 参）。</summary>",
+      "/// <param name=\"axis\">轴号（对应控制器上的总线轴）</param>",
+      "/// <param name=\"index\">对象字典编号，如 0x6064 实际位置</param>",
+      "/// <param name=\"subIndex\">子编号</param>",
+      "/// <param name=\"dataType\">数据类型编码（按厂商文档）</param>",
+      "/// <remarks>",
+      "/// 用途：现场核对 MPOS 是不是真反馈 —— 用 0x6064（驱动器实际位置）交叉验证",
+      "/// ZAux_Direct_GetMpos 的读数：两者不等说明 ATYPE 配错、或反馈通道没接上。",
+      "/// 0x6064 是驱动器原始计数，与 MPOS 的换算关系取决于电子齿轮，需现场核对。",
+      "/// 官方原型末参是 int32*（不是字节缓冲区）—— 一次只能读 32 位量。",
+      "/// </remarks>",
+      "public int ReadBusAxisObject(int axis, int index, int subIndex, int dataType)",
+      "{",
+      "    int value = 0;",
+      "    var err = Native.ZAux_BusCmd_SDOReadAxis(_handle, (uint)axis, (uint)index, (uint)subIndex,",
+      "        (uint)dataType, ref value);",
+      "    if (err != 0) throw new MotionException($\"读取轴 {axis} 的总线对象 0x{index:X4} 失败，错误码 {err}\");",
+      "    return value;",
+      "}"
+    ]
+  }
+}

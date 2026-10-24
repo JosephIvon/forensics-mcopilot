@@ -1,0 +1,97 @@
+{
+  "provenance": "real_record",
+  "evidence_type": "external",
+  "truth_basis": "**独立基线**，不是「我造的数据我自己的规则读」：①厂商原始导出与上游解析管线的 meta（out/crossval_export10_meta.json）②docs/交叉验证_Export10.md §3 抄下来的结论 ③scripts/verify_servo_spectrum.py 从规范 CSV 独立复算（只用 csv+math+自写 FFT，**不 import mcopilot 的估计器**）。三者一致才算数。",
+  "not_evidence_note": "本文件只提供**事实**（数据是什么），不提供**结论**（工具该说什么）。工具行为是否符合这些事实，由 tests/test_mcopilot.py 里的真实记录回归断言来管。",
+  "source": {
+    "vendor": "beckhoff",
+    "product": "CODESYS Scope View (TwinCAT 3)",
+    "raw_file": "Export10_244531.csv",
+    "raw_bytes": 9175989,
+    "raw_sha256": "070dc74f26b9b8e24092a00fb38a11fd54cbd449eb48f23a333c64a3cdcb5660",
+    "export_start": "2023-05-24 11:27:40.879",
+    "export_end": "2023-05-24 11:27:59.529",
+    "canonical_csv": "samples/servo/twincat_export10.csv",
+    "note": "规范 CSV 只保留 5 个通道（time_ms/cmd_pos/fb_pos/vel/vel_fb）；其余 28 个通道在 meta.extra_channels 里，**没有电流/转矩通道**"
+  },
+  "from_vendor_meta": {
+    "basis": "上游解析管线 meta（out/crossval_export10_meta.json），不来自 mcopilot servo",
+    "vendor_triple": {
+      "cmd": "Measurement_Connector.dPosition_test_tar",
+      "fb": "Measurement_Connector.dPosition_asco_enc",
+      "fe_candidate": "Measurement_Connector.dPosition_diff",
+      "cmd_minus_fb": {
+        "mean": 0.9535331797797663,
+        "std": 0.01755149485325443,
+        "max_abs": 1.170038993416
+      },
+      "verdict": "厂商自己用的是这一对通道；它们之间的差才是跟随误差量级"
+    },
+    "canonical_pair_is_not_same_axis": true,
+    "canonical_pair_verdict": "任务书指定的 dPosition_asco→cmd_pos / dPosition_asco_enc→fb_pos 这一对，**不是同一轴的指令/反馈**（厂商元数据 notes[5]）：残差几乎全是 180.11 mm 的常数偏置，std 只占 max 的 0.15%。**不能把 cmd−fb 当跟随误差读**。",
+    "taskbook_fe_numbers_not_reproducible": "任务书给的 mean=-0.9076 / std=6.238 / max|.|=851 在本文件上复现不出来 —— 那是把第 12 行的表头行当成第一条数据行的污染解析（上游 data/validate_raw.py L260-L261 明确记了这个坑）"
+  },
+  "recomputable": {
+    "n_samples": 18651,
+    "dt_ms": 1.0,
+    "sample_rate_hz": 1000.0,
+    "duration_s": 18.65,
+    "canonical_columns": [
+      "time_ms",
+      "cmd_pos",
+      "fb_pos",
+      "vel",
+      "vel_fb"
+    ],
+    "has_err_column": false,
+    "cmd_staircase_changes": 845,
+    "cmd_staircase_intervals_ms": [
+      9.0,
+      10.0,
+      11.0,
+      20.0,
+      30.0
+    ],
+    "cmd_refresh_hz_nominal": 100.0,
+    "analysis_window": {
+      "rule": "首个 cmd 变化 ~ 末个 cmd 变化（指令在动的那段）",
+      "t_start_ms": 10077.0,
+      "t_end_ms": 18616.0,
+      "n_samples": 8540
+    },
+    "fe_cmd_minus_fb": {
+      "mean": 179.81292918637072,
+      "std": 0.27037433334445016,
+      "max_abs": 180.14952000000002,
+      "dynamic_to_total_ratio": 0.0015008329377977257
+    },
+    "band_12_120hz": {
+      "cmd_detrended_energy_ratio": 0.5405841333079229,
+      "fb_detrended_energy_ratio": 0.12391486833713435,
+      "err_energy_ratio": 0.638092134364819,
+      "cmd_detrended_peak_hz": 100.04,
+      "fb_detrended_peak_hz": 12.27,
+      "err_peak_hz": 100.04,
+      "cmd_near_refresh_rel": 1.0,
+      "fb_near_refresh_rel": 0.1633124914946142
+    },
+    "refresh_line_in_error": {
+      "freq_hz": 100.0,
+      "amplitude_mm": 0.006268074018429711,
+      "amplitude_over_dynamic_std_whole_record": 0.023182947659622487,
+      "amplitude_over_dynamic_std_moving_window": 0.8491107864357377,
+      "note": "指令刷新线在误差里的**绝对幅值**，相对两个口径的误差动态量级：①整段动态 std（含前 10 s 的 180 mm 常数偏置区）→ 约 2%，**可忽略**；②动段动态 std（只有 ±0.007 mm）→ 约 85%，**占主导**。判据用哪个口径必须写明；用带内能量占比会被这条真实但微弱的线带偏（见 docs/交叉验证_Export10_数据复算.md §三）。"
+    }
+  },
+  "corrections": {
+    "note": "**本文件的事实口径以 docs/交叉验证_Export10_数据复算.md 为准** —— 那是对《交叉验证_Export10.md》数据结论的独立复算与更正。原报告 §3 末表有两处已被推翻：",
+    "更正一": "原报告说 cmd / fb 的「12–120 Hz 带内能量占比」是 65.71% / 3.77% → **不成立**。复算：cmd 2.21% / fb 2.21% / err 63.75%（本文件用整段动窗口 + 去趋势，口径不同但 err 一致在 63.8%）。**带内占比 63~66% 这个量级只对 err 成立**。",
+    "更正二": "原报告说「误差谱带内内容 100% 来自指令刷新率，反馈通道里根本没有」→ **错**。fb 里确实有 99.6 Hz 谱线（幅值 0.006447 mm，甚至比 err 里的 0.001551 mm 还大）——因为 cmd 是 100 Hz 刷新的阶梯，轴的反馈当然跟着走。**这条线在 cmd / fb / err 里物理都真实存在**，不是「伪谱线」，只是幅值可忽略、且属指令侧而非对象响应。"
+  },
+  "key_readings": {
+    "指令刷新率": "cmd 是 100 Hz 刷新的阶梯（845 次变化，间隔众数 10 ms）→ 100 Hz 及其谐波是**指令侧成分**（真实存在，但非对象响应）",
+    "误差谱带内成分": "误差（cmd−fb）在整段口径下 12–120 Hz 带内 63.8% 的能量集中在 100.04 Hz",
+    "这条线该不该当物理现象": "**该用绝对幅值比，不用带内占比**：100 Hz 线在误差里的绝对幅值 0.0063 mm；相对**整段**误差动态 std(0.2704 mm) 只有 **2.3%**（可忽略），但相对**动段**动态 std(0.0074 mm) 是 85%（占主导）。判据用哪个口径必须写明。",
+    "跟随误差口径": "cmd/fb 不是同一轴 → cmd−fb = 179.81 ± 0.27 mm，其中 99.85% 是常数偏置，动态部分只有 ±0.34 mm"
+  }
+}

@@ -1,0 +1,911 @@
+==========================================================================================
+章： 00-导读.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+==========================================================================================
+章： ch01-审计者姿态.md ｜ 素材仓顺序： ['mcopilot', 'axiscope']
+==========================================================================================
+  [OK] AUDIT-minimax-mcopilot.md:3-4 → 审计方式：实跑测试、独立数值校验、读源码查是否硬编码答案、比对规则与样例来源。 … 不采信其自述结论。
+  [OK] AUDIT-minimax-mcopilot.md:51 → 分歧比它的总结听起来小得多。
+  [OK] AUDIT-glm-code-factory.md:3-4 → 日期：2026-10-20　核查方式：**验证性执行**（真实调用 `csc.exe` 重编译、真实运行产物、逐行读生成代码）， … 不是读它的交付说明。对象目录：`%USERPROFILE%\Documents\Trae-CN\temp_20261019_01\`
+  [OK] AUDIT-minimax-round3.md:3-4 → 日期：2026-10-20　方式：验证性执行（实跑 pytest、实跑 `compile_check.ps1`、逐文件字节头检查、 … 跨文件签名一致性实读、diff 比对旧产物）　对象：
+  [OK] AUDIT-glm-code-factory.md:19 → | 6 品牌适配器编译「0 错误 0 警告」 | `mc_all`/`mc_gts`/`mc_leadshine`/`mc_zmotion`/`mb_temp` 确为 0/0；**`mc_softwin` 有 2 条 CS0162**（`SoftWinController.cs:60,223`） |…
+  [OK] AUDIT-glm-code-factory.md:21 → | 「全品牌运行 PASS」 | 五个品牌套件的 `Program.cs` 全是 `CREATE_BRAND = Brand.Virtual`；**没有任何一次执行走过 P/Invoke 路径** | **不成立** |
+  [OK] AUDIT-glm-code-factory.md:22 → | 「换卡演示只改一行，业务代码零改动」 | 业务层确实只依赖 `IMotionController`；**但能力矩阵与 Brand 枚举把 ACS 列为 B 级，工厂里 `case Acs` 不存在、无 `AcsController.cs`**，改成 `Brand.Acs` 直接抛 `NotSup…
+  [OK] AUDIT-glm-code-factory.md:40-41 → - 骨架生成的 C# 里残留未渲染的 JS 拼接串：`"[TODO] 按《' + label + '手册》…"`（`GaoChuan`/`SoftWin.cs:49,61`）； … - README 标题在全品牌模式下印出 `undefined`。
+  [OK] tests/test_mcopilot.py:485 → 下面每一条都对着厂商官方手册原文核对过；任何一条回退都要立刻被发现。
+  [OK] AUDIT-minimax-round3.md:21-22 → **判定：证据等级 = 二手网络转录。** `sources` 里没有任何一条能定位到手册页码或原文片段， … 本机也无法追溯验证。所以"手册原文核对"这个声称**不成立**，它是 `public-doc` 的口头升格。
+  [OK] AUDIT-minimax-round3.md:9-10 → **工程纪律是真的，且明显强于 GLM 那版；但它本轮的招牌话「逐条对着厂商官方手册原文核对」没有支撑。** … 更糟的是，这句话恰好只出现在**两份面向外部的文档**里，而它自己的数据文件仍然诚实标着 `public-doc`。
+  [OK] AUDIT-glm-code-factory.md:46 → 2. **`Check()` 失败即抛异常、退出码非 0**——是真断言，不是打 PASS 字。这正是我们实现期要的标准。
+  [OK] AUDIT-minimax-round3.md:40 → | 适配器编译零警告 + 仿真器自检 6/6 实跑 | PowerShell 7.6.7 下 `EXIT=0`，Roslyn 编译后真跑 `MotionSelfCheck.exe`，6/6 `[ok]` | **属实**；但脚本在 **PS 5.1 下主动 `exit 0` 跳过**，"零警告"依赖…
+  [OK] AUDIT-glm-code-factory.md:85 → 三家共同点，也是本项目最该讲的一句话：**问题都不在"能不能生成"，在"谁来判定生成得对"。**
+  [OK] SoftWinController.cs:60 → {
+==========================================================================================
+章： ch02-证据等级.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] chapters/ch02-三态真值.md:20 → > 三者不可互相冒充；够不到的那一级，显式挂起——挂起不是欠账，是设计。**
+  [OK] docs/项目回顾与收尾_20261022.md:26-27 → | src | 15 个 py / 5,263 行 | `src/axiscope` + `src/agent` | … | tests | 3,743 行 / **403 项全过** | 当日 `python -m pytest tests`，24.71s |
+  [OK] README.md:101-103 → 引用纪律：外部会话（minimax 三轮、GLM 系）的手册与 SDK 绑定**不在本仓库**，故其核对结论对本仓库 … （`docs/kb/KB2-waveform-formats.md:619-628`，A-32 / A-89）。
+  [OK] chapters/ch02-三态真值.md:20 → > 三者不可互相冒充；够不到的那一级，显式挂起——挂起不是欠账，是设计。**
+  [OK] KB2:662-665 → 1. **不把第三方转录的 SDK 签名当我们的事实来源（A-32）**。外部智能体（minimax 三轮）的 C#/Python 适配器把 P/Invoke 签名做成了「二手网络转录」——其仓库内**当时没有任何厂商手册 PDF、摘录或截图**，来源字段只有两条
+  [OK] KB2:666-671 → **状态更正（A-89）**：该会话第四轮已取得官方手册与官方 SDK 绑定，并把绑定源文件抽取成函数清单 （它称正运动 402 / 雷赛 1391 个函数），据此抓出三个真机即崩缺陷（`ZAux_*` 的 DLL 归属指错、
+  [OK] KB0:80 → | `public-doc` | 二手公开资料转录，**含第三方会话/别的 agent 的转述**（`verified_by = third_party_report`） | "按公开资料形成下表，请厂商指出不符项"（A-32 原口径不变） | 转述**不升档、不计入 `已核对 k`**，只改变"这…
+  [OK] C5:82 → | **案例执行分列** | 每族报告 `执行 N / 跳过 M`，凡标注"需真机 / 需厂商手册原文 / 需现场接线表 / `skipped` / `pending`"的案例**单独成列，不进通过数**（A-87） | 分列呈现率 100%，禁止合并汇总 | 载体是 KB8 §6 的配额表与 §执…
+  [OK] KB0:435 → | A-87 | 触发者是 minimax 第四轮问答的自审（"首次上机务必低速点动验证方向与 IO 位号——你有没有做仿真先行验证？"）：它承认仿真器**根本没建模点动**、契约测试**零条点动用例**，随后补了"仿真器建模点动 + 自检 7/7"，并把参考语义**自己定为**"速度符号 = 运动…
+  [OK] KB0:436 → | A-88 | 触发者是 GLM 对其"上位机代码工厂"的第四轮自审（用户逐条驳回后它逐条核实并承认）：它生成的 SDK 适配层签名是**凭记忆写的**（如 `ZAux_Direct_GetIdle/Servo` 是否存在、`GT_GetSts` 用 `out int` 还是 `short*`），…
+  [OK] KB2:674-675 → 把「已对照官方手册」这类措辞发给 FAE，一旦对方翻出手册发现某条不符（如 `HwPswitch2` 的模式参数口径）， 损失的是整份清单的可信度（`AUDIT-minimax-round3.md` §二）。
+  [OK] C5:83 → | **外部核对计数** `external_counts` | `audit.external_counts = {verified k, total n}`，只有 `verified_by = self` 且工件存证在本仓库内才计 `k`（C3 规则 17、A-88/A-89） | 不设通过线，…
+  [OK] C5:56 → | `fault_modes[]` | KB0 §2 的 22 个 slug，禁显示名 | 与 C3 `hypotheses[].fault_mode` 同一命名空间，否则真值标签对不上 | A-19 |
+  [OK] KB2:619-628 → ⚠ **改名一处（A-54 单一名字律）**：该猜测器原名 `channel_role`，与 `src/axiscope/mapping.py::channel_role`（审计**之后**回答"canonical 还是 extra"、返回字符串）
+  [OK] KB2:658-694 → ### 事实来源纪律（A-32 / A-31 / A-33） 
+==========================================================================================
+章： ch03-引进纪律.md ｜ 素材仓顺序： ['axiscope', 'mcopilot']
+==========================================================================================
+  [OK] docs/AUDIT-minimax-mcopilot.md:72-73 → 3. **归属纪律**：复用部分必须在 README 与作品集中标注来源，不得以"我写的"呈现。 … 面试被追问实现细节时答不上来，比不复用更糟。
+  [OK] README.md:83 → ### 7. 复用设计标注（非本项目原创的部分）
+  [OK] README.md:85-86 → 义务来源逐字：`docs/AUDIT-minimax-mcopilot.md:72` … 「**归属纪律**：复用部分必须在 README 与作品集中标注来源，不得以"我写的"呈现。」
+  [OK] README.md:88-99 → | 复用的设计 | 本仓库落点 | 标注来源（已在本仓库写明"非原创"） | … | 六个**软件诱导缺陷形态**（DPOS 冒充反馈、`_unit` 双重换算、IO 电平当错误码、PSO 比较点、回零后 MPOS 未同步、锁存源选错） | KB3 / C3 | `docs/kb/KB2-wavef…
+  [OK] README.md:90 → | 接入卡**九项字段结构**（minimax《厂商手册索取清单》） | KB2 §4「接入卡模板」 | `docs/kb/KB2-waveform-formats.md:369-371`：「该九项字段结构参考第三方智能体（minimax）《厂商手册索取清单》的工程做法，**不是本项目原创**」／「…
+  [OK] AUDIT-minimax-round3.md:77 → 2. **《索取清单》的 9 项结构直接复用**为 KB2 §4「跨厂商接入卡」的字段模板
+  [OK] README.md:91 → | **七段 jerk 受限 S 曲线**轨迹生成器的设计思路 | KB5 §4.1–§4.2 | `docs/kb/KB5-simulation-plant.md:793-805`：「**参考来源（设计思路，非代码）**」+「**借鉴**：七段对称结构…」「**自己重写**：…」「不复制任何代码行…
+  [OK] README.md:95 → | **A/B/C 诚实分级**的呈现方式（用于跨厂商能力矩阵） | C5 §8、KB2 §4.9 | `docs/AUDIT-glm-code-factory.md:70-72`：「**A/B/C 诚实分级的呈现方式**用在我们自己的跨厂商能力矩阵上……**不采纳**它把清单交给被检对象自身生成的…
+  [OK] AUDIT-glm-code-factory.md:70-72 → 2. **A/B/C 诚实分级的呈现方式**用在我们自己的跨厂商能力矩阵上（C5 §8 兜底方向、KB2 §4.9）： … 我们的清单来源必须是外部（手册页码/实测/文献），否则就是第三节那个循环。
+  [OK] README.md:99 → | 六个**软件诱导缺陷形态**（DPOS 冒充反馈、`_unit` 双重换算、IO 电平当错误码、PSO 比较点、回零后 MPOS 未同步、锁存源选错） | KB3 / C3 | `docs/kb/KB2-waveform-formats.md:636-639`（A-33）：一律表述为「**第三方…
+  [OK] OUTLINE-VOL2.md:43 → | ch03 | 引进纪律：复用与署名 | 七项复用逐条标注；"不得以'我写的'呈现"；CC BY 4.0 署名义务逐字在案 | README §7、KB2 §4.9 |
+  [OK] README.md:90-99 → | 接入卡**九项字段结构**（minimax《厂商手册索取清单》） | KB2 §4「接入卡模板」 | `docs/kb/KB2-waveform-formats.md:369-371`：「该九项字段结构参考第三方智能体（minimax）《厂商手册索取清单》的工程做法，**不是本项目原创**」／「…
+  [OK] README.md:88 → | 复用的设计 | 本仓库落点 | 标注来源（已在本仓库写明"非原创"） |
+  [OK] README.md:6 → ## 数据来源与署名
+  [OK] README.md:10 → 以下四行**逐字抄自本仓库**，未作改写：
+  [OK] README.md:29-34 → 数据集标题按 KB7 出处与许可表首行（`docs/kb/KB7-dataset-da-rus-cat.md:10`）登记。 … （发布门断言三 token 归零，执行记录 `data/redact_pii_20261022.py` + 侧车 md5 前后对照）。
+  [OK] README.md:51-53 → **待补**：`doi:10.1002/acs.3276` 的**论文标题**在本仓库不存在。已检索 `docs/kb/`、`docs/contracts/`、`data/`、 … `build/probe_kb7_b_group.out:351` 已把它判为「外部出版物，未落盘 ⟹ 无法复算」。此…
+  [OK] README.md:65-67 → **待补**：该表只含 DOI／标题／文件数／关键 fs／用途五列，**无作者列**；除 `-3759`（`Steinle, Lukas`）与 … 其余五个 DOI 的作者姓名在本仓库**未见登记**，不得据「同一系列」推定为 Reichenbach。
+  [OK] README.md:74 → ### 6. 脱敏门禁（发布前必做 → **已执行 2026-10-22**）
+  [OK] README.md:21-24 → - 权利 URI（`data/raw/DD_head.csv.source.txt:5`，抄自 DaRUS API `latestVersion.license`）： … `data/raw/darus3600.json` / `data/raw/darus5171.json` 的 `latestV…
+  [OK] README.md:79-81 → **已执行（2026-10-22，`adf4c4b`）**：一次性执行记录 `data/redact_pii_20261022.py`； … 两个侧车登记 md5 前后对照（Export10 `8cba13df…`→`178a6308…`、DD_head `995d0d91…`→`3f80439d……
+  [OK] README.md:101-103 → 引用纪律：外部会话（minimax 三轮、GLM 系）的手册与 SDK 绑定**不在本仓库**，故其核对结论对本仓库 … （`docs/kb/KB2-waveform-formats.md:619-628`，A-32 / A-89）。
+  [OK] docs/kb/KB7-dataset-da-rus-cat.md:8-18 → | | DARUS-3600 | DARUS-5171 | …
+  [OK] OUTLINE-VOL2.md:43 → | ch03 | 引进纪律：复用与署名 | 七项复用逐条标注；"不得以'我写的'呈现"；CC BY 4.0 署名义务逐字在案 | README §7、KB2 §4.9 |
+  [OK] README.md:76-77 → 脱敏字段级规则与断言以 `docs/kb/KB2-waveform-formats.md` §六（`:780`–`:818`）为准，其中 `:804` 逐字： … `脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。`
+  [OK] README.md:48 → - 归属纪律（`docs/kb/KB7-dataset-da-rus-cat.md:420-422`）：引用须带该 DOI + CC BY 4.0，
+  [OK] KB2:369-371 → > **该九项字段结构参考第三方智能体（minimax）《厂商手册索取清单》的工程做法，不是本项目原创** > （用户定的引用纪律：借用其可执行骨架，须注明出处、不得当作我们自己的发明）。
+  [OK] KB5:793-805 → **参考来源（设计思路，非代码）**：`motion_lab.py` 的七段 jerk 受限轨迹生成器， 路径
+  [OK] KB2:636-639 → 红线开火「有效时长<0.5s (实测 0.1279s)」+「cur_q/vel_fb/fe 未识别（2/2 列未映射）」⟹ **verdict 仍是 reject**， 与台账口径一致；`data/raw` 全量切片六件的 `小数逗号` 一律 `False`、accept/reject 计数一字未动…
+  [OK] KB5:793 → **参考来源（设计思路，非代码）**：`motion_lab.py` 的七段 jerk 受限轨迹生成器，
+  [OK] KB2:371 → > 本项目只吸收其**格式**，不采用其任何 SDK 签名作为事实来源（见本节末「事实来源纪律」）。
+  [OK] KB7:11 → | 作者 | Reichenbach, Thomas — University of Stuttgart (ROR 04vnq7t77) | 同 |
+  [OK] KB7:13 → | 许可 | **CC BY 4.0** | **CC BY 4.0** |
+  [OK] KB7:15 → | DOI | 10.18419/DARUS-3600 | 10.18419/DARUS-5171 |
+  [OK] KB7:17 → 署名要求：引用须注明 Reichenbach/University of Stuttgart + DOI + CC BY 4.0。
+  [OK] KB7:14 → | 文件数 | 393 | **3488** |
+  [OK] KB7:10 → | 标题 | Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running Properties of Synthetic Fiber Ropes | Meas…
+  [OK] KB7:492 → **不得**并入 "Reichenbach / University of Stuttgart" 一行；且它**是机器人关节实验，不是半导体产线数据**。
+  [OK] KB7:103 → 引用须带该 DOI + CC BY 4.0，**不得**并入 "Reichenbach / University of Stuttgart" 一行。
+  [OK] KB7:31 → | `10.5281/zenodo.21526135` | Multi-Block Vibration and Motor-Current Dataset from an Industrial Wire-Drawing Machine | — | 30 s/样本 | 8 路块电流真实，但 `dt_j…
+  [OK] KB7:504-507 → | CWRU | T1-b | `[待核]` | **本文无可核实 DOI**；采样率、文件名、工况数值一律不登记——未经实际下载解析，凭记忆填写违反 A-67 | | Paderborn CM | T1-b | `[待核]` | 同上 |
+  [OK] KB7:497-498 → 硬红线：**本文不编造 DOI、论文标题、文件名、采样率或任何数值**——凡未走"实际下载与解析" 核验流程（见文件头核验纪律）的，一律登记 `[待核]`，不得凭记忆填 DOI、不得猜 URL（A-67）。
+  [OK] KB2:780 → ## 六、脱敏要求（发布作品集前必做）
+  [OK] KB5:800-801 → * **借鉴**：七段对称结构（+j / 0 / −j | 匀速 | −j / 0 / +j）、`a_eff = min(a_max, √(v·j))` 的加速度受 jerk 约束这一物理上限、峰值速度不足时用二分回解、以及用黄金向量做回归。
+  [OK] KB5:793 → **参考来源（设计思路，非代码）**：`motion_lab.py` 的七段 jerk 受限轨迹生成器，
+  [OK] KB2:809 → - `assert all(meta.provenance.doi in {"10.18419/DARUS-3600","10.18419/DARUS-5171"})`（署名在包）
+  [OK] KB7:17 → 署名要求：引用须注明 Reichenbach/University of Stuttgart + DOI + CC BY 4.0。
+  [OK] KB2:804 → - 脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。
+  [OK] KB7:10 → | 标题 | Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running Properties of Synthetic Fiber Ropes | Meas…
+  [OK] KB2:804 → - 脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。
+  [OK] KB7:492 → **不得**并入 "Reichenbach / University of Stuttgart" 一行；且它**是机器人关节实验，不是半导体产线数据**。
+  [OK] KB7:103 → 引用须带该 DOI + CC BY 4.0，**不得**并入 "Reichenbach / University of Stuttgart" 一行。
+  [OK] KB7:504-507 → | CWRU | T1-b | `[待核]` | **本文无可核实 DOI**；采样率、文件名、工况数值一律不登记——未经实际下载解析，凭记忆填写违反 A-67 | | Paderborn CM | T1-b | `[待核]` | 同上 |
+==========================================================================================
+章： ch04-契约七层与验证门控.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] src/axiscope/c1.py:1-3 → """C1 样本包装配：厂商 CSV → meta.json + waveform.tsv（C1 契约）。 … 只做契约明文要求的事；任何超出契约的推断一律不写进包，改写进 meta.audit.assumptions。
+  [OK] src/axiscope/c3validate.py:1-3 → """C3 诊断输出契约的机器可判定校验器（不可协商规则 1–21 + KB4 §0 不变式）。 … 纪律：`validate` 只做结构 / 数值 / 措辞判定，不调 LLM、不联网；诊断以 dict 传入。
+  [OK] docs/DECISION-2026-10-19-方向裁决.md:12 → | 先冻结契约与评测集，再写 agent | C 结尾 | 当前阶段（P0/P1）不做任何 agent 代码 |
+  [OK] docs/项目回顾与收尾_20261022.md:35-36 → 1. **先冻结契约与评测集，再写 agent**（DECISION §1：当前阶段 P0/P1 不做任何 … agent 代码）——契约先行在本仓的原始出处。
+  [OK] src/axiscope/assertions.py:1-4 → """KB2 §8.3 端到端断言 + §6 脱敏断言。 … 断言在跑 ≠ 断言能抓）。
+  [OK] src/axiscope/confidence.py:1-4 → """KB4 §2 置信度与证据模型：确定性数值层。 … 内部一律全精度，只在 `display()`（序列化层）取 2 位小数（C3 硬性规则 15）。
+  [OK] docs/项目回顾与收尾_20261022.md:53-54 → - **Tier C 真机**：离线引擎的全部结论停留在仿真与数据集验证层，真机波次验证 … 未开始——设计性挂起，不是欠账（与 mcopilot T1-T5 同一款记法）。
+  [OK] docs/DECISION-2026-10-19-方向裁决.md:12 → | 先冻结契约与评测集，再写 agent | C 结尾 | 当前阶段（P0/P1）不做任何 agent 代码 |
+  [OK] docs/DECISION-2026-10-19-方向裁决.md:12 → | 先冻结契约与评测集，再写 agent | C 结尾 | 当前阶段（P0/P1）不做任何 agent 代码 |
+  [OK] C1:3-5 → 所有上游解析器的输出、所有下游分析器的输入，都必须落在这个格式上。 诊断内核**不认识**任何厂商格式，只认识本契约。
+  [OK] C2:3-5 → `features()` 的纯函数输出：只读 C1 样本包，只产出**确定性可复现**的数值特征。 规则引擎（C3）只能读 C2，不允许自己再做 FFT——保证"证据"与"判断"分离。
+  [OK] C7:5-8 → KB6 的寻光与标定判据需要一整类**不属于伺服波形**的证据：功率计采样元数据、"功率—位置"曲线形态、 跨扫描趋势、扫描—运动互斥、标定残差矢量场、SPC 分段。全部塞进 C2 会把通用诊断内核与工艺外壳耦合，
+  [OK] C4:3-4 → 这是本项目区别于"LLM 生成建议"的核心机制：**任何参数建议必须先在仿真被控对象上跑一遍， 拿到量化改进后，才允许以 `simulation_validated` 层级写入报告**。
+  [OK] C4:6-8 → > 例外（裁决 A-43）：`software_induced_*` 一族的**改进量**一律 `rule_heuristic`—— > KB5 的事件注入不含真实调度器与总线仲裁，仿真能证明"这个形态可被检出"，
+  [OK] C4:16-17 → ├─→ 复现校验：P̂ 在相同指令下重放，误差 < tol ？ │     否 → basis = rule_heuristic，报告标注"模型不可信，未验证"
+  [OK] C4:30-31 → - `plant_fit.fit_residual_pct` > 25% 时，`basis` 必须降级为 `rule_heuristic`， 并在 `caveats` 里写明"仿真模型无法复现观测波形，改进量不可信"。
+  [OK] C4:32-39 → - **约定真值不得走本门控**（A-87，分档按 A-89 更正）：`basis = simulation_validated` 要求被验证的量在**波形里可复算**。 方向位号（`dmc_vmove` 的 0/1 到底哪个是正）、停止方式编码、IO 位号↔端子、PSO 比较源（cmd 还是 fb…
+  [OK] C4:40-49 → - **A-89 的两点收窄（不改本门控的形状）**： **(a) ③a 文档可查类可以闭合，但闭合不经过本门控**——方向位号、停止方式编码、错误码表、
+  [OK] C4:50-56 → - **验证结论的环境层级（A-90）**：`validation[]` 每条结果须带 `verification_level ∈ {L1, L2, L3}` （KB0 §4 第三阶梯；模型来源**读 C3 既有字段 `plant_source`/`plant_id`**——A-91 按检查 23 …
+  [OK] C4:63-64 → - `sensitivity` 必填：至少 3 个参数（惯量比、共振频率、阻尼）各 ±20% 扫描， 记录改进量的最坏值。最坏值 < 10% 则建议标记为 `fragile`。
+  [OK] C4:69-70 → - 若建议会激发新的共振峰（`candidate` 频谱中出现基线没有的、幅值 > 基线主峰 50% 的峰）， 必须**否决该建议**并在报告中说明——这是内行会立刻检查的点。
+  [OK] C4:84-87 → **凡用额定值做分母的指标（`*_pct`、饱和比、余量类）继承额定值来源的层级**（A-70）： `meta.drive.rated_torque_source == "assumed"` 时，改进量的 `basis` 不得高于 `rule_heuristic`，
+  [OK] C4:91-93 → 被控对象模型规范见 `docs/kb/KB5-simulation-plant.md`（双惯量 + 摩擦 + 量化噪声 + 三环控制）。 仿真必须与真实数据走同一套 `features()` 与 `rules()` 代码路径——
+  [OK] C5:5-8 → 本项目最大的可信度风险不是算法不够好，而是**循环论证**： 自己写一个二惯量仿真器造波形 → 用自己提炼的规则诊断 → 再用同一个仿真器验证建议有效 → 自己打分。
+  [OK] C5:21-23 → 每个评测案例标注 `source_tier`（**字段权威名 = KB0 §4，已裁 A-54**；旧名 `evidence_tier` 在本文件就地作废， 中文叙述里说"证据层级"是表述不是字段名），**指标必须按层分别报告，禁止合并成一个总数**。
+  [OK] C5:38-39 → - 对外报告的"根因 Top-3 命中率"等能力性指标，**只能来自 T1+T2**（slug 级实为 T1-a+T2，见 §3 与 A-63）。 - T3 指标只允许出现在"流程正确性"章节，标题必须写明"合成集，不用于能力主张"。
+  [OK] C5:42 → - 报告首页放一张"证据层级声明表"，列出每个数字来自哪一层。这是作品集里最能打的一页。
+  [OK] C5:76-78 → | **无依据成功声明** | `expected_effect` 标 `simulation_validated` 但无对应 V* 记录，或 V* 的 `fit_residual_pct`>25% 却未降级 | **0 次** | 硬门禁，出现一次即视为失败 | | **禁语违例** | 报告文本…
+  [OK] C5:90-92 → **为什么 ECE 是核心指标**：工业诊断 agent 的价值不在"猜对"，在"知道自己不知道"。 一个置信度 0.4 的猜测和一个 0.9 的判定如果长得一样，工程师不敢用。
+  [OK] C5:86-88 → **证据准确率的结构性保证**：规则引擎只能引用 C2 特征路径，不允许自带数值。 加载期校验每条证据的 `feature` 能在 C2 JSON 中解析到、且 `value` 与之一致，
+  [OK] C5:46-48 → - **开发集 / 隐藏测试集 = 60/40**。隐藏集在写完后冻结哈希（`bench/hidden.sha256`）， 调提示词、调规则阈值、挑模型**一律不得看它**。
+  [OK] C5:65-66 → - `difficulty` 必须包含：缺通道、缺定标系数、多故障叠加、以及 **`none_of_the_above`（无上述故障， 正确答案是拒绝下结论）**。最后一类占 ≥15%，专测过度自信。
+  [OK] C5:107-114 → ## 5. 人工基线（必须做，否则数字无意义） 
+  [OK] C5:164-166 → 4. **为什么承认真空比造案例强**：§0 的循环论证最擅长的就是"把覆盖矩阵的空格用东西填上"。 空格只是少一分，造案例是把整页数字的可信度押进去——而且违反 A-31/C3 规则 14 的措辞纪律，
+  [OK] C4:50-56 → - **验证结论的环境层级（A-90）**：`validation[]` 每条结果须带 `verification_level ∈ {L1, L2, L3}` （KB0 §4 第三阶梯；模型来源**读 C3 既有字段 `plant_source`/`plant_id`**——A-91 按检查 23 …
+  [OK] C4:40-49 → - **A-89 的两点收窄（不改本门控的形状）**： **(a) ③a 文档可查类可以闭合，但闭合不经过本门控**——方向位号、停止方式编码、错误码表、
+==========================================================================================
+章： ch05-真实数据打断契约.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] KB0-conventions.md:126-129 → ## 5. 文件与环境约定 … - 内部基准单位恒为编码器 counts（C1）；`counts_per_mm == null` 时报告只印 `[counts]`。
+  [OK] C1-canonical-waveform.md:52-58 → **单位规则**：`meta.units_are ∈ {counts, si_native}`，默认 `counts`。 … 缺定标不得臆造**其它**单位（例如把 m 冒充 µm 级精度）。
+  [OK] C1:35-36 → | `pos_cmd` | 位置指令 | counts | 上位机/插补器下发的指令位置 | | `pos_fb` | 位置反馈 | counts | 编码器实际位置 |
+  [OK] KB0:129 → - 内部基准单位恒为编码器 counts（C1）；`counts_per_mm == null` 时报告只印 `[counts]`。
+  [OK] KB2:332-333 → - **实测冲突**：本文件位置通道量级 ~`18.0`、速度 ~`±0.03`、作者图轴 `m`/`m/s`/`N`/`Nm` （`main.m` xlabel `$l_d$ /m`、ylabel `$/mm` 由 `*1000` 得来）→ **物理量本就是 SI（m, m/s, N），
+  [OK] C1:56 → - `si_native`：源数据本身就是 SI 量纲（实测教训：DaRUS 两份真实数据的位置/速度/转矩是 m、m/s、N·m，
+  [OK] KB0:129 → - 内部基准单位恒为编码器 counts（C1）；`counts_per_mm == null` 时报告只印 `[counts]`。
+  [OK] C1:56-58 → - `si_native`：源数据本身就是 SI 量纲（实测教训：DaRUS 两份真实数据的位置/速度/转矩是 m、m/s、N·m， 根本没有 counts 刻度）。此时按真实单位标注，但**同一条纪律换个形式仍然生效**：
+  [OK] KB0:317 → | A-4 | 真实数据是 SI 原生（m、N·m），counts 纪律对它误导（KB2 §七.1/.3） | 采纳 `meta.units_are ∈ {counts, si_native}`；`torque.unit`/`cur_q.unit` 显式化；"禁造 µm"改述为"缺定标不得臆造其它单…
+  [OK] KB2:335-337 → - **处置**：`meta.units_are = "si_native"`；把各通道 `unit` 如实记为 `m`/`m/s`/`N`/`Nm`； `counts_per_mm = null`；报告层对 DaRUS 样本印 `[m]` 等真实 SI 单位并注明来自 T1-a 试验台。
+  [OK] KB0:162-165 → 12. **`counts_per_mm` 按"有没有可复算推导链"取值，不按 `units_are` 分岔**（A-75）： `units_are == "si_native"` **不**自动等于 `counts_per_mm = null`——有公开值或有 KB5 §1.1 推导链
+  [OK] KB0:494 → | A-97 | **`units_are = si_native` 样本上 `*_counts` 路径的单位真空**。C2 有一整族以 `_counts` 结尾的字段（`sensor_disagreement.pairs[].rms_counts`、`global.reversal_error_c…
+  [OK] C2:305-312 → 3. **单位**：`*_counts` 的后缀是**历史名，不是单位**（A-97）。它的字面含义是"该通道 **原生刻度**下的数值"，真实单位由 `meta.units_are` 唯一决定（`counts` ⟹ 编码器 counts；
+  [OK] KB7:255 → | 2 | `raw/DD_head.csv` | 5171 / 394008 前 400,001 B | 1000 Hz | 813 | 母本有 | 无 | 有 | ✔（前缀逐字节） | **拒**（行数<2000） | 只作表头/词表回归，接母本 |
+  [OK] KB0:308-310 → ## 7. 主线程裁决（2026-10-19/20 契约收口） 
+  [OK] KB0:494 → | A-97 | **`units_are = si_native` 样本上 `*_counts` 路径的单位真空**。C2 有一整族以 `_counts` 结尾的字段（`sensor_disagreement.pairs[].rms_counts`、`global.reversal_error_c…
+  [OK] C2:309-312 → - **绝对 counts 阈值**（形如 `≥ 22 counts`）在 `units_are != "counts"` 且 `meta.counts_per_mm == null` 时**不得直接套用**——把 m 当 counts 判是静默量纲替换，
+  [OK] KB0:162-165 → 12. **`counts_per_mm` 按"有没有可复算推导链"取值，不按 `units_are` 分岔**（A-75）： `units_are == "si_native"` **不**自动等于 `counts_per_mm = null`——有公开值或有 KB5 §1.1 推导链
+  [OK] KB2:351 → - **绝不**猜测语义或塞进近似 canonical 通道（例：不许因为带 `Force` 就映成 `torque`）。
+  [OK] KB0:523 → | A-110 | **§1.13b 待人工复判清单五条悬案 + 我自己写进 KB2 的脱敏计数不可复现**（A-107 同批排队待裁项；用户裁定「同批排队待裁的你智能决策」）。两类问题同形——都登记了口径或数字，却没有可复算的出处。(i) KB3 §1.13b 在 A-97 之后留下 **4 族 …
+  [OK] KB2:804 → - 脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。
+==========================================================================================
+章： ch06-厂商方言与上下文契约.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] dialects.py:1-3 → """厂商导出方言分派器：把非 Scope View 的布局归一到 `twincat.ScopeTable`。 … 只回答三件事：**有哪些列、每列多少行、时间轴从哪来**。列的物理语义是 mapping.py 的活
+  [OK] mapping.py:1-5 → """DARUS-3600（DaRUS 3600，绳索/缆索执行器试验台）列 → C1 通道映射。 … 拒映的列也必须逐条登记理由，KB2 §3.6 要求 N_mapped + N_extra == N_header。
+  [OK] c1.py:1-3 → """C1 样本包装配：厂商 CSV → meta.json + waveform.tsv（C1 契约）。 … 只做契约明文要求的事；任何超出契约的推断一律不写进包，改写进 meta.audit.assumptions。
+  [OK] twincat.py:1-3 → """TwinCAT 3 Scope View CSV 读取器（KB2 §4.1 族卡 + §4.10 样本卡实测形态）。 … 只做「读成结构化表」这一件事，语义映射在 mapping.py，契约装包在 c1.py。
+  [OK] dialects.py:13-14 → - 以上都不成立 → **拒读**。不拿「第一个递增的数值列」顶替时间列（那是 R-7 点名的 … 「身份未证实」启发式），也不假定等间隔——没有时间基就没有 fs，特征与频谱判据全部失效。
+  [OK] dialects.py:32-33 → #: 列名即 ISO-8601 时间列（KB2 §4.12 R-3 修的正是这一族：`t` 列是 ISO 文本）。 … ISO_TIME_NAMES = frozenset({"t", "time", "timestamp", "zeit", "ts"})
+  [OK] src/axiscope/dialects.py:35-36 → #: 列名里带单位的数值时间列：`X (ms)`、`t (s)`（2563 导出实测写法）。 … UNIT_TIME_RE = re.compile(r"\(\s*(ns|us|µs|μs|ms|s|sec|secs|second|seconds)\s*\)\s*$", re.I)
+  [OK] dialects.py:11-12 → （同目录 `<file>.source.txt` 的 `sampling_rate` 声称，且三种单位假设里**有且仅有一种** … 复现该声称），出处记 `sidecar_attested:<unit>`；
+  [OK] dialects.py:37-38 → #: 别名折到四个规范单位上：折之前的别名表会让「有且仅有一种假设复现侧车声称」这条判据 … #: 一次命中五个键（sec/secs/second/seconds 同值），把唯一性判据废掉。
+  [OK] KB2-waveform-formats.md:604-655 → **解析器待办（R-4 仍开放；R-5 / R-3 于 2026-10-21 随任务 #15 修，同日复算追加并修 R-6 / R-7；四条合并登记为 KB0 A-112）**： … 与 R-7 的两条形态断言；汇总数由脚本自数，检查 27）。
+  [OK] KB2-waveform-formats.md:654-655 → `--selftest` 现打印 **29 通过 / 29 执行 / 0 失败**（22 → 26 随 R-5/R-3，26 → 29 随 R-6 的 accept 用例 … 与 R-7 的两条形态断言；汇总数由脚本自数，检查 27）。
+  [OK] registration.py:1-6 → """登记层：把"看不见 / 算不了 / 不许断因果"写成结构化事实，而不是写成"未发现"。 … from __future__ import annotations
+  [OK] registration.py:12-13 → # KB4 §1.1 的 22 叶表（slug → 主锚点规则 / 采样率下限）。 … # 频带下界一律取 features.BAND_FLOOR / BRANCH_FLOOR（KB3 §2.1 的唯一真值），此处不重复登记。
+  [OK] registration.py:15 → "mechanical_resonance": {"rules": ["R-03", "R-04"], "feature": "resonance.candidates"},
+  [OK] dialects.py:1-3 → """厂商导出方言分派器：把非 Scope View 的布局归一到 `twincat.ScopeTable`。 … 只回答三件事：**有哪些列、每列多少行、时间轴从哪来**。列的物理语义是 mapping.py 的活
+  [OK] mapping.py:1-5 → """DARUS-3600（DaRUS 3600，绳索/缆索执行器试验台）列 → C1 通道映射。 … 拒映的列也必须逐条登记理由，KB2 §3.6 要求 N_mapped + N_extra == N_header。
+  [OK] dialects.py:13-14 → - 以上都不成立 → **拒读**。不拿「第一个递增的数值列」顶替时间列（那是 R-7 点名的 … 「身份未证实」启发式），也不假定等间隔——没有时间基就没有 fs，特征与频谱判据全部失效。
+  [OK] registration.py:1-6 → """登记层：把"看不见 / 算不了 / 不许断因果"写成结构化事实，而不是写成"未发现"。 … from __future__ import annotations
+  [OK] dialects.py:1-3 → """厂商导出方言分派器：把非 Scope View 的布局归一到 `twincat.ScopeTable`。 … 只回答三件事：**有哪些列、每列多少行、时间轴从哪来**。列的物理语义是 mapping.py 的活
+  [OK] mapping.py:1-5 → """DARUS-3600（DaRUS 3600，绳索/缆索执行器试验台）列 → C1 通道映射。 … 拒映的列也必须逐条登记理由，KB2 §3.6 要求 N_mapped + N_extra == N_header。
+  [OK] registration.py:1-6 → """登记层：把"看不见 / 算不了 / 不许断因果"写成结构化事实，而不是写成"未发现"。 … from __future__ import annotations
+  [OK] C5:164-166 → 4. **为什么承认真空比造案例强**：§0 的循环论证最擅长的就是"把覆盖矩阵的空格用东西填上"。 空格只是少一分，造案例是把整页数字的可信度押进去——而且违反 A-31/C3 规则 14 的措辞纪律，
+  [OK] C6:5-16 → C1 只有波形。但有一整类成因**在波形里长得和机械故障一模一样，只有对齐的事件流能区分**： 
+  [OK] C6:21 → 放在 C1 样本包内：`sample/events.jsonl`（可选，一行一事件）。
+  [OK] C6:40-52 → ## 2. 机器语境 
+  [OK] C6:33-35 → `host`（上位机进程：GC、线程、内存）、`interp`（插补/前瞻缓冲）、`motion`（指令下发与完成）、 `drive`（驱动器报警/状态字）、`io`（限位、真空、传感器电平）、`network`（总线周期、WKC、超时）、
+  [OK] C6:38 → `debug` `info` `warn` `error` `alarm`。
+  [OK] C5:76-77 → | **无依据成功声明** | `expected_effect` 标 `simulation_validated` 但无对应 V* 记录，或 V* 的 `fit_residual_pct`>25% 却未降级 | **0 次** | 硬门禁，出现一次即视为失败 | | **禁语违例** | 报告文本…
+  [OK] C6:132-135 → ## 5. 范围纪律 
+  [OK] C6:139-141 → 落点在 C3 的 `recommendation.field_procedure[]`（字符串数组，不新增字段），步骤文本以固定前缀标注： `[L<级>|真值来源=<③a 手册可查|③b 批次与现场>|核对=<memory|public-doc|official-artifact:<工件@版本 第X…
+  [OK] C6:142-145 → 前缀缺失 ⟹ 该步视为未标注，`audit.rules_fired` 记一条 A-87 违规（与 C3 规则 14 的措辞拦截同机制）； **标 ③a 却给不出 `official-artifact:<工件@版本 第X条>` 或 `vendor_reply`** ⟹ 按 KB0 §6 检查 21 判…
+  [OK] C6:147-154 → | 级 | 内容 | 依赖的真值 | 档位（A-89） | 本 agent | |---|---|---|---|---|
+  [OK] C6:156-160 → 纪律：**上一级不过不得进下一级**；方向/位号类错误的特征是**不报错、不写日志、轴直接往反方向走**， 所以 L2 之前不得解除限位保护（该提醒必须原样进报告）。本 agent `safety.writes_to_device` 恒为 `false`
+  [OK] C4:37 → 确认动作只以 `recommendation.field_procedure` 存在（C6 §5 的 L1→L6 分级，本 agent 不执行）。
+  [OK] C6:164-170 → **阶梯覆盖的是"验证动作"，不是"所有上机动作"（本轮自查补）**。像"写陷波参数 / 回退一档增益"这类步骤 在 L1–L6 里没有对应级——它们是**人工在设备上执行的改动**，其风险由 C3 的 `safety.hard_blocks`
+  [OK] C3:1068 → `field_procedure`**（A-89）。台账让"未知"变成可数的量，才算得出哪些未知其实可自查。
+  [OK] KB2:572 → ### 4.12 未接入样本卡 · ScienceDB 机器人关节电机位置（`data/staging/`，**接入前置未满足**）
+  [OK] KB2:574 → > 本卡**不是**接入卡：按 §3.6 的"不丢弃、不猜语义"与 §5.1 红线 6，这 12 个文件当前**不得**进 `data/raw/`。
+  [OK] KB2:386 → 5. **缺它时的处理方式（显式失败，不猜）** —— 走 §五 拒入或 §三「不猜语义」；绝不以默认值冒充（C1 `drive.*` 纪律），也不「调用待核对函数时静默跑猜值」。
+  [OK] KB2:339 → ### 3.6 映射表未覆盖的通道怎么办（不丢弃、不猜语义）
+  [OK] KB2:352 → - 断言：`assert N_mapped + N_extra == N`（表头奇数列总数被完整二分）；
+  [OK] C6:156-160 → 纪律：**上一级不过不得进下一级**；方向/位号类错误的特征是**不报错、不写日志、轴直接往反方向走**， 所以 L2 之前不得解除限位保护（该提醒必须原样进报告）。本 agent `safety.writes_to_device` 恒为 `false`
+  [OK] C6:17 → 没有 C6，`software_induced_error` 判据族就只能靠猜——那是不诚实的。
+==========================================================================================
+章： ch07-没有真机时.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] synth/integrator.py:9-11 → 方案 1（§1.5 首选）：线性部分**精确 ZOH 离散化** `A_d = expm(A·h)`、 …
+  [OK] synth/integrator.py:15-18 → 三环结构的实现口径（§1.4）： … ⟹ 离散极点必须在**串级**结构上求，只把 PID 直接乘到力矩上是把两级并成了一级。
+  [OK] synth/integrator.py:19-21 → * 电流环按一阶滞后 `ω_i = 2π·f_i` 建模（§1.4）。P-A 的 `f_i` 未发布（§5.3 纪律 3 / … `selfcheck.json` 里登记该缺口，而不是编一个数。
+  [OK] synth/integrator.py:22-25 → * PWM 传输延迟是**非整数拍**（P-B `T_delay = 0.5·T_cur = 25 µs`，而最细拍是 `T_cur`）， … 这一条在 `selfcheck.json` 的 `discretization_notes` 里显式登记。
+  [OK] synth/integrator.py:12-13 → 稳定性判据（§1.5 表）全部是**解析 / 数值自洽校验**，不是对真机的实测。 … 措辞上限按 A-31：通过后只报「数值稳定性判据满足、能量残差分布为 …（合成侧自洽校验）」。
+  [OK] synth/scurve.py:1-6 → """KB5 §4 七段 jerk 受限 S 曲线 + §4.3 采样栅格对齐 + §4.5 自检不变量 I1–I12。 … 不复制任何代码行。
+  [OK] synth/params.py:1-5 → """KB5 §2 参数集（P-A / P-B）与 P-C 守门案例。 … `provenance = "assumed"`，并在报告的「需要登记进 KB0 的事项」里列拟的裁决文字。
+  [OK] bench/casebuild.py:5-11 → * 真值只有一种来源——**本文件里写死的注入数学**（`INJECTIONS`）。真值不写进样本包， … 设计植入的误差」，**不能**证明诊断准确。这是 A-88，本文件不淡化这一点。
+  [OK] bench/run_eval.py:14-19 → 口径纪律： … * 分母为 0 的指标一律打印「未测（分母 0）」并写明原因，**不填 0、不留空**。
+  [OK] bench/forbidden_patterns.json:4 → "why": "C5 §9 纪律 2 / C2 规则 7：f_b=400 Hz 的数据上不得说「未发现谐振」——看不见≠查过没问题",
+  [OK] bench/forbidden_patterns.json:9 → "patterns": ["未发现异常", "未见异常", "无异常", "一切正常", "完全正常", "未发现任何", "no anomaly", "nothing abnormal"]
+  [OK] docs/项目回顾与收尾_20261022.md:53-54 → - **Tier C 真机**：离线引擎的全部结论停留在仿真与数据集验证层，真机波次验证 … 未开始——设计性挂起，不是欠账（与 mcopilot T1-T5 同一款记法）。
+  [OK] bench/run_eval.py:19 → * 分母为 0 的指标一律打印「未测（分母 0）」并写明原因，**不填 0、不留空**。
+  [OK] run_eval.py:15-18 → * 命中率分母只收 `expected_verdict_class` 是**具体 slug** 且 `source_tier ∈ {T1-a, T2}` 的案例 … 三类（C5 §3 + §9 结构性真空能力项的拒答案例）。
+  [OK] integrator.py:15-25 → 三环结构的实现口径（§1.4）： … 这一条在 `selfcheck.json` 的 `discretization_notes` 里显式登记。
+  [OK] casebuild.py:5-11 → * 真值只有一种来源——**本文件里写死的注入数学**（`INJECTIONS`）。真值不写进样本包， … 设计植入的误差」，**不能**证明诊断准确。这是 A-88，本文件不淡化这一点。
+  [OK] KB5:342-348 → **三个时间尺度必须分开**（这是本节的唯一主题）： 
+  [OK] KB8:45 → 评测元数据是**旁挂**的，绝不写进样本包内部——尤其不得把真值塞进真实样本包（见 §4 污染红线）。
+  [OK] KB8:139 → ### 1.4 `sha256` 的计算口径（A-60 已裁：覆盖**输入样本原始字节**；只写口径，不算值）
+  [OK] KB8:307 → **已裁：A-65 —— 同为结构性真空，并转成一条正面红线**：T1-a 是 1 kHz ⟹ Nyquist 500 Hz ⟹ `reliable_band_hz = 400 Hz`，
+  [OK] KB8:222 → "_note":"kHz 峰在此 fs 下进 blocked_rules=[R-03,R-04]；声明 45 Hz 绳索模态的另一种『看不见』须写成 not_exited(指令低通 8 Hz)；两者都禁写『未发现谐振』（KB5 §2.1 红字 / C2 规则 7 / A-65 正面红线）。count…
+  [OK] C5:164-166 → 4. **为什么承认真空比造案例强**：§0 的循环论证最擅长的就是"把覆盖矩阵的空格用东西填上"。 空格只是少一分，造案例是把整页数字的可信度押进去——而且违反 A-31/C3 规则 14 的措辞纪律，
+  [OK] KB8:165-166 → - 案例 `counts_per_mm=null` ⟹ 不必然加计数（µm 声明是被"改写为无法判定"，C2 规则 11，不是 not_evaluable 条目）； 但若该案例本应给精度声明，则 `forbidden_conclusions` 必须含 `sub_quantum_mm_claim`（见…
+  [OK] C5:46 → - **开发集 / 隐藏测试集 = 60/40**。隐藏集在写完后冻结哈希（`bench/hidden.sha256`），
+  [OK] KB8:307 → **已裁：A-65 —— 同为结构性真空，并转成一条正面红线**：T1-a 是 1 kHz ⟹ Nyquist 500 Hz ⟹ `reliable_band_hz = 400 Hz`，
+  [OK] KB5:342-348 → **三个时间尺度必须分开**（这是本节的唯一主题）： 
+  [OK] C5:46-48 → - **开发集 / 隐藏测试集 = 60/40**。隐藏集在写完后冻结哈希（`bench/hidden.sha256`）， 调提示词、调规则阈值、挑模型**一律不得看它**。
+  [OK] C5:76-77 → | **无依据成功声明** | `expected_effect` 标 `simulation_validated` 但无对应 V* 记录，或 V* 的 `fit_residual_pct`>25% 却未降级 | **0 次** | 硬门禁，出现一次即视为失败 | | **禁语违例** | 报告文本…
+==========================================================================================
+章： ch08-署名与脱敏.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] docs/kb/KB7-dataset-da-rus-cat.md:13 → | 许可 | **CC BY 4.0** | **CC BY 4.0** |
+  [OK] Export10_244531.csv.source.txt:6 → dataset_doi:         10.18419/DARUS-3600（数据集标题 "Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running P…
+  [OK] data/raw/Export10_244531.csv.source.txt:6 → dataset_doi:         10.18419/DARUS-3600（数据集标题 "Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running P…
+  [OK] data/raw/Export10_244531.csv.source.txt:14 → notes:               MD5 = 8cba13dfae7d1a3cdf48d3e20851dadb，size = 9175989 B，与 DaRUS API 记录逐字节一致。⚠️ 两点纠偏：(1) 本文件属 DARUS-3600，非清单所写的 DARUS-5171；(2) DAR…
+  [OK] README.md:51-53 → **待补**：`doi:10.1002/acs.3276` 的**论文标题**在本仓库不存在。已检索 `docs/kb/`、`docs/contracts/`、`data/`、 … `build/probe_kb7_b_group.out:351` 已把它判为「外部出版物，未落盘 ⟹ 无法复算」。此…
+  [OK] README.md:65-67 → **待补**：该表只含 DOI／标题／文件数／关键 fs／用途五列，**无作者列**；除 `-3759`（`Steinle, Lukas`）与 … 其余五个 DOI 的作者姓名在本仓库**未见登记**，不得据「同一系列」推定为 Reichenbach。
+  [OK] docs/kb/KB2-waveform-formats.md:786-795 → | 位置 | 内容 | 处置 | 保留? | … | 任何 `Versuchsstand`/用户名/机名列 | — | 正则清除 `C:\\...`、`\\\\...`、含本地用户名的串 | 否 |
+  [OK] docs/kb/KB2-waveform-formats.md:797-804 → ### 6.2 署名（CC BY 4.0）必须保留 … - 脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。
+  [OK] docs/kb/KB2-waveform-formats.md:806-817 → ### 6.3 脱敏断言 … 不是"某个词一次都不出现"；把后者写进断言会把自己写的说明文字判成泄漏，下一轮就会去删证据而不是删标识。
+  [OK] docs/kb/KB2-waveform-formats.md:527 → - **发布前必做**：计数由 `python data/probe_pii.py` 打印（口径=**正则命中次数**，不是行数也不是文件数；
+  [OK] docs/kb/KB2-waveform-formats.md:561 → → 数值可算、量纲不可断言（KB0 §5 单位纪律）；无 `events.jsonl`。
+  [OK] data/raw/Export10_244531.csv.source.txt:6 → dataset_doi:         10.18419/DARUS-3600（数据集标题 "Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running P…
+  [OK] data/raw/Export10_244531.csv.source.txt:9 → device_or_software:  Beckhoff TwinCAT 3 测量工程（文件内自报 File = [REDACTED_HOST_PATH]\Export 10.csv）；Cable Actuator Testbed / Winch_Testbed；[REDACTED_WALLCLO…
+  [OK] data/raw/Export10_244531.csv.source.txt:14 → notes:               MD5 = 8cba13dfae7d1a3cdf48d3e20851dadb，size = 9175989 B，与 DaRUS API 记录逐字节一致。⚠️ 两点纠偏：(1) 本文件属 DARUS-3600，非清单所写的 DARUS-5171；(2) DAR…
+  [OK] data/raw/DD_head.csv.source.txt:9 → device_or_software:  Beckhoff TwinCAT 3 测量工程 cati-twincat / TC3_MeasurementProjects，导出集名 Measurement_Ch2；CableDirectDrive_Testbed 直驱线缆台架（构型量见 data/inc…
+  [OK] data/raw/DD_head.csv.source.txt:14 → notes:               md5 = 995d0d916f872520025a1d57e685ab9f，size = 400,001 B，sha256 = 5a394b55151155ab8741eb17ba8225a3fc7e357bd9f2e0710855978343fff947…
+  [OK] README.md:51-53 → **待补**：`doi:10.1002/acs.3276` 的**论文标题**在本仓库不存在。已检索 `docs/kb/`、`docs/contracts/`、`data/`、 … `build/probe_kb7_b_group.out:351` 已把它判为「外部出版物，未落盘 ⟹ 无法复算」。此…
+  [OK] README.md:74-81 → ### 6. 脱敏门禁（发布前必做 → **已执行 2026-10-22**） … 两个侧车登记 md5 前后对照（Export10 `8cba13df…`→`178a6308…`、DD_head `995d0d91…`→`3f80439d…`）。
+  [OK] README.md:85-86 → 义务来源逐字：`docs/AUDIT-minimax-mcopilot.md:72` … 「**归属纪律**：复用部分必须在 README 与作品集中标注来源，不得以"我写的"呈现。」
+  [OK] README.md:88-99 → | 复用的设计 | 本仓库落点 | 标注来源（已在本仓库写明"非原创"） | … | 六个**软件诱导缺陷形态**（DPOS 冒充反馈、`_unit` 双重换算、IO 电平当错误码、PSO 比较点、回零后 MPOS 未同步、锁存源选错） | KB3 / C3 | `docs/kb/KB2-wavef…
+  [OK] README.md:101-103 → 引用纪律：外部会话（minimax 三轮、GLM 系）的手册与 SDK 绑定**不在本仓库**，故其核对结论对本仓库 … （`docs/kb/KB2-waveform-formats.md:619-628`，A-32 / A-89）。
+  [OK] docs/kb/KB7-dataset-da-rus-cat.md:10 → | 标题 | Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running Properties of Synthetic Fiber Ropes | Meas…
+  [OK] docs/kb/KB7-dataset-da-rus-cat.md:13 → | 许可 | **CC BY 4.0** | **CC BY 4.0** |
+  [OK] docs/kb/KB7-dataset-da-rus-cat.md:17 → 署名要求：引用须注明 Reichenbach/University of Stuttgart + DOI + CC BY 4.0。
+  [OK] KB2:803 → - 许可：**CC BY 4.0**；引用须注明作者 + 机构 + DOI + 许可（KB7 署名要求）。
+  [OK] KB2:786-795 → | 位置 | 内容 | 处置 | 保留? | |---|---|---|---|
+  [OK] KB2:789 → | L3/L4 `Starttime/Endtime` | .NET ticks + 德语墙钟（时区未标注，KB7） | ticks 与墙钟**均**替换为 `[REDACTED_WALLCLOCK]`；仅保留「相对时长 ≈ 18.65 s」这类不含绝对时刻的量 | 否 |
+  [OK] KB2:789 → | L3/L4 `Starttime/Endtime` | .NET ticks + 德语墙钟（时区未标注，KB7） | ticks 与墙钟**均**替换为 `[REDACTED_WALLCLOCK]`；仅保留「相对时长 ≈ 18.65 s」这类不含绝对时刻的量 | 否 |
+  [OK] KB2:794 → | 数据区数值 | 物理量 | 保留（这是作品集核心证据） | 是 |
+  [OK] KB2:804 → - 脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。
+  [OK] KB2:808-811 → - `assert "Versuchsstand" not in serialized_bundle and "141.58." not in serialized_bundle` - `assert all(meta.provenance.doi in {"10.18419/DARUS-3600"…
+  [OK] KB2:816-817 → ⟹ 门的判据是 `assertions.REDACT_TOKENS = ("Versuchsstand", "141.58.", "C:\\")` 三个**标识值 token** 不出现， 不是"某个词一次都不出现"；把后者写进断言会把自己写的说明文字判成泄漏，下一轮就会去删证据而不是删标识。
+  [OK] KB2:814-815 → 发布产物 `build/Export10_244531` 侧 `Versuchsstand`/内网 IP/盘符路径均 **0**，而 `NetID` 字样命中 **4**—— 这 4 次是本仓**关于脱敏的叙述文字**（`meta.source.note` 一句 + `report.html` 的署…
+  [OK] KB2:812-813 → - **口径（KB0 §6 检查 27）**：上面四条是**发布门**，不是"当前有多少处待清"的计数——计数一律抄 `python data/probe_pii.py` 的打印行（§4.10/§4.11 已按该口径引用）。该脚本还给出一个容易被误读的事实：
+  [OK] KB7:10 → | 标题 | Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running Properties of Synthetic Fiber Ropes | Meas…
+  [OK] KB7:10 → | 标题 | Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running Properties of Synthetic Fiber Ropes | Meas…
+  [OK] KB7:17 → 署名要求：引用须注明 Reichenbach/University of Stuttgart + DOI + CC BY 4.0。
+  [OK] KB2:804 → - 脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。
+  [OK] KB2:797-803 → ### 6.2 署名（CC BY 4.0）必须保留 
+  [OK] KB2:814-815 → 发布产物 `build/Export10_244531` 侧 `Versuchsstand`/内网 IP/盘符路径均 **0**，而 `NetID` 字样命中 **4**—— 这 4 次是本仓**关于脱敏的叙述文字**（`meta.source.note` 一句 + `report.html` 的署…
+  [OK] KB2:780-818 → ## 六、脱敏要求（发布作品集前必做） 
+==========================================================================================
+章： ch09-文档即代码.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] src/axiscope/engine.py:727 → 引擎若按原始 C 排，同带内就会分出两种序，规则 20 只能对其中一种判红——那是假红不是缺陷。
+  [OK] data/probe_doc_line_refs.py:5-6 → 仓内文档大量使用 `docs/kb/KB0-conventions.md:NNN`、`docs/AUDIT-glm-code-factory.md:110-129` … 这类**裸行号指针**。行号会随增删行**静默漂移**，散文里看不出来。本脚本把每条指针拆成三问：
+  [OK] README.md:98 → | 「验证金字塔」三档 / 文档级真值双标注 / 完成度口径（A-90、A-92、A-93） | KB0 §4、§6 检查 24/25、§7.3 | `docs/AUDIT-glm-code-factory.md:110-129`；`docs/kb/KB0-conventions.md` §7.3 …
+  [OK] data/probe_doc_line_refs.py:5-14 → 仓内文档大量使用 `docs/kb/KB0-conventions.md:NNN`、`docs/AUDIT-glm-code-factory.md:110-129` … 指针后面根本没有引文 ⟹ `no-quote`（**不判**，不算病例）
+  [OK] probe_doc_line_refs.py:8 → 1. 被指文件找得到吗？              找不到 ⟹ `missing-file`（病例）
+  [OK] data/probe_doc_line_refs.py:9-10 → **引用方是 `docs/AUDIT-*.md` 时**改判 `external-target` … （那是被审计项目的路径，不在本仓可核范围，见 `is_audit_doc`）
+  [OK] data/probe_doc_line_refs.py:11 → 2. 行号范围越界吗？（M 超过文件行数）越界 ⟹ `range-out-of-bounds`（病例）
+  [OK] data/probe_doc_line_refs.py:12 → 3. 指针所带的引文真的落在 N..M 里吗？不在 ⟹ `stale`（病例）；
+  [OK] data/probe_doc_line_refs.py:13 → 多段拼接引文只命中一部分 ⟹ `partial-quote`（病例）；
+  [OK] data/probe_doc_line_refs.py:14 → 指针后面根本没有引文 ⟹ `no-quote`（**不判**，不算病例）
+  [OK] data/probe_doc_line_refs.py:9-10 → **引用方是 `docs/AUDIT-*.md` 时**改判 `external-target` … （那是被审计项目的路径，不在本仓可核范围，见 `is_audit_doc`）
+  [OK] data/probe_doc_line_refs.py:16 → 口径（A-117 ⑦ 明确要求的先决条件：**先定引文归属，否则工具自己就是假病例的制造机**）
+  [OK] data/probe_doc_line_refs.py:18-20 → * **引文归属**：一条 `path:NNN` 指针只对**它后面紧邻的那一段引文**负责。实现上先把整行按 … 引文之间只允许分隔符（反引号、空白、`：` `、` `，` `。` `；` `（）` `+` `／` `|` `*` `-`）。
+  [OK] data/probe_doc_line_refs.py:21-22 → 反例（本脚本必须**不**报病例）：同一行有两条引用、引文属于第二条 ⟹ 第一条记 `no-quote`。 … 这条负向例就是 README 雏形脚本制造 2 处假阳性的地方，见 `--selftest` 用例 (c)。
+  [OK] data/probe_doc_line_refs.py:23 → * **引文定界**：`「」` `『』` `“”` `""` 四种成对括号；`「」` 支持嵌套（取到配平的收尾）。
+  [OK] data/probe_doc_line_refs.py:25-26 → * **归一化比对**：去掉 `*`、反引号、空白、`「」『』` 后再判子串包含（原文常带粗体、引文常不带； … 去掉嵌套方括号以免「禁止写「手册…」」这类嵌套被判成不命中）。
+  [OK] data/probe_doc_line_refs.py:27 → * **省略号拼接**：引文含 `…` 时按 `…` 切成若干段，每段都必须命中，缺一段 ⟹ `partial-quote`。
+  [OK] data/probe_doc_line_refs.py:28 → * **无实质内容的引文不判**：引文里没有任何字母数字/CJK（如 `""`、`「…」`）⟹ `no-quote`。
+  [OK] data/probe_doc_line_refs.py:29 → * **范围语义**：`N-M` 是闭区间（落点在第 N 到第 M 行之间），单行就是 `N`。
+  [OK] probe_doc_line_refs.py:31-40 → 已知局限（不要把它当成"绿了就是没问题"） … 引文。README 的「逐字抄自本仓库」一节正是这种排版，默认口径下这些指针全部记 `no-quote`。
+  [OK] data/probe_doc_line_refs.py:35-36 → * 只认 `path.ext:NNN` 形态。**不带路径的续写形态**（`...md:526` 与 `:560`、`KB7:10`）不判， … 只在汇总前单独报一条计数（口径待裁定，默认保守不判 ⟹ 宁可少计，不可虚计）。
+  [OK] data/probe_doc_line_refs.py:37-38 → * 围栏代码块（三个反引号 / `~~~` 包起来的）里的 `file:NNN` **跳过**：代码块是示例内容、 … 不是对文档的断言，扫它会把示例行号判成病例。跳过的条数在汇总前打印。
+  [OK] data/probe_doc_line_refs.py:39-40 → * `--multiline` 是**待裁定的扩展口径**（默认关）：指针行尾只有标点时，把下一行的引文当作它的 … 引文。README 的「逐字抄自本仓库」一节正是这种排版，默认口径下这些指针全部记 `no-quote`。
+  [OK] data/probe_doc_line_refs.py:46 → PYTHONIOENCODING=utf-8 python data/probe_doc_line_refs.py --quote-backtick --multiline   # 推荐的高产口径
+  [OK] docs/kb/KB0-conventions.md:287-289 → **§6 新增检查（19–25）的负向样例（按检查 22 的要求，本文件自证）** … 以及**本轮是否真的见血**（没见过血的一律标注，不冒充已验证）：
+  [OK] KB0-conventions.md:296 → | 22 断言须负向测试 | 自称能自曝的断言须附注入用例 | `FAIL[22] <检查名>: 无负向用例 ⟹ 降格为"约定"` | **已有一次真实触发记录**：规则 15/A-72 的逐格复算把 C3 示例的 `0.78` 抓成重算值 `0.651`（标注不符即视为缺陷），证明该复算检查确有检…
+  [OK] tests/test_doc_line_refs.py:3-5 → 纪律来自 KB0 §6 检查 22/27：**检查必须能抓缺陷（负向例），数字必须由脚本自己数**。 … 口径（引文归属、external-target 豁免边界）定义在探针自己的 docstring 里，不在这里复述一份。
+  [OK] docs/kb/KB0-conventions.md:533 → | A-120 | **行号指针核对器（#44，A-117 ⑦ 立项）落地，并用它抓到本仓两处真漂移；同时本轮第三次靠"外部报告须自己复算"挡下一次事故**。(i) 探针扫出 `docs/AUDIT-minimax-round3.md` 第 19 行指向被审计项目的 `tests/test_mcop…
+  [OK] tests/test_slice.py:229 → def test_leaked_ads_netid_is_caught(built):
+  [OK] tests/test_slice.py:229-237 → def test_leaked_ads_netid_is_caught(built): … io.open(path, "w", encoding="utf-8").write(blob)
+  [OK] docs/kb/KB0-conventions.md:523 → | A-110 | **§1.13b 待人工复判清单五条悬案 + 我自己写进 KB2 的脱敏计数不可复现**（A-107 同批排队待裁项；用户裁定「同批排队待裁的你智能决策」）。两类问题同形——都登记了口径或数字，却没有可复算的出处。(i) KB3 §1.13b 在 A-97 之后留下 **4 族 …
+  [OK] KB0-conventions.md:563-565 → > A-108 是同一病的**第三层**：脚本挂上之后，汇总数字仍是我手工点出来的，而且两份点的是不同口径 … > 凡"数行数"的数，判据不是"有没有脚本"，而是**"这个数是不是脚本自己印的"**——已经把它写进 §6 检查 27。
+  [OK] KB0-conventions.md:583-584 → > **规范已写 ≠ 行为已守**，检查 22/23 的这一格只有负向测试能闭合（本轮把 `--selftest` 从 22 推到 29， … > 全部由脚本自数——检查 27 在这一侧的兑现）。
+  [OK] docs/kb/KB2-waveform-formats.md:780-818 → ## 六、脱敏要求（发布作品集前必做） …
+  [OK] docs/kb/KB0-conventions.md:533 → | A-120 | **行号指针核对器（#44，A-117 ⑦ 立项）落地，并用它抓到本仓两处真漂移；同时本轮第三次靠"外部报告须自己复算"挡下一次事故**。(i) 探针扫出 `docs/AUDIT-minimax-round3.md` 第 19 行指向被审计项目的 `tests/test_mcop…
+  [OK] README.md:98 → | 「验证金字塔」三档 / 文档级真值双标注 / 完成度口径（A-90、A-92、A-93） | KB0 §4、§6 检查 24/25、§7.3 | `docs/AUDIT-glm-code-factory.md:110-129`；`docs/kb/KB0-conventions.md` §7.3 …
+  [OK] data/probe_doc_line_refs.py:9-10 → **引用方是 `docs/AUDIT-*.md` 时**改判 `external-target` … （那是被审计项目的路径，不在本仓可核范围，见 `is_audit_doc`）
+  [OK] data/probe_doc_line_refs.py:35-36 → * 只认 `path.ext:NNN` 形态。**不带路径的续写形态**（`...md:526` 与 `:560`、`KB7:10`）不判， … 只在汇总前单独报一条计数（口径待裁定，默认保守不判 ⟹ 宁可少计，不可虚计）。
+  [OK] data/probe_doc_line_refs.py:14 → 指针后面根本没有引文 ⟹ `no-quote`（**不判**，不算病例）
+  [OK] data/probe_doc_line_refs.py:39-40 → * `--multiline` 是**待裁定的扩展口径**（默认关）：指针行尾只有标点时，把下一行的引文当作它的 … 引文。README 的「逐字抄自本仓库」一节正是这种排版，默认口径下这些指针全部记 `no-quote`。
+  [OK] data/probe_doc_line_refs.py:37-38 → * 围栏代码块（三个反引号 / `~~~` 包起来的）里的 `file:NNN` **跳过**：代码块是示例内容、 … 不是对文档的断言，扫它会把示例行号判成病例。跳过的条数在汇总前打印。
+  [OK] data/probe_doc_line_refs.py:33-34 → * 引文被改写而行号正确 ⟹ 本脚本判 `stale` 但报不出"行号错"，只报"该范围内找不到该引文"； … 真实成因（措辞被改写 vs 行号漂移）靠"引文是否在文件其他行命中"区分，已在打印里给出实际行号。
+  [OK] data/probe_doc_line_refs.py:5-14 → 仓内文档大量使用 `docs/kb/KB0-conventions.md:NNN`、`docs/AUDIT-glm-code-factory.md:110-129` … 指针后面根本没有引文 ⟹ `no-quote`（**不判**，不算病例）
+  [OK] KB0-conventions.md:296 → | 22 断言须负向测试 | 自称能自曝的断言须附注入用例 | `FAIL[22] <检查名>: 无负向用例 ⟹ 降格为"约定"` | **已有一次真实触发记录**：规则 15/A-72 的逐格复算把 C3 示例的 `0.78` 抓成重算值 `0.651`（标注不符即视为缺陷），证明该复算检查确有检…
+  [OK] probe_doc_line_refs.py:5-6 → 仓内文档大量使用 `docs/kb/KB0-conventions.md:NNN`、`docs/AUDIT-glm-code-factory.md:110-129` … 这类**裸行号指针**。行号会随增删行**静默漂移**，散文里看不出来。本脚本把每条指针拆成三问：
+  [OK] KB0-conventions.md:530 → | A-117 | **Markdown 表形的四类「渲染即碎」病例：本仓的纪律只写在散文里，而写它的人当天就违反了一次**（第六轮；起因是 A-114 的落点自己踩了自己立的规矩）。四类同时现形：①**裸竖线**——单元格里的绝对值与标签写法把一行切成多于表头的列，本轮抓到 8 行（A-114 的…
+  [OK] KB0-conventions.md:563-565 → > A-108 是同一病的**第三层**：脚本挂上之后，汇总数字仍是我手工点出来的，而且两份点的是不同口径 … > 凡"数行数"的数，判据不是"有没有脚本"，而是**"这个数是不是脚本自己印的"**——已经把它写进 §6 检查 27。
+  [OK] docs/kb/KB0-conventions.md:530 → | A-117 | **Markdown 表形的四类「渲染即碎」病例：本仓的纪律只写在散文里，而写它的人当天就违反了一次**（第六轮；起因是 A-114 的落点自己踩了自己立的规矩）。四类同时现形：①**裸竖线**——单元格里的绝对值与标签写法把一行切成多于表头的列，本轮抓到 8 行（A-114 的…
+  [OK] docs/kb/KB0-conventions.md:384 → > A-54…A-70 处理两份上报清单；**A-71…A-86 全部是主线程自查/清扫时发现的自家缺陷**
+  [OK] KB0-conventions.md:563-565 → > A-108 是同一病的**第三层**：脚本挂上之后，汇总数字仍是我手工点出来的，而且两份点的是不同口径 … > 凡"数行数"的数，判据不是"有没有脚本"，而是**"这个数是不是脚本自己印的"**——已经把它写进 §6 检查 27。
+  [OK] KB0-conventions.md:302 → | 27 实测数字须有重跑产物 | 文档里凡"全量实测 / 行级差异数 / 恒等式成立或证伪"类断言，须指向本仓一个可重跑产物（`data/probe_*.py`、`data/validate_raw.py` 或一条用例）并能复现该数字。**汇总计数同理**：一份产物"判成立 N 行 / 不成立 M…
+  [OK] data/probe_doc_line_refs.py:16 → 口径（A-117 ⑦ 明确要求的先决条件：**先定引文归属，否则工具自己就是假病例的制造机**）
+  [OK] tests/test_doc_line_refs.py:1-6 → """文档行号指针的落点核对（KB0 §6 检查 28 的姊妹项；任务 #44，裁决 A-120）。 … """
+  [OK] data/probe_doc_line_refs.py:5-14 → 仓内文档大量使用 `docs/kb/KB0-conventions.md:NNN`、`docs/AUDIT-glm-code-factory.md:110-129` … 指针后面根本没有引文 ⟹ `no-quote`（**不判**，不算病例）
+  [OK] data/probe_doc_line_refs.py:16-29 → 口径（A-117 ⑦ 明确要求的先决条件：**先定引文归属，否则工具自己就是假病例的制造机**） … * **范围语义**：`N-M` 是闭区间（落点在第 N 到第 M 行之间），单行就是 `N`。
+  [OK] data/probe_doc_line_refs.py:31-40 → 已知局限（不要把它当成"绿了就是没问题"） … 引文。README 的「逐字抄自本仓库」一节正是这种排版，默认口径下这些指针全部记 `no-quote`。
+  [OK] data/probe_doc_line_refs.py:44-55 → PYTHONIOENCODING=utf-8 python data/probe_doc_line_refs.py                    # 主扫描（缺省=严格口径） … * `--own-segment`：放宽到「本段内第一个引文串」，散文隔开也认。实测它对 KB0/KB4 台账的
+  [OK] tests/test_slice.py:229-237 → def test_leaked_ads_netid_is_caught(built): … io.open(path, "w", encoding="utf-8").write(blob)
+  [OK] docs/kb/KB0-conventions.md:287-289 → **§6 新增检查（19–25）的负向样例（按检查 22 的要求，本文件自证）** … 以及**本轮是否真的见血**（没见过血的一律标注，不冒充已验证）：
+  [OK] docs/kb/KB0-conventions.md:296 → | 22 断言须负向测试 | 自称能自曝的断言须附注入用例 | `FAIL[22] <检查名>: 无负向用例 ⟹ 降格为"约定"` | **已有一次真实触发记录**：规则 15/A-72 的逐格复算把 C3 示例的 `0.78` 抓成重算值 `0.651`（标注不符即视为缺陷），证明该复算检查确有检…
+  [OK] docs/kb/KB0-conventions.md:302 → | 27 实测数字须有重跑产物 | 文档里凡"全量实测 / 行级差异数 / 恒等式成立或证伪"类断言，须指向本仓一个可重跑产物（`data/probe_*.py`、`data/validate_raw.py` 或一条用例）并能复现该数字。**汇总计数同理**：一份产物"判成立 N 行 / 不成立 M…
+  [OK] docs/kb/KB0-conventions.md:303 → | 28 表须成形（A-117） | 每张 Markdown 表：①一条逻辑行 = 一个物理行；②每行列数与表头相符（单元格内的竖线必须写成 `\|`）；③表**整体连续**，中间不得插空行（空行之后的 `\|…\|` 不再是表，竖线原样印成散文）。机器载体 `python data/probe_m…
+  [OK] docs/kb/KB0-conventions.md:523 → | A-110 | **§1.13b 待人工复判清单五条悬案 + 我自己写进 KB2 的脱敏计数不可复现**（A-107 同批排队待裁项；用户裁定「同批排队待裁的你智能决策」）。两类问题同形——都登记了口径或数字，却没有可复算的出处。(i) KB3 §1.13b 在 A-97 之后留下 **4 族 …
+  [OK] docs/kb/KB0-conventions.md:530 → | A-117 | **Markdown 表形的四类「渲染即碎」病例：本仓的纪律只写在散文里，而写它的人当天就违反了一次**（第六轮；起因是 A-114 的落点自己踩了自己立的规矩）。四类同时现形：①**裸竖线**——单元格里的绝对值与标签写法把一行切成多于表头的列，本轮抓到 8 行（A-114 的…
+  [OK] docs/kb/KB0-conventions.md:533 → | A-120 | **行号指针核对器（#44，A-117 ⑦ 立项）落地，并用它抓到本仓两处真漂移；同时本轮第三次靠"外部报告须自己复算"挡下一次事故**。(i) 探针扫出 `docs/AUDIT-minimax-round3.md` 第 19 行指向被审计项目的 `tests/test_mcop…
+  [OK] docs/kb/KB0-conventions.md:563-565 → > A-108 是同一病的**第三层**：脚本挂上之后，汇总数字仍是我手工点出来的，而且两份点的是不同口径 … > 凡"数行数"的数，判据不是"有没有脚本"，而是**"这个数是不是脚本自己印的"**——已经把它写进 §6 检查 27。
+  [OK] docs/kb/KB0-conventions.md:583-584 → > **规范已写 ≠ 行为已守**，检查 22/23 的这一格只有负向测试能闭合（本轮把 `--selftest` 从 22 推到 29， … > 全部由脚本自数——检查 27 在这一侧的兑现）。
+  [OK] README.md:98 → | 「验证金字塔」三档 / 文档级真值双标注 / 完成度口径（A-90、A-92、A-93） | KB0 §4、§6 检查 24/25、§7.3 | `docs/AUDIT-glm-code-factory.md:110-129`；`docs/kb/KB0-conventions.md` §7.3 …
+  [OK] docs/kb/KB2-waveform-formats.md:780-818 → ## 六、脱敏要求（发布作品集前必做） …
+  [OK] KB0:302 → | 27 实测数字须有重跑产物 | 文档里凡"全量实测 / 行级差异数 / 恒等式成立或证伪"类断言，须指向本仓一个可重跑产物（`data/probe_*.py`、`data/validate_raw.py` 或一条用例）并能复现该数字。**汇总计数同理**：一份产物"判成立 N 行 / 不成立 M…
+  [OK] KB0:303 → | 28 表须成形（A-117） | 每张 Markdown 表：①一条逻辑行 = 一个物理行；②每行列数与表头相符（单元格内的竖线必须写成 `\|`）；③表**整体连续**，中间不得插空行（空行之后的 `\|…\|` 不再是表，竖线原样印成散文）。机器载体 `python data/probe_m…
+  [OK] KB0:303 → | 28 表须成形（A-117） | 每张 Markdown 表：①一条逻辑行 = 一个物理行；②每行列数与表头相符（单元格内的竖线必须写成 `\|`）；③表**整体连续**，中间不得插空行（空行之后的 `\|…\|` 不再是表，竖线原样印成散文）。机器载体 `python data/probe_m…
+  [OK] KB0:3 → 本文件是 KB2/KB3/KB4/KB5/KB6 与 C1–C6 契约之间的**唯一命名权威**。
+  [OK] KB2:737-768 → }, "why_not_conclusive": {
+  [OK] KB2:761 → why:"无事件上下文，无法区分机械尖峰与调度抖动"}`；**禁止**沉默跳过。
+  [OK] KB2:804 → - 脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。
+  [OK] KB2:768 → 
+  [OK] KB2:761 → why:"无事件上下文，无法区分机械尖峰与调度抖动"}`；**禁止**沉默跳过。
+  [OK] KB2:758 → 
+  [OK] KB2:760 → - 按 C6 §4：C3 必须显式写 `differential.not_evaluable = {family:"software_induced_error",
+  [OK] KB2:801 → - 作者：Reichenbach, Thomas — University of Stuttgart（ROR 04vnq7t77）
+  [OK] KB2:803 → - 许可：**CC BY 4.0**；引用须注明作者 + 机构 + DOI + 许可（KB7 署名要求）。
+  [OK] KB0:303 → | 28 表须成形（A-117） | 每张 Markdown 表：①一条逻辑行 = 一个物理行；②每行列数与表头相符（单元格内的竖线必须写成 `\|`）；③表**整体连续**，中间不得插空行（空行之后的 `\|…\|` 不再是表，竖线原样印成散文）。机器载体 `python data/probe_m…
+  [OK] KB0:302 → | 27 实测数字须有重跑产物 | 文档里凡"全量实测 / 行级差异数 / 恒等式成立或证伪"类断言，须指向本仓一个可重跑产物（`data/probe_*.py`、`data/validate_raw.py` 或一条用例）并能复现该数字。**汇总计数同理**：一份产物"判成立 N 行 / 不成立 M…
+  [OK] KB2:804 → - 脱敏**只清除主机路径 / ADS NetID / 绝对墙钟时刻**，绝不清除署名与 DOI，也不改动数值。
+  [OK] KB2:737-768 → }, "why_not_conclusive": {
+  [OK] KB2:761 → why:"无事件上下文，无法区分机械尖峰与调度抖动"}`；**禁止**沉默跳过。
+==========================================================================================
+章： 00-导读.md ｜ 素材仓顺序： ['trae_factory', 'axiscope']
+==========================================================================================
+==========================================================================================
+章： ch01-代码工厂.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] index.js:28 → // ---------- 自然语言需求解析（规则式，零API依赖） ----------
+  [OK] core.js:35 → '    /// <summary>运动控制品牌。新增品牌 = 加一个枚举值 + 一个适配器 + 工厂注册一行。</summary>\n' +
+  [OK] adapters_kb.js:19 → device: 'GoogolGTS', brandEnum: 'Brand.GoogolGts', kbLevel: 'B',
+  [OK] core.js:909-911 → '- **A级**: 虚拟控制器 —— 100% 自研可运行（仿真）\n' + … '- **C级**: 骨架 + 完整 TODO 清单，用于二次开发起点\n' +
+  [OK] adapters_kb.js:322 → buildNote: '核心API已映射(board/点位/停止/位置/IO/模拟量)。函数名与参数表已按官方C#绑定/C头文件核对；官方无软件使能接口(脉冲卡硬线使能)，使能项标注未实现。',
+  [OK] gts.csv:326 → GT_Open,gts.dll,"GT_Open(short channel,short param)"
+  [OK] gts_hdr.csv:367 → GT_Open,gts.dll,"short GT_Open(short channel=0,short param=1)"
+  [OK] adapters_kb.js:814-815 → open: ` … return MotionResult.Fail(-300, "[TODO] 按《' + label + '手册》实现连接初始化");`,
+  [OK] core.js:924-926 → '> **同源声明（重要）**: 本清单由生成器内置知识库派生，与适配器代码同源。\n' + … '> 唯一有效依据是厂商官方手册/头文件（外部信息源），须逐条比对（含函数名、参数个数/类型/方向、轴号基数、IO 极性）。\n' +
+  [OK] test_gen.js:4 → //   all  : 全品牌套件（各品牌适配器 + 虚拟控制器，不含 ACS）
+  [OK] out/mc_all/README.md:3 → > 生成工具: **上位机代码工厂 v1.0** | 时间: 2026-10-22 12:00:23 | 轴数: 4 | 工艺: dispensing
+  [OK] out/mc_all/README.md:9-16 → ``` … ```
+  [OK] core.js:966-968 → 'rem ===== Windows 自带 .NET Framework 编译（零安装，验证代码可编译） =====\r\n' + … 'set CSC=%WINDIR%\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe\r\n' +
+  [OK] out/mc_all/README.md:18-22 → ## 30 秒跑起来（无需任何硬件/安装） … ```
+  [OK] test_gen.js:43-52 → '# 地址,名称,类型,访问,功能码,缩放,单位,描述', … emit('out/mb_temp', mb, 'ModbusDeviceKit.zip');
+  [OK] core.js:995-997 → function readme(cfg, adapters) { … var brand = (adapters && adapters.brandLabel) || cfg.brandLabel || '多品牌套件';
+  [OK] core.js:676-677 → '        // ================== 换卡只改这一行 ==================\n' + … '        const Brand CREATE_BRAND = Brand.Virtual;\n' +
+  [OK] out/mc_all/src/Core/ControllerFactory.cs:12 → /// <summary>工厂：业务层唯一的品牌耦合点。换卡 = 改调用处一个枚举值（JD职责3）。</summary>
+  [OK] core.js:604-608 → var cases = ''; … cases += '                case ' + brandCs(a.id) + ': return new ' + a.ns + '.' + a.cls + '();\n';
+  [OK] out/mc_all/src/Core/ControllerFactory.cs:25 → default: throw new NotSupportedException("Brand not registered: " + brand);
+  [OK] out/mc_all/README.md:41-43 → - 所有适配器错误码统一映射到 MotionResult … - 单位换算集中在适配层，业务层只用用户单位
+  [OK] core.js:65 → '    /// <summary>轴配置。所有位置统一为用户单位（默认 mm），脉冲换算封装在适配层。</summary>\n' +
+  [OK] core.js:679-680 → '        // [注意] 真实品牌的 P/Invoke 路径只做过编译级验证，未经运行验证；\n' + … '        //        切换前须按 docs/ApiChecklist.md 对照厂商手册核对签名。\n' +
+  [OK] core.js:927 → '> 比对工时是上真机工作的主体，请按实际手册篇幅估算，不要以本清单条数推断"半天即可"。\n\n' +
+  [OK] out/mc_all/src/Virtual/VirtualController.cs:15 → public class VirtualController : IMotionController
+  [OK] core.js:715 → '                // 2.5 行为断言自检（接缝3 共享评测集 BEH-01/03/04/07/09/14/15）\n' +
+  [OK] core.js:973-975 → 'if %errorlevel%==0 (\r\n' + … '  ..\\bin\\GlueDemo.exe\r\n' +
+  [OK] index.js:16 → { id: 'acs',       label: 'ACS SPiiPlus (高级EtherCAT)', kb: 'B' },
+  [OK] adapters_kb.js:668 → device: 'ACS-SPiiPlus', brandEnum: 'Brand.Acs', kbLevel: 'B',
+  [OK] core.js:972 → '  ..\\src\\Core\\*.cs ..\\src\\Virtual\\*.cs ..\\src\\Adapters\\*.cs ..\\samples\\*.cs\r\n' +
+  [OK] index.js:66-67 → // ACS 不进全品牌套件：其适配器引用官方 ACS.SPiiPlusNET.dll，无该 DLL 时整个套件编不过； … // 选 ACS 作为目标品牌时仍单独生成专用套件
+  [OK] index.js:65 → list = [kb, MCKb.kb.gts, MCKb.kb.leadshine, MCKb.kb.zmotion, MCKb.kb.softwin, MCKb.kb.gaochuan];
+  [OK] core.js:604-608 → var cases = ''; … cases += '                case ' + brandCs(a.id) + ': return new ' + a.ns + '.' + a.cls + '();\n';
+  [OK] core.js:42 → '        Acs = 4,          // ACS SPiiPlus（ACS.SPiiPlusNET 官方.NET库）\n' +
+  [OK] out/mc_all/src/Core/ControllerFactory.cs:25 → default: throw new NotSupportedException("Brand not registered: " + brand);
+  [OK] core.js:960-963 → var acsNote = (cfg && cfg.brandId === 'acs') … : '';
+  [OK] index.js:28 → // ---------- 自然语言需求解析（规则式，零API依赖） ----------
+  [OK] adapters_kb.js:37 → { f: '(未实现) 模拟量 AI/AO', use: '力控模拟量', chk: '官方 C# 绑定与 PE 导出表均无 GT_GetAi/GT_SetAo，已删除该臆造声明；固高模拟量是通道型接口 GT_GetAdc / GT_SetDac / GT_PtAo（gts.csv:129/393/…
+  [OK] core.js:931 → '> 标注「未实现」的条目（官方真值里没有等价函数，已从代码里删除该臆造声明）计入总 n、不计入 k。\n' +
+  [OK] core.js:604-608 → var cases = ''; … cases += '                case ' + brandCs(a.id) + ': return new ' + a.ns + '.' + a.cls + '();\n';
+  [OK] core.js:910 → '- **B级**: 核心 API 已映射（Open/使能/回零/点位/IO/位置），插补给出调用结构；**SDK 函数名与参数表已按官方真值（PE 导出表 + 官方 C# 绑定 / C 头文件）逐条核对**，仍带 [核对] 标记的项（单位/量程/IO 极性/模式号等）须按厂商手册确认。注意：全品牌…
+  [OK] adapters_kb.js:37 → { f: '(未实现) 模拟量 AI/AO', use: '力控模拟量', chk: '官方 C# 绑定与 PE 导出表均无 GT_GetAi/GT_SetAo，已删除该臆造声明；固高模拟量是通道型接口 GT_GetAdc / GT_SetDac / GT_PtAo（gts.csv:129/393/…
+  [OK] adapters_kb.js:814-815 → open: ` … return MotionResult.Fail(-300, "[TODO] 按《' + label + '手册》实现连接初始化");`,
+  [OK] out/mc_all/src/Virtual/VirtualController.cs:317 → // 越界轴号在真机上是非法内存访问（栈损坏级）。
+  [OK] core.js:927 → '> 比对工时是上真机工作的主体，请按实际手册篇幅估算，不要以本清单条数推断"半天即可"。\n\n' +
+  [OK] core.js:973-975 → 'if %errorlevel%==0 (\r\n' + … '  ..\\bin\\GlueDemo.exe\r\n' +
+  [OK] core.js:677 → '        const Brand CREATE_BRAND = Brand.Virtual;\n' +
+  [OK] out/mc_all/src/Virtual/VirtualController.cs:133 → a.Homed = false; // [接缝3·BEH-15] 回零进行中不算已回零：不清此标志，WaitHomeDone 对已回零轴立即返回，重回零根本没等（行为断言抓到的真 bug）
+==========================================================================================
+章： ch02-真值链.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] truth_kb.js:170 → out.push('        // 【口径不一致·用前必须人工裁决】' + fn + '：本套件 ' + ret + '/' + argc + '参 vs mcopilot ' + mret + '/' + margc + '参 —— 两边都可能有据，见 docs/TruthChain.md …
+  [OK] out/mc_gts/src/Adapters/GoogolGtsController.cs:63 → // [ 源 official-binding | 核对 none | 提取 judgment ]  导出表无背书
+  [OK] LTDMC.cs:891 → public static extern Int32 dmc_get_position(UInt16 CardNo, UInt16 axis);
+  [OK] truth_kb.js:151-152 → // 注意：未收录降级不进 noneList —— "未核对"专指钉扎了但 check=none 的条目， … // 降级条目已在 missed 里单独统计，重复计入会让总汇总 56+2+2=60 这种账对不上。
+  [OK] truth_kb.js:24 → '%WORKSPACE%\\mcopilot'
+==========================================================================================
+章： ch03-手册进知识库.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] gen/adapters_kb.js:10-15 → // 真值依据（只认这三层外部真值，函数名/参数表/结构体字段顺序全部照抄，不凭记忆）： … //   gts_hdr_macros.csv 官方头文件宏表   —— 回零模式号等常量
+  [OK] gen/adapters_kb.js:40 → // [真值] 函数名/参数表取自 gts.csv(官方C#绑定) 与 gts_hdr.csv(官方C头文件)，并已对 dll_exports.csv(PE导出表) 校验
+  [OK] gen/adapters_kb.js:23-24 → { f: 'GT_Open(channel, param)', use: '打开卡', chk: '官方原型 GT_Open(short channel,short param)（gts.csv:326 / gts_hdr.csv:367）；第一参是通道(卡)号，第二参 param 按卡型取值。变体…
+  [OK] gts.csv:326 → GT_Open,gts.dll,"GT_Open(short channel,short param)"
+  [OK] gts_hdr.csv:36 → GT_ArcZXCOverride2,gts.dll,"short GT_ArcZXCOverride2(short crd,long z,long x,double zCenter,double xCenter,short circleDir,double synVel,double synAcc…
+  [OK] decision-lists/trae_factory-2da4559.md:30-31 → - **T1 跨仓真值桥全 [OK]**：mcopilot `scripts/verify_trae_pinvoke.py` 当日实跑 … 退出码 0，58 条 P/Invoke 逐条 `[OK] ← <厂商>.csv:行号`。
+  [OK] gen/index.js:11-19 → var BRANDS = [ … ];
+  [OK] gen/adapters_kb.js:19 → device: 'GoogolGTS', brandEnum: 'Brand.GoogolGts', kbLevel: 'B',
+  [OK] gen/adapters_kb.js:321 → device: 'LeadshineDMC', brandEnum: 'Brand.Leadshine', kbLevel: 'B',
+  [OK] gen/adapters_kb.js:487 → device: 'ZMotionZMC', brandEnum: 'Brand.ZMotion', kbLevel: 'B',
+  [OK] gen/adapters_kb.js:668 → device: 'ACS-SPiiPlus', brandEnum: 'Brand.Acs', kbLevel: 'B',
+  [OK] gen/adapters_kb.js:802 → brandEnum: brandEnum, kbLevel: 'C',
+  [OK] gen/adapters_kb.js:857 → device: 'VirtualController', brandEnum: 'Brand.Virtual', kbLevel: 'A'
+  [OK] decision-lists/trae_factory-2da4559.md:33-34 → 22 文件/3372 行 + 温控 7 文件，产物与 gen 源同源可再生（P/Invoke 58 条： … 知识库钉扎 49 / 未收录降级 9）。
+  [OK] gen/adapters_kb.js:37 → { f: '(未实现) 模拟量 AI/AO', use: '力控模拟量', chk: '官方 C# 绑定与 PE 导出表均无 GT_GetAi/GT_SetAo，已删除该臆造声明；固高模拟量是通道型接口 GT_GetAdc / GT_SetDac / GT_PtAo（gts.csv:129/393/…
+  [OK] gen/adapters_kb.js:337 → { f: '(未实现) 总线卡软件使能', use: '使能', chk: '官方 C# 绑定/C 头文件/PE 导出表均无 dmc_set_servo 或任何软件使能声明，已删除该臆造声明；雷赛脉冲卡为硬线使能，总线卡使能接口须按型号手册确认后再接入', ok: false }
+  [OK] gen/adapters_kb.js:382 → // [未实现] 官方 C# 绑定/C 头文件/PE 导出表里都没有 dmc_set_servo（或任何软件使能声明），该臆造声明已删除。
+  [OK] gen/adapters_kb.js:196-199 → // [核对] 官方 TTrapPrm.smoothTime 是 short（gts_structs.csv 字段3）， … tp.smoothTime = 0;
+  [OK] decision-lists/trae_factory-2da4559.md:63-65 → - **C2 已清偿**（`954c210`）：五品牌套件修复后逐个再生——gts 19/22、 … 属设计事实）；TruthChain.md ×5 全部刷新为现行知识库口径。
+  [OK] gen/index.js:17-18 → { id: 'softwin',   label: '软赢（骨架+TODO清单）', kb: 'C' }, … { id: 'gaochuan',  label: '高川（骨架+TODO清单）', kb: 'C' }
+  [OK] decision-lists/trae_factory-2da4559.md:35-36 → - **T3 产物自证无效**：工厂产物的"对"由 mcopilot 官方绑定与编译门（build_net48.bat … 零安装 csc）外部裁决，生成器自述不作为验收依据。
+  [OK] adapters_kb.js:10-15 → // 真值依据（只认这三层外部真值，函数名/参数表/结构体字段顺序全部照抄，不凭记忆）： … //   gts_hdr_macros.csv 官方头文件宏表   —— 回零模式号等常量
+  [OK] decision-lists/trae_factory-2da4559.md:33-34 → 22 文件/3372 行 + 温控 7 文件，产物与 gen 源同源可再生（P/Invoke 58 条： … 知识库钉扎 49 / 未收录降级 9）。
+  [OK] adapters_kb.js:10-15 → // 真值依据（只认这三层外部真值，函数名/参数表/结构体字段顺序全部照抄，不凭记忆）： … //   gts_hdr_macros.csv 官方头文件宏表   —— 回零模式号等常量
+  [OK] index.js:11-19 → var BRANDS = [ … ];
+  [OK] gen/adapters_kb.js:37 → { f: '(未实现) 模拟量 AI/AO', use: '力控模拟量', chk: '官方 C# 绑定与 PE 导出表均无 GT_GetAi/GT_SetAo，已删除该臆造声明；固高模拟量是通道型接口 GT_GetAdc / GT_SetDac / GT_PtAo（gts.csv:129/393/…
+  [OK] gen/adapters_kb.js:196-199 → // [核对] 官方 TTrapPrm.smoothTime 是 short（gts_structs.csv 字段3）， … tp.smoothTime = 0;
+==========================================================================================
+章： ch04-双仓收尾实录.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] gen/truth_kb.js:24 → '%WORKSPACE%\\mcopilot'
+  [OK] gen/index.js:66-68 → // ACS 不进全品牌套件：其适配器引用官方 ACS.SPiiPlusNET.dll，无该 DLL 时整个套件编不过； … steps.push({ tag: '知识库', msg: '全品牌套件不含 ACS（需官方 ACS.SPiiPlusNET.dll 才能编译）；Brand.Acs 请单独生…
+  [OK] gen/truth_kb.js:24 → '%WORKSPACE%\\mcopilot'
+  [OK] gen/index.js:66-68 → // ACS 不进全品牌套件：其适配器引用官方 ACS.SPiiPlusNET.dll，无该 DLL 时整个套件编不过； … steps.push({ tag: '知识库', msg: '全品牌套件不含 ACS（需官方 ACS.SPiiPlusNET.dll 才能编译）；Brand.Acs 请单独生…
+  [OK] KB7:10 → | 标题 | Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running Properties of Synthetic Fiber Ropes | Meas…
+  [OK] KB7:10 → | 标题 | Measurement data for: Development of a Cable Actuator Test Rig for Identification of Dynamic Running Properties of Synthetic Fiber Ropes | Meas…
+==========================================================================================
+章： 00-导读.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+==========================================================================================
+章： ch01-驾驭层.md ｜ 素材仓顺序： ['mcopilot', 'axiscope']
+==========================================================================================
+  [OK] memory.md:3 → > 固定路径：`%USERPROFILE%\self-improving\memory.md`。多个智能体共写：**只允许末尾追加，不修改他人条目**。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:7 → > 本文件的适配规则有 4 处全局副本（`.minimax\AGENTS.md`、`.claude\CLAUDE.md`、`.codex\AGENTS.md`、MiniMax 插件 `self-improving` 的 SKILL.md）+ 各项目 `.trae\rules` 变体，改规则须同步全部…
+  [OK] memory.md:4 → > 条目格式：`N. [YYYY-MM-DD][来源: 纠正|失败|偏好|3次确认] 一句话规则（写"要做什么"，而非光秃秃的"别做什么"）`
+  [OK] memory.md:11-27 → 1. [2026-10-15][来源: 失败] Trae 的 MCP host 子进程 PATH 不含 `<工具链>\nodejs`：mcp.json 里的 `command` 一律写绝对路径（用 `<工具链>\nodejs\node.exe` 直接执行 js 入口）。 … 17. [2…
+  [OK] docs/协议提取SOP.md:4-5 → > 动机：防方法流失——管道目前只存在于三个知识库的产出物和会话记忆里；下一个人（或下次会话） … > 点名新协议时，不应靠考古 modbus.json 的提交历史重新发明流程。
+  [OK] docs/协议提取SOP.md:6 → > 有效性的证据标准：本文只收三次提取中实际用过且被抓过错/防过错的步骤；没用过的一律不写。
+  [OK] docs/协议提取SOP.md:24-26 → ①来源获取 → ②文本化 → ③机械提取 → ④引文全量机器校验 → ⑤三源语义对账 … ⑧账本入账 ← ⑦锚点登记 ← ⑥源码取证升级（可选，有开源实现时）
+  [OK] docs/协议提取SOP.md:182 → - **完成标准**：八步验收门全绿（退出码 0）+ judgment 全部显式 + 诚实边界章节随交付更新。
+  [OK] memory.md:23 → 13. [2026-10-22][来源: 纠正] 交付前先就绪性质询（"具备真跑条件么"），不轻信"做完了"。
+  [OK] memory.md:17 → 7. [2026-10-21][来源: 纠正] 交付物里**不写死本机绝对路径**：仓库根用运行时计算（`Path(__file__).resolve().parents[N]`），仓库外的依赖走环境变量或命令行参数，解释器走 `PYTHON`/PATH 自动定位；外部件缺失时**明确报错退出**，…
+  [OK] memory.md:34 → - 2026-10-20：给别人（厂商/FAE/同事）的待确认清单要**附上自己已查到的公开依据、只问差异项与缺失项**，并逐条标注「卡住什么」，让对方不必从头回复（第 1 次：用户回传逐项核实后的厂商清单，明确建议「让厂商只确认差异项」；我据此把 9 项清单精简成 5 必须+2 建议+1 确认）。
+  [OK] memory.md:33 → - 2026-10-20：交付硬件相关代码前先做**可运行的仿真先行验证**（自己跑起来的自检程序），不要只丢一句「请上机验证」；桌面能验的方向/单位/状态机必须自己验掉，剩下的再列成上机清单（第 1 次：用户追问「有没有做过仿真先行验证」，我发现自己只覆盖了签名与换算，点动方向这条完全没建模）。
+  [OK] memory.md:5 → > 引用条目时带序号与日期（序号可能因并发追加重复，日期消歧）。
+  [OK] docs/协议提取SOP.md:6 → > 有效性的证据标准：本文只收三次提取中实际用过且被抓过错/防过错的步骤；没用过的一律不写。
+  [OK] memory.md:13 → 3. [2026-10-19][来源: 纠正] 声明准确率/检出率前必须绑定可核对的清单或外部真值（如植入缺陷清单、解析解、厂商手册），并在文档里明确区分「自洽性验证」与「外部证据」；禁止把自己造的样例 + 自己写的规则当作有效性证明。
+==========================================================================================
+章： ch02-三态真值.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] memory.md:13 → 3. [2026-10-19][来源: 纠正] 声明准确率/检出率前必须绑定可核对的清单或外部真值（如植入缺陷清单、解析解、厂商手册），并在文档里明确区分「自洽性验证」与「外部证据」；禁止把自己造的样例 + 自己写的规则当作有效性证明。
+  [OK] decision-lists/mcopilot-b53ac62.md:30-32 → - **T2 三态真值结构**：Tier A 构造真值（自洽）/ Tier B 真实分布（Lemay 12852 帧 … 有效性证明（对照：memory.md 条目 3）。
+  [OK] scripts/fault_farm.py:9-10 → 场景驱动器：对每个故障场景「注入 → 客户端/探针收发与错误事件落成 comm_log/1 条目 … → 按注入参数构造标签（真值在注入那一刻即知，不依赖事后观测）」。
+  [OK] scripts/fault_farm.py:22-34 → 场景清单（注入参数 → 构造性真值）： … rtu_timeout      农场 no-respond 桩（复用 G4 同款做法）     检出 timeout
+  [OK] scripts/fault_farm.py:36-42 → 构造性真值三断言（每场景自动执行，任一不满足即该场景 FAIL）： … （绝不带病出农场——采集端缺陷在农场就地暴露，不流到检出层）。
+  [OK] scripts/fault_farm.py:48-50 → 诚实边界：本农场的真值全部是注入参数的构造性推论——它证明「批产→检出→判卷」 … 分布校准属 Phase 2（真实语料）与 Phase 3（真机波次）。
+  [OK] scripts/fault_farm.py:15 → comm_log_all.jsonl          全场景合并日志（行号 L<n> 是判卷与检出的统一坐标）
+  [OK] anchors.json:4 → "purpose": "协议域外部真值锚点清单：文件 → sha256。门禁 scripts/gate_anchors.py 重算比对，防一手件/提取文本/源码包被静默篡改（铁律4）。",
+  [OK] anchors.json:9-14 → "name": "Modbus_Application_Protocol_V1_1b3.pdf", … "sha256": "f80d0d7132fd035104c3f21b01026470e3310ca3d8d493d9a9737d0d32ad2eb1"
+  [OK] knowledge/protocols/anchors.json:57-63 → "name": "snap7-master.tar.gz", … },
+  [OK] knowledge/protocols/anchors.json:65-95 → "name": "com0com-3.0.0.0-i386-and-x64-signed.exe", … },
+  [OK] knowledge/protocols/anchors.json:97-122 → "name": "Modbus_Application_Protocol_V1_1b3.txt", … }
+  [OK] anchors.json:103-105 → "reextract_from": "knowledge/protocols/specs/Modbus_Application_Protocol_V1_1b3.pdf", … "reextract_check": "哈希必须与在档 txt 完全一致（证明提取链未被篡改，见 gate_anchors.…
+  [OK] anchors.json:35 → "spec": "FOCAS1/2 函数清单（第三方分发的 FANUC 手册副本；官方 B-63xx 未获得，来源性质见 focas.json spec_version）",
+  [OK] anchors.json:51 → "spec": "Snap7 Reference Manual Rev.8（对应 Snap7 1.4.2，第三方逆向工程文档——S7 无官方公开协议规范）",
+  [OK] anchors.json:129 → "policy": "默认 WARN 不计入失败（CI 无网不误报）；gate_anchors.py --strict 时计入失败"
+  [OK] real_corpora/sources.md:6 → - 统计：共 35 条；confirmed 11 / reported 24；覆盖 7 个仓库。
+  [OK] real_corpora/sources.md:5 → - 纪律：每条含 `source_url`（可回查）；`root_cause_status` 仅两档——`confirmed`（维护者回复/修复 commit 佐证，note 注明依据）与 `reported`（仅用户报告）；`error_class` ∈ {timeout, crc, reset,…
+  [OK] knowledge/protocols/real_corpora/sources.md:64-65 → --- … 未收录说明：pymodbus 讨论 #2413/#2389、python-snap7 讨论 #295/#393/#415 为 GitHub Discussions（非 issue）未计入；EASYMODBUS #68、python-snap7 #51/#519 等为 API/参数类问题，…
+  [OK] docs/项目回顾与收尾_20261021.md:384-385 → **natural_polling_only 全量：58325 包 → 12852 Modbus 帧（FC1/2/3 各 4284，纯读）， … 标签全 0，forensics_comm 检出 0 条 → 真实分布误报率 = 0/12852 = 0.000000。**
+  [OK] docs/项目回顾与收尾_20261021.md:387-389 → 首测无基线，此数字只报告不设阈值；它的意义是「对 1.3 万帧真实正常流量，现有 7 … 写、标签全 0）留存未映射，下一切片补上后样本量可再翻三倍。
+  [OK] docs/项目回顾与收尾_20261021.md:399 → | characterization | 探测画像：读越界地址 | **6689 帧**（海量 EX02 非法地址异常响应） | **37 段 exception_storm** | **0.4977** | **正对照**：攻击在 Modbus 面可见时检出引擎确实开火，且窗外零误报——管线对真实…
+  [OK] scripts/fault_farm.py:395-404 → finally: … try:
+  [OK] docs/TODO需实测_协议域.md:9-13 → | T1 | diagslave 正式模拟器对跑同一契约套件（当前对端=自建契约桩，行为受 C1-C10 约束但非第三方实现） | `ModbusContracts.cs` 文件头 | ◐ P2/P4 | 契约测试 | … | T5 | SLMP 副头部值（0x5000/0xD000）真机核对（现 …
+  [OK] docs/TODO需实测_协议域.md:3-5 → 纪律：模板/知识库里所有 `TODO[需实测]` 注释必须在本文件登记（编号 + 状态）， … 真机波（P4）逐条消除：删模板注释 + 本文件状态改 ✅（附实测环境记录）。
+  [OK] decision-lists/mcopilot-b53ac62.md:19-20 → - **B1 软件层收尾 ≠ 全部完成**：真机验证 T1-T5 显式挂起，Tier C 冻结至硬件到场—— … 这是设计性挂起，不是遗留欠账（对照：`docs/TODO需实测_协议域.md`）。
+  [OK] docs/TODO需实测_协议域.md:16-18 → - 知识库引文复核现为三层判定（严格逐字 36 / 签名同源 17 / judgment 跳过 7）， … - `fc_quantity_limits_summary` 引文为概括，已按纪律标 `needs: manual_check`（本轮复核发现并补标）。
+  [OK] real_corpora/sources.md:6 → - 统计：共 35 条；confirmed 11 / reported 24；覆盖 7 个仓库。
+  [OK] docs/TODO需实测_协议域.md:4 → `tests/test_protocol_modbus.py::test_TODO需实测追踪对账` 双向对账。
+  [OK] memory.md:26 → 16. [2026-10-22][来源: 纠正] 陌生领域不瞎立基准：用外部锚点（官方文档/厂商件/解析解）替代个人基准；熟悉领域才先立个人基准。
+  [OK] knowledge/protocols/anchors.json:35 → "spec": "FOCAS1/2 函数清单（第三方分发的 FANUC 手册副本；官方 B-63xx 未获得，来源性质见 focas.json spec_version）",
+  [OK] memory.md:27 → 17. [2026-10-22][来源: 失败] 非专家背书的领域判断必须标注「工作假设」，禁止进入事实区（实例：伺服前馈判据为智能体产出，非用户领域经验）。
+  [OK] samples/servo/darus3252_prbs_pos_ppi.truth.json:10 → "boundary": "位置环闭合（PRBS 位置参考 → P 位置环 → PI 速度环 → 丝杠 → 负载位置反馈），**能验伺服闭环位置带宽模型**（宽带路径已落地，工具读数与本文件独立复算的 11.943 Hz 逐位一致）。**不能验开环相位裕度**：数据集公开参数写明速度/加速度前馈**开…
+  [OK] samples/servo/darus3252_prbs_pos_ppi.truth.json:9 → "truth_basis": "本文件由 scripts/verify_darus3252_servo.py 独立复算（不 import mcopilot 的估计器）：Welch 分段互谱 + 自写 FFT；并与数据集自己公开的机械模型 ω₀=215.1584 rad/s 对撞；另独立复算「前馈污染…
+  [OK] memory.md:26 → 16. [2026-10-22][来源: 纠正] 陌生领域不瞎立基准：用外部锚点（官方文档/厂商件/解析解）替代个人基准；熟悉领域才先立个人基准。
+  [OK] memory.md:27 → 17. [2026-10-22][来源: 失败] 非专家背书的领域判断必须标注「工作假设」，禁止进入事实区（实例：伺服前馈判据为智能体产出，非用户领域经验）。
+  [OK] memory.md:29 → 19. [2026-10-22][来源: 失败] 写文件工具报超时（timeout）后不能只看"文件存在"就当成功，要**读回内容验完整性**（首末行/行数），并在连续多次超时后停下来查因而不是继续写（实例：连写 7 个 md 全部返回 timeout，逐个验证时均在，但超时的真实含义是落盘未确认）…
+  [OK] ledger.md:3 → > 规则集：`memory.md` 条目 9–17（2026-10-22 全签入库，证据卡见当日审计会话存档）。
+  [OK] memory.md:13 → 3. [2026-10-19][来源: 纠正] 声明准确率/检出率前必须绑定可核对的清单或外部真值（如植入缺陷清单、解析解、厂商手册），并在文档里明确区分「自洽性验证」与「外部证据」；禁止把自己造的样例 + 自己写的规则当作有效性证明。
+  [OK] scripts/fault_farm.py:48-50 → 诚实边界：本农场的真值全部是注入参数的构造性推论——它证明「批产→检出→判卷」 … 分布校准属 Phase 2（真实语料）与 Phase 3（真机波次）。
+  [OK] anchors.json:103-105 → "reextract_from": "knowledge/protocols/specs/Modbus_Application_Protocol_V1_1b3.pdf", … "reextract_check": "哈希必须与在档 txt 完全一致（证明提取链未被篡改，见 gate_anchors.…
+  [OK] docs/TODO需实测_协议域.md:3-5 → 纪律：模板/知识库里所有 `TODO[需实测]` 注释必须在本文件登记（编号 + 状态）， … 真机波（P4）逐条消除：删模板注释 + 本文件状态改 ✅（附实测环境记录）。
+  [OK] docs/TODO需实测_协议域.md:9 → | T1 | diagslave 正式模拟器对跑同一契约套件（当前对端=自建契约桩，行为受 C1-C10 约束但非第三方实现） | `ModbusContracts.cs` 文件头 | ◐ P2/P4 | 契约测试 |
+  [OK] decision-lists/mcopilot-b53ac62.md:19-20 → - **B1 软件层收尾 ≠ 全部完成**：真机验证 T1-T5 显式挂起，Tier C 冻结至硬件到场—— … 这是设计性挂起，不是遗留欠账（对照：`docs/TODO需实测_协议域.md`）。
+  [OK] memory.md:27 → 17. [2026-10-22][来源: 失败] 非专家背书的领域判断必须标注「工作假设」，禁止进入事实区（实例：伺服前馈判据为智能体产出，非用户领域经验）。
+==========================================================================================
+章： ch03-门禁与负向测试.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+==========================================================================================
+章： ch04-契约先行.md ｜ 素材仓顺序： ['mcopilot', 'axiscope']
+==========================================================================================
+  [OK] comm_log_contract.json:3 → "generated": "2026-10-21",
+  [OK] comm_log_contract.json:125 → "status": "本契约与配套工具 2026-10-21 落档时，仓库内零份真实现场日志、零份标注真值集。内嵌样例全部是合成数据，只证明格式与工具链可跑，不构成任何归因能力的证据。",
+  [OK] comm_log_contract.json:4 → "purpose": "现场通信日志契约：规定 forensics 归因（eval_forensics 管线）可直接消费的 Modbus 现场日志逐帧记录格式。scripts/validate_comm_log.py 是本契约的唯一裁判（退出码=违规数），scripts/eval_forensics…
+  [OK] knowledge/contracts/comm_log_contract.json:2-5 → "schema": "comm_log/1", … "style_ref": "axiscope C1 契约（axiscope.waveform/1，docs/contracts/C1-canonical-waveform.md）同款纪律：schema id 不符即拒收；词表封闭枚举；派生不变式机器…
+  [OK] knowledge/contracts/comm_log_contract.json:15-90 → "fields": { … }
+  [OK] knowledge/contracts/comm_log_contract.json:92-99 → "invariants": [ … ],
+  [OK] knowledge/contracts/comm_log_contract.json:105-109 → "red_lines": [ … ],
+  [OK] knowledge/contracts/comm_log_contract.json:31 → "enum": ["tcp", "rtu"]
+  [OK] knowledge/contracts/comm_log_contract.json:36 → "enum": ["req", "resp", "broadcast"],
+  [OK] knowledge/contracts/comm_log_contract.json:71 → "enum": ["timeout", "crc", "reset", "refused", "no_response", "malformed", "other"],
+  [OK] validate_comm_log.py:108-113 → if chan is not None and chan not in f["channel"]["enum"]: … violations.append(f"{L}: direction {d!r} 不在词表 {f['direction']['enum']}")
+  [OK] knowledge/contracts/comm_log_contract.json:8 → "out": "帧内 PDU 逐字段解析（归因层的职责，本契约只要求可定位到帧）；其他协议（S7/Focas/SLMP）的日志契约——接入时按本文件风格另立 schema id，不共用词表。"
+  [OK] knowledge/contracts/comm_log_contract.json:101 → "resp 与 req 的配对完整性不在校验范围（现场采集允许截断/丢包后起采，resp 找不到前置 req 不算违规）；配对是归因层的消费规则：resp 归属同流中最近的未匹配前置 req。",
+  [OK] knowledge/contracts/comm_log_contract.json:102 → "frame_hex 与 unit_id/function_code 的一致性（如 resp 帧 FC 位是否真置 1）不在行级校验范围——那是带帧解析的深检职责。",
+  [OK] knowledge/contracts/comm_log_contract.json:103 → "采集体量红线（最少帧数/最短时长）暂不设：本轮零份真实日志，红线数字定了也是编的，待首批现场日志落库后按 C1 红线同款流程补。"
+  [OK] knowledge/contracts/comm_log_contract.json:128-133 → "knowledge_refs": [ … ]
+  [OK] knowledge/contracts/comm_log_contract.json:44 → "rule": "SL V1.02 §2.1/§2.2：0=广播，1-247=从站独立地址，248-255 保留。broadcast 记录必须 unit_id=0；保留段地址 248-255 出现在日志里即为违规（不是罕见值，是不该发出去的帧）。"
+  [OK] comm_log_contract.json:93-98 → "I1 流内单调：同 (channel, device.host_or_port) 的 seq 严格递增；跨流各自独立。", … "I6 时间合法：timestamp_utc 必须是真实存在的 UTC 时刻（拒绝 2 月 30 日类）。"
+  [OK] knowledge/contracts/comm_log_contract.json:93 → "I1 流内单调：同 (channel, device.host_or_port) 的 seq 严格递增；跨流各自独立。",
+  [OK] validate_comm_log.py:100-104 → key = (str(chan), str(host)) … last_seq[key] = max(seq, last_seq.get(key, seq))
+  [OK] knowledge/contracts/comm_log_contract.json:94 → "I2 广播形态：direction=broadcast ⇒ channel=rtu 且 unit_id=0 且无 exception_code 且无 error（SL V1.02 §2.4.1：广播后从站不回响应）。",
+  [OK] validate_comm_log.py:142-151 → # I2 广播形态：四个合取条件逐条报 … violations.append(f"{L}: broadcast 不得带 error（I2，广播无响应语义）")
+  [OK] knowledge/contracts/comm_log_contract.json:95 → "I3 异常归属：exception_code∈1..11 ⇒ direction=resp（异常响应只会从从站回来）。",
+  [OK] validate_comm_log.py:130-131 → if d is not None and d != "resp": … violations.append(f"{L}: exception_code 只允许出现在 resp（I3，此行 direction={d!r}）")
+  [OK] knowledge/contracts/comm_log_contract.json:96 → "I4 互斥：error 与 exception_code 不得同时出现。",
+  [OK] validate_comm_log.py:137-138 → if exc is not None: … violations.append(f"{L}: error 与 exception_code 互斥（I4：链路级失败 vs 协议级异常同帧矛盾）")
+  [OK] knowledge/contracts/comm_log_contract.json:97 → "I5 other 可归因：error=other ⇒ notes 非空。",
+  [OK] knowledge/contracts/comm_log_contract.json:89 → "rule": "自由文本；error=other 时必填（说不清的失败不许进日志）。"
+  [OK] validate_comm_log.py:139-140 → if err == "other" and not (isinstance(rec.get("notes"), str) and rec["notes"].strip()): … violations.append(f"{L}: error=other 必须带非空 notes（I5）")
+  [OK] knowledge/contracts/comm_log_contract.json:98 → "I6 时间合法：timestamp_utc 必须是真实存在的 UTC 时刻（拒绝 2 月 30 日类）。"
+  [OK] knowledge/contracts/comm_log_contract.json:20 → "rule": "必须可被日历解析（月日时分秒不得越界）；本地时间、时区偏移写法一律不收——现场机器时区不可信，采集端负责先归一到 UTC。"
+  [OK] validate_comm_log.py:48-56 → def _bad_ts(s: str) -> bool: … return False
+  [OK] validate_comm_log.py:142-151 → # I2 广播形态：四个合取条件逐条报 … violations.append(f"{L}: broadcast 不得带 error（I2，广播无响应语义）")
+  [OK] knowledge/contracts/comm_log_contract.json:13 → "line_order": "记录按采集顺序排列；seq 与行序冲突时以 seq 为准判单调（行序错乱本身不算违规，seq 乱才算）。"
+  [OK] knowledge/contracts/comm_log_contract.json:12 → "stream_key": "序列单调性按 (channel, device.host_or_port) 分流判定，全文件混写多条流合法。",
+  [OK] comm_log_contract.json:106-108 → "R1 schema 不符即拒收：schema 字段缺失或值不为 comm_log/1（契约头部）→ 整文件拒收，不算行级违规算文件级。", … "R3 不静默改数据：校验器只报不修；任何字段规范化（如时间归一）是采集端的责任。"
+  [OK] knowledge/contracts/comm_log_contract.json:5 → "style_ref": "axiscope C1 契约（axiscope.waveform/1，docs/contracts/C1-canonical-waveform.md）同款纪律：schema id 不符即拒收；词表封闭枚举；派生不变式机器可查；数据质量红线宁可拒收不可带病放行；采集端缺陷不…
+  [OK] knowledge/contracts/comm_log_contract.json:4 → "purpose": "现场通信日志契约：规定 forensics 归因（eval_forensics 管线）可直接消费的 Modbus 现场日志逐帧记录格式。scripts/validate_comm_log.py 是本契约的唯一裁判（退出码=违规数），scripts/eval_forensics…
+  [OK] comm_log_contract.json:121 → "role": "归因评测骨架：{日志集, 检出结果 jsonl, 标注真值 jsonl} → precision/recall/漏检清单；吃日志前先过契约门"
+  [OK] 协议提取SOP.md:21-27 → ## 二、八步管道 … ```
+  [OK] 协议提取SOP.md:10-11 → 1. **无裸提取**：每条结论必须带 `spec_ref`（一手件名/章节/页码或 URL/逐字引文）+ `provenance`。 … 引文**逐字**复制自提取文本（允许行折断点合并，不改动词句）；反查不过=条目不存在。
+  [OK] 协议提取SOP.md:76 → - **验收门**：退出码 0 = 全命中。当前基线：modbus 53/53（严格 36 / 签名 17 / 跳过 7）。
+  [OK] 协议提取SOP.md:77 → - **失败处置**：miss → 回 ③ 修引文，或降级 judgment（§三）；**不许改反查器放行**。
+  [OK] 协议提取SOP.md:163-164 → 执行；负向检测力由 `gate_negative.ps1` 证明（N1：向 modbus.json 副本注入编造引文 → G5 … 必须变红，52/53 拒收）。
+  [OK] validate_comm_log.py:43-44 → if doc.get("schema") != SCHEMA_ID: … raise SystemExit(f"契约文件 {p} 的 schema 不是 {SCHEMA_ID}，拒载")
+  [OK] comm_log_contract.json:112 → "contains": "3 条内嵌样例：1 合法 + 2 非法；退出码 0 = 校验器行为与契约一致（合法放行、非法逐条报出且违规数精确吻合）"
+  [OK] 协议提取SOP.md:12-13 → 2. **判断显式化**：结论多于引文的部分必须降级为 `judgment` + `needs:manual_check` + 理由在档 … （见 §三）。judgment 不是耻辱，隐藏 judgment 才是。
+  [OK] 协议提取SOP.md:75 → - judgment/`needs:manual_check` 项**跳过并计数**（跳过数必须显式打出，不许静默吞）。
+  [OK] 协议提取SOP.md:141-142 → 通用处置：judgment 项在反查门被跳过但**计数显式打出**；回归测试对关键 judgment 钉身份 … （如 test_protocol_modbus 断言 EX-07/09 必须 `provenance=="judgment"`——降级状态也是受测状态）。
+  [OK] validate_comm_log.py:14-16 → python scripts/validate_comm_log.py <log.jsonl>          # 校验一个日志文件 … 可选：--contract <路径> 换契约文件（缺省即仓库契约，测试用）。
+  [OK] scripts/validate_comm_log.py:10-11 → · 输出 PASS/FAIL + 行号 + 违规摘要；**退出码 = 违规数**（0 = 全绿）； … 建议级（如广播/异常帧缺 frame_hex）只提示不计违规。
+  [OK] validate_comm_log.py:216 → expect = [0, 2, 8]
+  [OK] validate_comm_log.py:251-253 → print(f"comm_log 校验: FAIL（{n} 条记录，违规 {len(violations)}，建议 {len(advisories)}）" … return len(violations)
+  [OK] comm_log_contract.json:59 → "rule": "仅 direction=resp 可携带；取值 null 或 1..0x0B（0x0A/0x0B 为网关路径/目标异常，AP V1.1b3 §7 表；07/09 在 V1.1b3 表中缺席，见 modbus.json exception_codes 判断项）。req/broadca…
+  [OK] knowledge/contracts/comm_log_contract.json:95 → "I3 异常归属：exception_code∈1..11 ⇒ direction=resp（异常响应只会从从站回来）。",
+  [OK] validate_comm_log.py:126-129 → exc = rec.get("exception_code") … violations.append(f"{L}: exception_code 必须是 1..0x0B 的整数或 null: {exc!r}")
+  [OK] scripts/validate_comm_log.py:130-131 → if d is not None and d != "resp": … violations.append(f"{L}: exception_code 只允许出现在 resp（I3，此行 direction={d!r}）")
+  [OK] knowledge/contracts/comm_log_contract.json:5 → "style_ref": "axiscope C1 契约（axiscope.waveform/1，docs/contracts/C1-canonical-waveform.md）同款纪律：schema id 不符即拒收；词表封闭枚举；派生不变式机器可查；数据质量红线宁可拒收不可带病放行；采集端缺陷不…
+  [OK] knowledge/contracts/comm_log_contract.json:103 → "采集体量红线（最少帧数/最短时长）暂不设：本轮零份真实日志，红线数字定了也是编的，待首批现场日志落库后按 C1 红线同款流程补。"
+  [OK] knowledge/contracts/comm_log_contract.json:5 → "style_ref": "axiscope C1 契约（axiscope.waveform/1，docs/contracts/C1-canonical-waveform.md）同款纪律：schema id 不符即拒收；词表封闭枚举；派生不变式机器可查；数据质量红线宁可拒收不可带病放行；采集端缺陷不…
+==========================================================================================
+章： ch05-故障农场与真实语料.md ｜ 素材仓顺序： ['mcopilot', 'axiscope']
+==========================================================================================
+  [OK] scripts/fault_farm.py:48-50 → 诚实边界：本农场的真值全部是注入参数的构造性推论——它证明「批产→检出→判卷」 … 分布校准属 Phase 2（真实语料）与 Phase 3（真机波次）。
+  [OK] scripts/lemay_corpus.py:34-35 → 诚实边界：标签是「攻击窗口」二元标注，不是协议级 cause 真值；检出的协议归因 … （exception_storm 等）对不上 cause 级真值，判卷只做窗口口径，不装能评 cause。
+  [OK] scripts/fault_farm.py:9-10 → 场景驱动器：对每个故障场景「注入 → 客户端/探针收发与错误事件落成 comm_log/1 条目 … → 按注入参数构造标签（真值在注入那一刻即知，不依赖事后观测）」。
+  [OK] scripts/fault_farm.py:22-34 → 场景清单（注入参数 → 构造性真值）： … rtu_timeout      农场 no-respond 桩（复用 G4 同款做法）     检出 timeout
+  [OK] scripts/fault_farm.py:36-42 → 构造性真值三断言（每场景自动执行，任一不满足即该场景 FAIL）： … （绝不带病出农场——采集端缺陷在农场就地暴露，不流到检出层）。
+  [OK] scripts/lemay_corpus.py:6 → 数据集（out/_corpus_pcaps/，不入库；缺失 → 门禁 SKIP）：
+  [OK] scripts/lemay_corpus.py:7-12 → Lemay et al. CSET'16「Modbus_dataset」真机测试床抓包。关键结构：每个 pcap 配一份 … knowledge/protocols/pcap_mapping.json。
+  [OK] scripts/lemay_corpus.py:14-26 → 管线（单遍线性，无全局排序/bisect——上一路废稿死于过度架构，本版刻意保持简单）： … 零攻击帧、协议层工具天然不可见」，不硬凑规则。
+  [OK] knowledge/protocols/real_corpora/sources.md:6 → - 统计：共 35 条；confirmed 11 / reported 24；覆盖 7 个仓库。
+  [OK] docs/kb3_判据抽取.md:17-28 → **结论：以 KB0 §2 为准，共 22 个 fault_mode slug。** … 多出来的第 23 个如果真存在，只能是编的 —— 所以不编。
+  [OK] scripts/lemay_corpus.py:34-35 → 诚实边界：标签是「攻击窗口」二元标注，不是协议级 cause 真值；检出的协议归因 … （exception_storm 等）对不上 cause 级真值，判卷只做窗口口径，不装能评 cause。
+  [OK] scripts/fault_farm.py:48-50 → 诚实边界：本农场的真值全部是注入参数的构造性推论——它证明「批产→检出→判卷」 … 分布校准属 Phase 2（真实语料）与 Phase 3（真机波次）。
+==========================================================================================
+章： ch06-诊断与归因.md ｜ 素材仓顺序： ['mcopilot', 'axiscope']
+==========================================================================================
+  [OK] src/mcopilot/agents/forensics_comm.py:19-32 → 规则集（7 条，cause 词表封闭）： … 码的 resp 截断）；一段风暴只报一条，id=首条证据行    每段
+  [OK] src/mcopilot/agents/forensics_comm.py:12-13 → · 规则只吃条目里的**结构化特征**（error 枚举值、exception_code、 … tid_expected/tid_got、expected_len/got_len），不做自由文本猜测；
+  [OK] src/mcopilot/agents/forensics_comm.py:14-16 → · 宁可少报也不误报：未知形态不硬套——error=refused / no_response、以及 … · 不带病检出（R2 同款）：输入日志必须先过 comm_log/1 契约门（复用
+  [OK] src/mcopilot/agents/forensics_comm.py:63 → STORM_MIN = 3          # 连续异常响应达到该条数即判风暴（农场 sweep 场景 4 连钉住）
+  [OK] src/mcopilot/agents/forensics_comm.py:16-17 → · 不带病检出（R2 同款）：输入日志必须先过 comm_log/1 契约门（复用 … scripts/validate_comm_log.py，不另抄口径），违规即拒跑。
+  [OK] knowledge/protocols/failure_signatures.json:4 → "purpose": "harness 接入闭环第一切片的失败解读引擎语料库：全部条目为本轮 session 亲手挖出并已修复/门禁化的真实缺陷（含回归点），每条带可查证据。供 scripts/onboard_loop.py 在契约失败时做确定性归因。",
+  [OK] knowledge/protocols/failure_signatures.json:11-99 → "signatures": [ … ],
+  [OK] knowledge/protocols/failure_signatures.json:5 → "match_discipline": "按 signatures 数组顺序逐条 re.search（在整个失败证据文本上），首个命中即归因；全部不命中 → 结构化上报 UNKNOWN（需人/LLM 介入），绝不猜、绝不无签名重试。",
+  [OK] knowledge/protocols/failure_signatures.json:6-10 → "action_class_vocabulary": { … },
+  [OK] knowledge/protocols/failure_signatures.json:100-106 → "must_not_match_samples": [ … ],
+  [OK] knowledge/protocols/failure_signatures.json:107-111 → "honest_boundary": [ … ]
+  [OK] scripts/onboard_loop.py:8 → 架构原则：**智能体在外、确定性内核在内。**
+  [OK] scripts/onboard_loop.py:11-12 → escalate）。全部执行走既有门禁（run_contract.ps1 / 其 normal 阶段的沙盒复刻）， … 不自创测试路径、不绕过任何门。
+  [OK] scripts/onboard_loop.py:16-28 → 闭环（状态机，每步打印 STAGE / DECISION / ATTRIBUTION 行，均为 TAB 分隔、关键字段 … REPORT    写《接入报告》out/onboard_loop/onboard_report.md + .json；全绿出报告
+  [OK] scripts/onboard_loop.py:30-34 → 退出码 = 接入成败： … 22 = 环境/用法错误（文件缺失、端口被占、矩阵无此协议等）
+  [OK] scripts/eval_forensics.py:13-16 → 判定口径（骨架版，故意简单到无法作弊）： … 误报清单（检出有 truth 无）。
+  [OK] scripts/eval_forensics.py:32 → import validate_comm_log as vcl  # 契约裁判复用（R2），不另抄一套口径
+  [OK] src/mcopilot/agents/forensics_comm.py:38-40 → 诚实边界（2026-10-21）：规则与阈值由故障注入农场构造性场景钉住（注入参数即真值）， … 率**——那要等 Phase 2 真实语料与 Phase 3 真机波次。
+==========================================================================================
+章： ch07-多智能体协作制度.md ｜ 素材仓顺序： ['mcopilot', 'axiscope']
+==========================================================================================
+  [OK] MANIFEST.txt:3 → 总条数: 134（M 83 / A 4 / MM 1 / ?? 46）
+  [OK] MANIFEST.txt:4-8 → 性质: 绝大多数为 servo/SDK 线（另一 AI 流）的开发中状态： … - README.md 含两流混合编辑（含协议线一条未提交编辑，已在此快照中保留）
+  [OK] MANIFEST.txt:11 → 协议/门禁/知识库主线已全部提交于 b53ac62，不在本快照内。
+  [OK] MANIFEST.txt:4 → 性质: 绝大多数为 servo/SDK 线（另一 AI 流）的开发中状态：
+  [OK] MANIFEST.txt:10 → 恢复方法: 相对路径拷回 %WORKSPACE%\mcopilot 即可；或对照 git HEAD 逐件取舍。
+  [OK] MANIFEST.txt:11 → 协议/门禁/知识库主线已全部提交于 b53ac62，不在本快照内。
+  [OK] MANIFEST.txt:12-37 → 【2026-10-22 补充：对象库抢救件 recovered/】 … 原位删除——工厂产物自此单点收归于 trae_factory。
+  [OK] MANIFEST.txt:3 → 总条数: 134（M 83 / A 4 / MM 1 / ?? 46）
+  [OK] MANIFEST.txt:18-20 → - 未可恢复：约 13 件中文路径 tracked 文档的 unstaged 增量（jd_证据/kb3/交叉验证/ … 丢失的只是未暂存增量草稿。
+  [OK] MANIFEST.txt:12-17 → 【2026-10-22 补充：对象库抢救件 recovered/】 … - 竞品调研/责任边界 staged 版
+  [OK] MANIFEST.txt:15-16 → - README.staged.MM版.md：暂存版 README（73KB），第 39 行含协议线的 BOSS直聘统计校 … 正编辑（HEAD 版无此行）——该编辑已保住，需要时可拷回仓库 README
+  [OK] MANIFEST.txt:33 → README.staged 73KB（第 39 行编辑已提取为 README.第39行编辑.md）、同名 zip（单拷贝原则）、
+  [OK] MANIFEST.txt:22-24 → 【2026-10-22 评估结论：run_gates 三稿 不收编】 … 无门禁、无独有能力；三稿间仅 24 行差异。
+  [OK] MANIFEST.txt:25 → - 依赖核验：draft3 全部 import 在 HEAD 在场，可独立运行，但收编=双 CLI 并存，否决。
+  [OK] MANIFEST.txt:26-28 → - 留种：draft3 的 --axis axis.json 参数（转矩纹波谱线归因：6×电频率=逆变器/死区 … cli.py servo diagnose，约十行量级。
+  [OK] MANIFEST.txt:31-37 → 【2026-10-22 清理记录（去重令执行）】 … 原位删除——工厂产物自此单点收归于 trae_factory。
+  [OK] MANIFEST.txt:3 → 总条数: 134（M 83 / A 4 / MM 1 / ?? 46）
+  [OK] MANIFEST.txt:22-25 → 【2026-10-22 评估结论：run_gates 三稿 不收编】 … - 依赖核验：draft3 全部 import 在 HEAD 在场，可独立运行，但收编=双 CLI 并存，否决。
+==========================================================================================
+章： ch08-记忆与沉淀系统.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] memory.md:3-7 → > 固定路径：`%USERPROFILE%\self-improving\memory.md`。多个智能体共写：**只允许末尾追加，不修改他人条目**。 … > 本文件的适配规则有 4 处全局副本（`.minimax\AGENTS.md`、`.claude\CLAUDE.md`、`.codex\A…
+  [OK] memory.md:3 → > 固定路径：`%USERPROFILE%\self-improving\memory.md`。多个智能体共写：**只允许末尾追加，不修改他人条目**。
+  [OK] memory.md:4 → > 条目格式：`N. [YYYY-MM-DD][来源: 纠正|失败|偏好|3次确认] 一句话规则（写"要做什么"，而非光秃秃的"别做什么"）`
+  [OK] memory.md:29 → 19. [2026-10-22][来源: 失败] 写文件工具报超时（timeout）后不能只看"文件存在"就当成功，要**读回内容验完整性**（首末行/行数），并在连续多次超时后停下来查因而不是继续写（实例：连写 7 个 md 全部返回 timeout，逐个验证时均在，但超时的真实含义是落盘未确认）…
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:5 → > 引用条目时带序号与日期（序号可能因并发追加重复，日期消歧）。
+  [OK] memory.md:31-36 → ## 候选（同一信号出现 3 次后升级为正式条目；写入时注明日期与信号） … - 2026-10-22：引用外部转录内容必须标注来源工具与时间（第 1 次：某 4973 字分析因来源遗忘无法归源）。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:3 → > 固定路径：`%USERPROFILE%\self-improving\memory.md`。多个智能体共写：**只允许末尾追加，不修改他人条目**。
+  [OK] memory.md:7 → > 本文件的适配规则有 4 处全局副本（`.minimax\AGENTS.md`、`.claude\CLAUDE.md`、`.codex\AGENTS.md`、MiniMax 插件 `self-improving` 的 SKILL.md）+ 各项目 `.trae\rules` 变体，改规则须同步全部…
+  [OK] memory.md:11-27 → 1. [2026-10-15][来源: 失败] Trae 的 MCP host 子进程 PATH 不含 `<工具链>\nodejs`：mcp.json 里的 `command` 一律写绝对路径（用 `<工具链>\nodejs\node.exe` 直接执行 js 入口）。 … 17. [2…
+  [OK] ledger.md:3 → > 规则集：`memory.md` 条目 9–17（2026-10-22 全签入库，证据卡见当日审计会话存档）。
+  [OK] memory.md:16 → 6. [2026-10-20][来源: 3次确认] 用户回传厂商资料（无论是他自己查的公开资料，还是官方手册/官方 SDK 绑定）时，**结论必须落进代码与知识库，并主动追它暴露出的新风险**，不能只回一句「已收到」；材料基于过期快照时以当前代码为准并明确指出差异。（3 次：第三轮 imode/PS…
+  [OK] memory.md:27 → 17. [2026-10-22][来源: 失败] 非专家背书的领域判断必须标注「工作假设」，禁止进入事实区（实例：伺服前馈判据为智能体产出，非用户领域经验）。
+  [OK] memory.md:31-36 → ## 候选（同一信号出现 3 次后升级为正式条目；写入时注明日期与信号） … - 2026-10-22：引用外部转录内容必须标注来源工具与时间（第 1 次：某 4973 字分析因来源遗忘无法归源）。
+  [OK] memory.md:35 → - 2026-10-22：需求变化拆三分类处理（目标/规则/实现变化各自不同流程）；重要功能配可观测性表格（阶段×应能回答的问题）（第 1 次：外部转录分析获用户认可采用；来源工具已不可考）。
+  [OK] memory.md:36 → - 2026-10-22：引用外部转录内容必须标注来源工具与时间（第 1 次：某 4973 字分析因来源遗忘无法归源）。
+  [OK] ledger.md:3 → > 规则集：`memory.md` 条目 9–17（2026-10-22 全签入库，证据卡见当日审计会话存档）。
+  [OK] ledger.md:4 → > 记法：每命中/失灵一次记一行：`[YYYY-MM-DD] 条目号 命中|失灵|未触发 一句话场景`。
+  [OK] ledger.md:5 → > 降级线：**2026-11-21** 复查；届时零应用记录的条目降级回候选区（经用户确认执行）。
+  [OK] ledger.md:6 → > 只追加，不改旧行。
+  [OK] ledger.md:3 → > 规则集：`memory.md` 条目 9–17（2026-10-22 全签入库，证据卡见当日审计会话存档）。
+  [OK] ledger.md:5 → > 降级线：**2026-11-21** 复查；届时零应用记录的条目降级回候选区（经用户确认执行）。
+  [OK] ledger.md:10 → （随手追加，无格式压力）
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:4 → > 条目格式：`N. [YYYY-MM-DD][来源: 纠正|失败|偏好|3次确认] 一句话规则（写"要做什么"，而非光秃秃的"别做什么"）`
+  [OK] memory.md:29 → 19. [2026-10-22][来源: 失败] 写文件工具报超时（timeout）后不能只看"文件存在"就当成功，要**读回内容验完整性**（首末行/行数），并在连续多次超时后停下来查因而不是继续写（实例：连写 7 个 md 全部返回 timeout，逐个验证时均在，但超时的真实含义是落盘未确认）…
+  [OK] memory.md:27 → 17. [2026-10-22][来源: 失败] 非专家背书的领域判断必须标注「工作假设」，禁止进入事实区（实例：伺服前馈判据为智能体产出，非用户领域经验）。
+  [OK] memory.md:35 → - 2026-10-22：需求变化拆三分类处理（目标/规则/实现变化各自不同流程）；重要功能配可观测性表格（阶段×应能回答的问题）（第 1 次：外部转录分析获用户认可采用；来源工具已不可考）。
+  [OK] ledger.md:3 → > 规则集：`memory.md` 条目 9–17（2026-10-22 全签入库，证据卡见当日审计会话存档）。
+  [OK] ledger.md:5 → > 降级线：**2026-11-21** 复查；届时零应用记录的条目降级回候选区（经用户确认执行）。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:5 → > 引用条目时带序号与日期（序号可能因并发追加重复，日期消歧）。
+  [OK] memory.md:4 → > 条目格式：`N. [YYYY-MM-DD][来源: 纠正|失败|偏好|3次确认] 一句话规则（写"要做什么"，而非光秃秃的"别做什么"）`
+  [OK] ledger.md:5 → > 降级线：**2026-11-21** 复查；届时零应用记录的条目降级回候选区（经用户确认执行）。
+  [OK] memory.md:31-36 → ## 候选（同一信号出现 3 次后升级为正式条目；写入时注明日期与信号） … - 2026-10-22：引用外部转录内容必须标注来源工具与时间（第 1 次：某 4973 字分析因来源遗忘无法归源）。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:3 → > 固定路径：`%USERPROFILE%\self-improving\memory.md`。多个智能体共写：**只允许末尾追加，不修改他人条目**。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:4 → > 条目格式：`N. [YYYY-MM-DD][来源: 纠正|失败|偏好|3次确认] 一句话规则（写"要做什么"，而非光秃秃的"别做什么"）`
+  [OK] memory.md:29 → 19. [2026-10-22][来源: 失败] 写文件工具报超时（timeout）后不能只看"文件存在"就当成功，要**读回内容验完整性**（首末行/行数），并在连续多次超时后停下来查因而不是继续写（实例：连写 7 个 md 全部返回 timeout，逐个验证时均在，但超时的真实含义是落盘未确认）…
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:6 → > 上限 100 行；超限经用户确认后合并相似条目。已确认偏好永不删除。永不记录密钥、令牌、个人敏感信息。
+  [OK] memory.md:12 → 2. [2026-10-15][来源: 偏好] 本机的 ponytail 插件（`~/.minimax/plugins/ponytail/`，含 SessionStart / SubagentStart / UserPromptSubmit 三个 hook）是共享记忆方案的已知例外：保留它，不要卸载…
+  [OK] memory.md:27 → 17. [2026-10-22][来源: 失败] 非专家背书的领域判断必须标注「工作假设」，禁止进入事实区（实例：伺服前馈判据为智能体产出，非用户领域经验）。
+  [OK] memory.md:27 → 17. [2026-10-22][来源: 失败] 非专家背书的领域判断必须标注「工作假设」，禁止进入事实区（实例：伺服前馈判据为智能体产出，非用户领域经验）。
+  [OK] memory.md:35 → - 2026-10-22：需求变化拆三分类处理（目标/规则/实现变化各自不同流程）；重要功能配可观测性表格（阶段×应能回答的问题）（第 1 次：外部转录分析获用户认可采用；来源工具已不可考）。
+==========================================================================================
+章： ch09-经济账与收尾.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+==========================================================================================
+章： 前言.md ｜ 素材仓顺序： ['axiscope', 'trae_factory']
+==========================================================================================
+  [OK] docs/kb/KB0-conventions.md:80 → | `public-doc` | 二手公开资料转录，**含第三方会话/别的 agent 的转述**（`verified_by = third_party_report`） | "按公开资料形成下表，请厂商指出不符项"（A-32 原口径不变） | 转述**不升档、不计入 `已核对 k`**，只改变"这…
+  [OK] docs/contracts/C1-canonical-waveform.md:1 → # C1 — 规范波形契约（canonical waveform）
+  [OK] memory.md:3 → > 固定路径：`%USERPROFILE%\self-improving\memory.md`。多个智能体共写：**只允许末尾追加，不修改他人条目**。
+  [OK] LTDMC.cs:891 → public static extern Int32 dmc_get_position(UInt16 CardNo, UInt16 axis);
+  [OK] bench/casebuild.py:5-11 → * 真值只有一种来源——**本文件里写死的注入数学**（`INJECTIONS`）。真值不写进样本包， … 设计植入的误差」，**不能**证明诊断准确。这是 A-88，本文件不淡化这一点。
+  [OK] decision-lists/axiscope-36e2c74.md:48-49 → - **C3 真机波次 0**：全部结论停留在仿真+数据集层，Tier C 设计性挂起—— … 与 mcopilot T1-T5 同款记法，挂起不是欠账。
+  [OK] gen/adapters_kb.js:196-199 → // [核对] 官方 TTrapPrm.smoothTime 是 short（gts_structs.csv 字段3）， … tp.smoothTime = 0;
+  [OK] docs/kb/KB0-conventions.md:80 → | `public-doc` | 二手公开资料转录，**含第三方会话/别的 agent 的转述**（`verified_by = third_party_report`） | "按公开资料形成下表，请厂商指出不符项"（A-32 原口径不变） | 转述**不升档、不计入 `已核对 k`**，只改变"这…
+  [OK] docs/contracts/C1-canonical-waveform.md:1 → # C1 — 规范波形契约（canonical waveform）
+  [OK] docs/contracts/C6-machine-context.md:132-135 → ## 5. 范围纪律 … 恢复动作只以 C3 里 `recommendation.field_procedure`（人执行的文字步骤）存在。
+  [OK] bench/casebuild.py:5-11 → * 真值只有一种来源——**本文件里写死的注入数学**（`INJECTIONS`）。真值不写进样本包， … 设计植入的误差」，**不能**证明诊断准确。这是 A-88，本文件不淡化这一点。
+  [OK] bench/run_eval.py:14-19 → 口径纪律： … * 分母为 0 的指标一律打印「未测（分母 0）」并写明原因，**不填 0、不留空**。
+  [OK] gen/adapters_kb.js:196-199 → // [核对] 官方 TTrapPrm.smoothTime 是 short（gts_structs.csv 字段3）， … tp.smoothTime = 0;
+  [OK] docs/项目回顾与收尾_20261022.md:53-54 → - **Tier C 真机**：离线引擎的全部结论停留在仿真与数据集验证层，真机波次验证 … 未开始——设计性挂起，不是欠账（与 mcopilot T1-T5 同一款记法）。
+  [OK] gen/adapters_kb.js:10-15 → // 真值依据（只认这三层外部真值，函数名/参数表/结构体字段顺序全部照抄，不凭记忆）： … //   gts_hdr_macros.csv 官方头文件宏表   —— 回零模式号等常量
+  [OK] gen/adapters_kb.js:37 → { f: '(未实现) 模拟量 AI/AO', use: '力控模拟量', chk: '官方 C# 绑定与 PE 导出表均无 GT_GetAi/GT_SetAo，已删除该臆造声明；固高模拟量是通道型接口 GT_GetAdc / GT_SetDac / GT_PtAo（gts.csv:129/393/…
+  [OK] MANIFEST.txt:3 → 总条数: 134（M 83 / A 4 / MM 1 / ?? 46）
+  [OK] MANIFEST.txt:4-8 → 性质: 绝大多数为 servo/SDK 线（另一 AI 流）的开发中状态： … - README.md 含两流混合编辑（含协议线一条未提交编辑，已在此快照中保留）
+  [OK] decision-lists/axiscope-36e2c74.md:48-49 → - **C3 真机波次 0**：全部结论停留在仿真+数据集层，Tier C 设计性挂起—— … 与 mcopilot T1-T5 同款记法，挂起不是欠账。
+  [OK] memory.md:3 → > 固定路径：`%USERPROFILE%\self-improving\memory.md`。多个智能体共写：**只允许末尾追加，不修改他人条目**。
+==========================================================================================
+章： 尾声.md ｜ 素材仓顺序： ['mcopilot', 'axiscope']
+==========================================================================================
+  [OK] decision-lists/mcopilot-b53ac62.md:14-15 → - **V4 无检出力证明的门禁**——每条门禁必须配负向测试；实证：CRLF 债两案由门禁 … 抓住门禁作者本人（对照：`scripts/gate_negative.ps1`）。
+  [OK] decision-lists/mcopilot-b53ac62.md:28-29 → - **T1 协议口径 = 外部锚点**：官方 PDF、厂商头文件、Snap7 源码；quote 反查 53/53 … （对照：`knowledge/protocols/anchors.json`）。
+  [OK] MANIFEST.txt:3 → 总条数: 134（M 83 / A 4 / MM 1 / ?? 46）
+  [OK] MANIFEST.txt:4-8 → 性质: 绝大多数为 servo/SDK 线（另一 AI 流）的开发中状态： … - README.md 含两流混合编辑（含协议线一条未提交编辑，已在此快照中保留）
+  [OK] decision-lists/axiscope-36e2c74.md:34-35 → - **T1 全量测试当日亲验**：`python -m pytest tests` → **403 passed, 24.71s, … 0 failed**（2026-10-22，Python 3.14）。
+  [OK] decision-lists/axiscope-36e2c74.md:17-18 → - **V4 第 23 个 slug**：任务书写 23，权威源 KB0 §2 实数 22。"多出来的如果真 … 存在，只能是编的——所以不编"（`docs/kb3` 抽取记录同源纪律）。
+  [OK] decision-lists/axiscope-36e2c74.md:64-68 → - **C1 脱敏 → 已清偿**：KB2 §6.1 字段级规则执行（`data/redact_pii_20261022.py` … `3f80439d…`），上游核验证据链保留。
+  [OK] decision-lists/axiscope-36e2c74.md:69-71 → - **C2 KB7 标题 → 已裁决**：API 留档 `darus3600.json`（latestVersion … "未核验"段改裁决记录。
+  [OK] decision-lists/axiscope-36e2c74.md:72 → - **C3 真机波次 0 → 维持挂起**（量程边界，等硬件立新照）。
+  [OK] gen/adapters_kb.js:10-15 → // 真值依据（只认这三层外部真值，函数名/参数表/结构体字段顺序全部照抄，不凭记忆）： … //   gts_hdr_macros.csv 官方头文件宏表   —— 回零模式号等常量
+  [OK] decision-lists/trae_factory-2da4559.md:30-31 → - **T1 跨仓真值桥全 [OK]**：mcopilot `scripts/verify_trae_pinvoke.py` 当日实跑 … 退出码 0，58 条 P/Invoke 逐条 `[OK] ← <厂商>.csv:行号`。
+  [OK] decision-lists/trae_factory-2da4559.md:33-34 → 22 文件/3372 行 + 温控 7 文件，产物与 gen 源同源可再生（P/Invoke 58 条： … 知识库钉扎 49 / 未收录降级 9）。
+  [OK] decision-lists/trae_factory-2da4559.md:63-65 → - **C2 已清偿**（`954c210`）：五品牌套件修复后逐个再生——gts 19/22、 … 属设计事实）；TruthChain.md ×5 全部刷新为现行知识库口径。
+  [OK] bench/casebuild.py:5-11 → * 真值只有一种来源——**本文件里写死的注入数学**（`INJECTIONS`）。真值不写进样本包， … 设计植入的误差」，**不能**证明诊断准确。这是 A-88，本文件不淡化这一点。
+  [OK] docs/kb/KB8-benchmark-cases.md:307 → **已裁：A-65 —— 同为结构性真空，并转成一条正面红线**：T1-a 是 1 kHz ⟹ Nyquist 500 Hz ⟹ `reliable_band_hz = 400 Hz`，
+  [OK] decision-lists/axiscope-36e2c74.md:72 → - **C3 真机波次 0 → 维持挂起**（量程边界，等硬件立新照）。
+  [OK] bench/run_eval.py:14-19 → 口径纪律： … * 分母为 0 的指标一律打印「未测（分母 0）」并写明原因，**不填 0、不留空**。
+  [OK] bench/casebuild.py:5-11 → * 真值只有一种来源——**本文件里写死的注入数学**（`INJECTIONS`）。真值不写进样本包， … 设计植入的误差」，**不能**证明诊断准确。这是 A-88，本文件不淡化这一点。
+  [OK] MANIFEST.txt:3 → 总条数: 134（M 83 / A 4 / MM 1 / ?? 46）
+  [OK] MANIFEST.txt:4-8 → 性质: 绝大多数为 servo/SDK 线（另一 AI 流）的开发中状态： … - README.md 含两流混合编辑（含协议线一条未提交编辑，已在此快照中保留）
+  [OK] docs/kb/KB8-benchmark-cases.md:307 → **已裁：A-65 —— 同为结构性真空，并转成一条正面红线**：T1-a 是 1 kHz ⟹ Nyquist 500 Hz ⟹ `reliable_band_hz = 400 Hz`，
+  [OK] docs/项目回顾与收尾_20261022.md:53-54 → - **Tier C 真机**：离线引擎的全部结论停留在仿真与数据集验证层，真机波次验证 … 未开始——设计性挂起，不是欠账（与 mcopilot T1-T5 同一款记法）。
+  [OK] gen/adapters_kb.js:10-15 → // 真值依据（只认这三层外部真值，函数名/参数表/结构体字段顺序全部照抄，不凭记忆）： … //   gts_hdr_macros.csv 官方头文件宏表   —— 回零模式号等常量
+  [OK] decision-lists/mcopilot-b53ac62.md:14-15 → - **V4 无检出力证明的门禁**——每条门禁必须配负向测试；实证：CRLF 债两案由门禁 … 抓住门禁作者本人（对照：`scripts/gate_negative.ps1`）。
+  [OK] decision-lists/mcopilot-b53ac62.md:28-29 → - **T1 协议口径 = 外部锚点**：官方 PDF、厂商头文件、Snap7 源码；quote 反查 53/53 … （对照：`knowledge/protocols/anchors.json`）。
+  [OK] decision-lists/axiscope-36e2c74.md:17-18 → - **V4 第 23 个 slug**：任务书写 23，权威源 KB0 §2 实数 22。"多出来的如果真 … 存在，只能是编的——所以不编"（`docs/kb3` 抽取记录同源纪律）。
+  [OK] decision-lists/axiscope-36e2c74.md:34-35 → - **T1 全量测试当日亲验**：`python -m pytest tests` → **403 passed, 24.71s, … 0 failed**（2026-10-22，Python 3.14）。
+  [OK] decision-lists/axiscope-36e2c74.md:64-68 → - **C1 脱敏 → 已清偿**：KB2 §6.1 字段级规则执行（`data/redact_pii_20261022.py` … `3f80439d…`），上游核验证据链保留。
+  [OK] decision-lists/axiscope-36e2c74.md:69-71 → - **C2 KB7 标题 → 已裁决**：API 留档 `darus3600.json`（latestVersion … "未核验"段改裁决记录。
+  [OK] decision-lists/axiscope-36e2c74.md:72 → - **C3 真机波次 0 → 维持挂起**（量程边界，等硬件立新照）。
+  [OK] decision-lists/trae_factory-2da4559.md:30-31 → - **T1 跨仓真值桥全 [OK]**：mcopilot `scripts/verify_trae_pinvoke.py` 当日实跑 … 退出码 0，58 条 P/Invoke 逐条 `[OK] ← <厂商>.csv:行号`。
+  [OK] decision-lists/trae_factory-2da4559.md:33-34 → 22 文件/3372 行 + 温控 7 文件，产物与 gen 源同源可再生（P/Invoke 58 条： … 知识库钉扎 49 / 未收录降级 9）。
+  [OK] decision-lists/trae_factory-2da4559.md:63-65 → - **C2 已清偿**（`954c210`）：五品牌套件修复后逐个再生——gts 19/22、 … 属设计事实）；TruthChain.md ×5 全部刷新为现行知识库口径。
+
+==========================================================================================
+坐标审计合计：引用 697 ｜ 可解析 697 ｜ 失败 0
+==========================================================================================
+[多章引用同一文件] %WORKSPACE%\axiscope\docs\AUDIT-minimax-mcopilot.md
+    ch01-审计者姿态.md: [(3, 4), (51, 51)]
+    ch03-引进纪律.md: [(72, 73)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs\AUDIT-glm-code-factory.md
+    ch01-审计者姿态.md: [(3, 4), (19, 19), (21, 21), (22, 22), (40, 41), (46, 46), (85, 85)]
+    ch03-引进纪律.md: [(70, 72)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs\AUDIT-minimax-round3.md
+    ch01-审计者姿态.md: [(3, 4), (9, 10), (21, 22), (40, 40)]
+    ch03-引进纪律.md: [(77, 77)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs\项目回顾与收尾_20261022.md
+    ch02-证据等级.md: [(26, 27)]
+    ch04-契约七层与验证门控.md: [(35, 36), (53, 54)]
+    ch07-没有真机时.md: [(53, 54)]
+    前言.md: [(53, 54)]
+    尾声.md: [(53, 54)]
+[多章引用同一文件] %WORKSPACE%\axiscope\README.md
+    ch02-证据等级.md: [(101, 103)]
+    ch03-引进纪律.md: [(6, 6), (10, 10), (21, 24), (29, 34), (48, 48), (51, 53), (65, 67), (74, 74), (76, 77), (79, 81), (83, 83), (85, 86), (88, 88), (88, 99), (90, 90), (90, 99), (91, 91), (95, 95), (99, 99), (101, 103)]
+    ch08-署名与脱敏.md: [(51, 53), (65, 67), (74, 81), (85, 86), (88, 99), (101, 103)]
+    ch09-文档即代码.md: [(98, 98)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs/kb/KB2-waveform-formats.md
+    ch02-证据等级.md: [(619, 628), (658, 694), (662, 665), (666, 671), (674, 675)]
+    ch03-引进纪律.md: [(369, 371), (371, 371), (636, 639), (780, 780), (804, 804), (809, 809)]
+    ch05-真实数据打断契约.md: [(332, 333), (335, 337), (351, 351), (804, 804)]
+    ch06-厂商方言与上下文契约.md: [(339, 339), (352, 352), (386, 386), (572, 572), (574, 574)]
+    ch08-署名与脱敏.md: [(780, 818), (786, 795), (789, 789), (794, 794), (797, 803), (803, 803), (804, 804), (808, 811), (812, 813), (814, 815), (816, 817)]
+    ch09-文档即代码.md: [(737, 768), (758, 758), (760, 760), (761, 761), (768, 768), (801, 801), (803, 803), (804, 804)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs/kb/KB0-conventions.md
+    ch02-证据等级.md: [(80, 80), (435, 435), (436, 436)]
+    ch05-真实数据打断契约.md: [(129, 129), (162, 165), (308, 310), (317, 317), (494, 494), (523, 523)]
+    ch09-文档即代码.md: [(3, 3), (302, 302), (303, 303)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs/contracts/C5-evaluation-protocol.md
+    ch02-证据等级.md: [(56, 56), (82, 82), (83, 83)]
+    ch04-契约七层与验证门控.md: [(5, 8), (21, 23), (38, 39), (42, 42), (46, 48), (65, 66), (76, 78), (86, 88), (90, 92), (107, 114), (164, 166)]
+    ch06-厂商方言与上下文契约.md: [(76, 77), (164, 166)]
+    ch07-没有真机时.md: [(46, 46), (46, 48), (76, 77), (164, 166)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs\kb\KB7-dataset-da-rus-cat.md
+    ch03-引进纪律.md: [(8, 18)]
+    ch08-署名与脱敏.md: [(10, 10), (13, 13), (17, 17)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs/kb/KB5-simulation-plant.md
+    ch03-引进纪律.md: [(793, 793), (793, 805), (800, 801)]
+    ch07-没有真机时.md: [(342, 348)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs/kb/KB7-dataset-da-rus-cat.md
+    ch03-引进纪律.md: [(10, 10), (11, 11), (13, 13), (14, 14), (15, 15), (17, 17), (31, 31), (103, 103), (492, 492), (497, 498), (504, 507)]
+    ch05-真实数据打断契约.md: [(255, 255)]
+    ch08-署名与脱敏.md: [(10, 10), (17, 17)]
+    ch04-双仓收尾实录.md: [(10, 10)]
+[多章引用同一文件] %WORKSPACE%\axiscope\src\axiscope\c1.py
+    ch04-契约七层与验证门控.md: [(1, 3)]
+    ch06-厂商方言与上下文契约.md: [(1, 3)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs/contracts/C1-canonical-waveform.md
+    ch04-契约七层与验证门控.md: [(3, 5)]
+    ch05-真实数据打断契约.md: [(35, 36), (56, 56), (56, 58)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs/contracts/C2-features.md
+    ch04-契约七层与验证门控.md: [(3, 5)]
+    ch05-真实数据打断契约.md: [(305, 312), (309, 312)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs/contracts/C4-validation.md
+    ch04-契约七层与验证门控.md: [(3, 4), (6, 8), (16, 17), (30, 31), (32, 39), (40, 49), (50, 56), (63, 64), (69, 70), (84, 87), (91, 93)]
+    ch06-厂商方言与上下文契约.md: [(37, 37)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs\kb\KB0-conventions.md
+    ch05-真实数据打断契约.md: [(126, 129)]
+    ch09-文档即代码.md: [(287, 289), (296, 296), (302, 302), (303, 303), (384, 384), (523, 523), (530, 530), (533, 533), (563, 565), (583, 584)]
+    前言.md: [(80, 80)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs\contracts\C1-canonical-waveform.md
+    ch05-真实数据打断契约.md: [(52, 58)]
+    前言.md: [(1, 1)]
+[多章引用同一文件] %WORKSPACE%\axiscope\docs\kb\KB2-waveform-formats.md
+    ch06-厂商方言与上下文契约.md: [(604, 655), (654, 655)]
+    ch08-署名与脱敏.md: [(527, 527), (561, 561), (786, 795), (797, 804), (806, 817)]
+    ch09-文档即代码.md: [(780, 818)]
+[多章引用同一文件] %WORKSPACE%\axiscope\bench\casebuild.py
+    ch07-没有真机时.md: [(5, 11)]
+    前言.md: [(5, 11)]
+    尾声.md: [(5, 11)]
+[多章引用同一文件] %WORKSPACE%\axiscope\bench\run_eval.py
+    ch07-没有真机时.md: [(14, 19), (15, 18), (19, 19)]
+    前言.md: [(14, 19)]
+    尾声.md: [(14, 19)]
+[多章引用同一文件] %WORKSPACE%\trae_factory\gen\index.js
+    ch01-代码工厂.md: [(16, 16), (28, 28), (65, 65), (66, 67)]
+    ch03-手册进知识库.md: [(11, 19), (17, 18)]
+    ch04-双仓收尾实录.md: [(66, 68)]
+[多章引用同一文件] %WORKSPACE%\trae_factory\gen\adapters_kb.js
+    ch01-代码工厂.md: [(19, 19), (37, 37), (322, 322), (668, 668), (814, 815)]
+    ch03-手册进知识库.md: [(10, 15), (19, 19), (23, 24), (37, 37), (40, 40), (196, 199), (321, 321), (337, 337), (382, 382), (487, 487), (668, 668), (802, 802), (857, 857)]
+    前言.md: [(10, 15), (37, 37), (196, 199)]
+    尾声.md: [(10, 15)]
+[多章引用同一文件] %WORKSPACE%\mcopilot\knowledge\sdks\official_api\gts.csv
+    ch01-代码工厂.md: [(326, 326)]
+    ch03-手册进知识库.md: [(326, 326)]
+[多章引用同一文件] %WORKSPACE%\mcopilot\knowledge\sdks\official_api\gts_hdr.csv
+    ch01-代码工厂.md: [(367, 367)]
+    ch03-手册进知识库.md: [(36, 36)]
+[多章引用同一文件] %WORKSPACE%\trae_factory\gen\truth_kb.js
+    ch02-真值链.md: [(24, 24), (151, 152), (170, 170)]
+    ch04-双仓收尾实录.md: [(24, 24)]
+[多章引用同一文件] %WORKSPACE%\mcopilot-external\vendor_docs\EMC系列开发头文件\C#\LTDMC.cs
+    ch02-真值链.md: [(891, 891)]
+    前言.md: [(891, 891)]
+[多章引用同一文件] %WORKSPACE%\forensics-learning-book\decision-lists\trae_factory-2da4559.md
+    ch03-手册进知识库.md: [(30, 31), (33, 34), (35, 36), (63, 65)]
+    尾声.md: [(30, 31), (33, 34), (63, 65)]
+[多章引用同一文件] %USERPROFILE%\self-improving\memory.md
+    ch01-驾驭层.md: [(3, 3), (4, 4), (5, 5), (6, 6), (7, 7), (11, 27), (13, 13), (17, 17), (23, 23), (33, 33), (34, 34)]
+    ch02-三态真值.md: [(13, 13), (26, 26), (27, 27), (29, 29)]
+    ch08-记忆与沉淀系统.md: [(3, 3), (3, 7), (4, 4), (5, 5), (6, 6), (7, 7), (11, 27), (12, 12), (16, 16), (27, 27), (29, 29), (31, 36), (35, 35), (36, 36)]
+    前言.md: [(3, 3)]
+[多章引用同一文件] %WORKSPACE%\mcopilot\docs\协议提取SOP.md
+    ch01-驾驭层.md: [(4, 5), (6, 6), (24, 26), (182, 182)]
+    ch04-契约先行.md: [(10, 11), (12, 13), (21, 27), (75, 75), (76, 76), (77, 77), (141, 142), (163, 164)]
+[多章引用同一文件] %WORKSPACE%\forensics-learning-book\decision-lists\mcopilot-b53ac62.md
+    ch02-三态真值.md: [(19, 20), (30, 32)]
+    尾声.md: [(14, 15), (28, 29)]
+[多章引用同一文件] %WORKSPACE%\mcopilot\scripts\fault_farm.py
+    ch02-三态真值.md: [(9, 10), (15, 15), (22, 34), (36, 42), (48, 50), (395, 404)]
+    ch05-故障农场与真实语料.md: [(9, 10), (22, 34), (36, 42), (48, 50)]
+[多章引用同一文件] %WORKSPACE%\mcopilot\knowledge\protocols\real_corpora\sources.md
+    ch02-三态真值.md: [(5, 5), (6, 6), (64, 65)]
+    ch05-故障农场与真实语料.md: [(6, 6)]
+[多章引用同一文件] %USERPROFILE%\self-improving\ledger.md
+    ch02-三态真值.md: [(3, 3)]
+    ch08-记忆与沉淀系统.md: [(3, 3), (4, 4), (5, 5), (6, 6), (10, 10)]
+[多章引用同一文件] %WORKSPACE%\mcopilot-pending-20261022\MANIFEST.txt
+    ch07-多智能体协作制度.md: [(3, 3), (4, 4), (4, 8), (10, 10), (11, 11), (12, 17), (12, 37), (15, 16), (18, 20), (22, 24), (22, 25), (25, 25), (26, 28), (31, 37), (33, 33)]
+    前言.md: [(3, 3), (4, 8)]
+    尾声.md: [(3, 3), (4, 8)]
+[多章引用同一文件] %WORKSPACE%\forensics-learning-book\decision-lists\axiscope-36e2c74.md
+    前言.md: [(48, 49)]
+    尾声.md: [(17, 18), (34, 35), (64, 68), (69, 71), (72, 72)]

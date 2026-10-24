@@ -1,0 +1,126 @@
+{
+  "meta": {
+    "fixture": "lemay_sample",
+    "source_csv": "Modbus_polling_only_6RTU_labeled.csv",
+    "source_csv_sha256": "58bf9a12513096d5e58f7f00190f608e5934903110c080467ef44827fcce09a3",
+    "source_pcap": "Modbus_polling_only_6RTU(2).pcap",
+    "source_pcap_sha256": "edd76df2510156f7a2c42a3fec7cd838ba5c8ab06a88aa72b1dc118af9ae111f",
+    "rows": 30,
+    "generated": "2026-10-21",
+    "note": "polling_only 前 30 包原字节截取；期望映射由 --make-fixtures 一次生成、人工核对后入库，门禁逐行断言（更新夹具须走 make 并复核 diff）"
+  },
+  "packets_total": 30,
+  "frames_total": 10,
+  "lines": [
+    {
+      "line": 1,
+      "pcap_index": 4,
+      "timestamp_utc": "2015-02-23T19:55:38.728216Z",
+      "direction": "req",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.106:502",
+      "client": "192.168.1.100:1726",
+      "label": 0
+    },
+    {
+      "line": 2,
+      "pcap_index": 8,
+      "timestamp_utc": "2015-02-23T19:55:38.729048Z",
+      "direction": "resp",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.106:502",
+      "client": "192.168.1.100:1726",
+      "label": 0
+    },
+    {
+      "line": 3,
+      "pcap_index": 9,
+      "timestamp_utc": "2015-02-23T19:55:38.729501Z",
+      "direction": "req",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.104:502",
+      "client": "192.168.1.100:1727",
+      "label": 0
+    },
+    {
+      "line": 4,
+      "pcap_index": 13,
+      "timestamp_utc": "2015-02-23T19:55:38.730330Z",
+      "direction": "resp",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.104:502",
+      "client": "192.168.1.100:1727",
+      "label": 0
+    },
+    {
+      "line": 5,
+      "pcap_index": 14,
+      "timestamp_utc": "2015-02-23T19:55:38.730776Z",
+      "direction": "req",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.101:502",
+      "client": "192.168.1.100:1728",
+      "label": 0
+    },
+    {
+      "line": 6,
+      "pcap_index": 18,
+      "timestamp_utc": "2015-02-23T19:55:38.731674Z",
+      "direction": "resp",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.101:502",
+      "client": "192.168.1.100:1728",
+      "label": 0
+    },
+    {
+      "line": 7,
+      "pcap_index": 19,
+      "timestamp_utc": "2015-02-23T19:55:38.732059Z",
+      "direction": "req",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.103:502",
+      "client": "192.168.1.100:1729",
+      "label": 0
+    },
+    {
+      "line": 8,
+      "pcap_index": 23,
+      "timestamp_utc": "2015-02-23T19:55:38.732860Z",
+      "direction": "resp",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.103:502",
+      "client": "192.168.1.100:1729",
+      "label": 0
+    },
+    {
+      "line": 9,
+      "pcap_index": 24,
+      "timestamp_utc": "2015-02-23T19:55:38.733356Z",
+      "direction": "req",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.105:502",
+      "client": "192.168.1.100:1730",
+      "label": 0
+    },
+    {
+      "line": 10,
+      "pcap_index": 27,
+      "timestamp_utc": "2015-02-23T19:55:38.734143Z",
+      "direction": "resp",
+      "unit_id": 1,
+      "function_code": 3,
+      "device": "192.168.1.105:502",
+      "client": "192.168.1.100:1730",
+      "label": 0
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "version": 1,
+  "note": "电子凸轮（需求基线 Q-05 明确要求的能力）的知识与阈值。改阈值改这里，不改代码。每条厂商结论都钉在官方真值上（knowledge/sdks/official_api/*.csv 与 dll_exports.csv 的 PE 导出表）。",
+  "provenance": "2026-10-20：雷赛 1466 条官方 C# 绑定（1463 个函数名） / 正运动 402 条官方 C# 绑定 / 固高 473 条官方 C# 绑定 + 12073 行 DLL 导出表。",
+  "defaults": {
+    "ramp_points": 4,
+    "velocity_step_ratio": 0.15,
+    "velocity_step_limit_ratio": 0.20,
+    "velocity_step_warn_ratio": 0.05,
+    "min_table_points": 4,
+    "accel_headroom": 1.0
+  },
+  "defaults_note": "**哪些键真的参与判定**（2026-10-20 逐键核对 cam_lab.py 的引用）：判定用 `velocity_step_limit_ratio`(0.20，高危线) / `velocity_step_warn_ratio`(0.05，中危线) / `min_table_points`(4) / `ramp_points`(4)。`velocity_step_ratio`(0.15) 与 `accel_headroom`(1.0) **当前不参与任何判定**（cam_lab.py L182 读出的 step_ratio 局部变量之后从未被使用；accel_headroom 全仓零引用）—— 它们是历史占位，不是阈值。**别拿它们当阈值讲**（已在 docs/首次上机验证清单.md L46 写明）。严重度一律按 `Δv / slave_v_max` 判。",
+  "checks": [
+    {
+      "id": "CAM-01",
+      "name": "主轴位置必须严格单调",
+      "level": "高",
+      "why": "主轴位置不单调时，「哪一点对应哪一段」的插值没有唯一解，厂商实现与你的预期必然不一致。",
+      "fix": "把主轴坐标整理成严格递增（必要时先对表做排序/去重）再下发。"
+    },
+    {
+      "id": "CAM-02",
+      "name": "从轴峰值速度",
+      "level": "高",
+      "why": "从轴速度 = 凸轮斜率 × 主轴速度。斜率是「每单位主轴走多少从轴」，主轴一转的斜率就是从轴的峰值速度。",
+      "fix": "降主轴转速、拆段（降低斜率），或换行程更小的从轴方案。"
+    },
+    {
+      "id": "CAM-03",
+      "name": "从轴峰值加速度（主轴加减速贡献）",
+      "level": "高",
+      "why": "凸轮段内从轴加速度 = 斜率 × 主轴加速度。斜率大的段在主轴加减速时从轴会被放大同样倍数。",
+      "fix": "把主轴的加减速段安排在凸轮生效区间之外；或拆段降低斜率。"
+    },
+    {
+      "id": "CAM-04",
+      "name": "段间速度阶跃（机械冲击）",
+      "level": "高",
+      "why": "相邻两段斜率不同，从轴速度会在断点处瞬间跳变。速度阶跃 = 斜率差 × 主轴速度，是真实机构上的冲击，伺服会报跟随误差过大。",
+      "fix": "在断点之间加过渡段（斜率线性过渡），过渡段的主轴宽度至少 = 阶跃速度 / 从轴最大加速度。",
+      "severity": "判据用**阶跃速度 / 从轴速度上限**（不是 / 峰值速度）——峰值速度很小时除以它会放大成假警报，而阶跃速度的绝对大小才是伺服能不能吸收的依据。超过 20% 判高危，超过 5% 判注意。"
+    },
+    {
+      "id": "CAM-05",
+      "name": "从轴总行程",
+      "level": "中",
+      "why": "凸轮表里的从轴坐标是绝对位置，表里最值之差就是从轴实际要走的行程。",
+      "fix": "核对从轴行程与限位，确认表里没有超过行程的坐标。"
+    },
+    {
+      "id": "CAM-06",
+      "name": "跟随误差预算",
+      "level": "中",
+      "why": "从轴在主轴加减速时的加速度会产生跟随误差 e ≈ a/ωn²（仅在 type-2 位置环+速度前馈下成立）。",
+      "fix": "降主轴加速度、拆段降斜率，或提高从轴伺服带宽。"
+    },
+    {
+      "id": "CAM-07",
+      "name": "表点数与分辨率",
+      "level": "低",
+      "why": "厂商凸轮表按点线性插值，点数越少，曲线越接近折线，高速段的插值误差越大。",
+      "fix": "按速度需要加点数；加点数不改变理论斜率，但能把折线误差压下去。"
+    },
+    {
+      "id": "CAM-08",
+      "name": "主轴匀速假设",
+      "level": "中",
+      "why": "本工具的凸轮表生成按「主轴在段内匀速」设计。主轴若在凸轮生效区间内做加减速，从轴时序会整体偏移。",
+      "fix": "让主轴在凸轮生效前就进入匀速段；或用 check --master-a 评估放大倍数。"
+    }
+  ],
+  "vendors": {
+    "雷赛": {
+      "native_cam_table": true,
+      "mechanism": "原生凸轮表：主轴 + 从轴 + 凸轮表号，支持单次/循环执行与凸轮输出触发",
+      "table_upload_from_host": true,
+      "table_upload_api": "dmc_cam_table_unit",
+      "table_upload_note": "dmc_cam_table_unit(CardNo, MasterAxisNo, SlaveAxisNo, Count, pMasterPos[], pSlavePos[], SrcMode) —— 从上位机整表下发（主轴位置数组 + 从轴位置数组），这正是「换凸轮表不用改代码」的入口。",
+      "functions": [
+        {"fn": "dmc_cam_table_unit", "dll": "LTDMC.dll", "proto": "dmc_cam_table_unit(ushort CardNo, ushort MasterAxisNo, ushort SlaveAxisNo, UInt32 Count, double[] pMasterPos, double[] pSlavePos, ushort SrcMode)", "source": "官方 C# 绑定 LTDMC.cs"},
+        {"fn": "dmc_cam_set", "dll": "LTDMC.dll", "proto": "dmc_cam_set(ushort CardNo, ushort execute, ushort cam_table, ushort[] done, ushort[] busy, ushort[] error, UInt32[] error_id)", "source": "官方 C# 绑定 LTDMC.cs"},
+        {"fn": "dmc_cam_move", "dll": "LTDMC.dll", "proto": "dmc_cam_move(ushort CardNo, ushort axis)", "source": "官方 C# 绑定 LTDMC.cs"},
+        {"fn": "dmc_cam_move_cycle", "dll": "LTDMC.dll", "proto": "dmc_cam_move_cycle(ushort CardNo, ushort axis)", "source": "官方 C# 绑定 LTDMC.cs"},
+        {"fn": "dmc_cam_out", "dll": "LTDMC.dll", "proto": "dmc_cam_out(ushort CardNo, ushort slave_axis, ushort execute)", "source": "官方 C# 绑定 LTDMC.cs"},
+        {"fn": "dmc_get_cam_out_status", "dll": "LTDMC.dll", "proto": "dmc_get_cam_out_status(ushort CardNo, ushort slave_axis, ref ushort done, ref ushort busy, ref ushort cmd_aborted, ref ushort error, ref UInt32 error_id)", "source": "官方 C# 绑定 LTDMC.cs"},
+        {"fn": "dmc_cam_delete_tappet", "dll": "LTDMC.dll", "proto": "dmc_cam_delete_tappet(ushort CardNo, ushort execute, ushort cam_table, ushort[] done, ushort[] busy, ushort[] error, UInt32[] error_id)", "source": "官方 C# 绑定 LTDMC.cs"}
+      ],
+      "dll_exported_not_in_csharp_binding": [
+        "dmc_cam_read_point", "dmc_cam_write_point"
+      ],
+      "dll_exported_not_in_csharp_binding_note": "这两个符号（**单数**版）在 LTDMC.dll 的 PE 导出表里确实存在，但**不在官方 C# 绑定 LTDMC.cs 里** —— 官方托管绑定给的是**复数**版 `dmc_cam_read_points` / `dmc_cam_write_points`（leisai.csv L971/L972）与 packet 版（L1171/L1170）。单数版只在官方 C 头文件 leisai_cpp.csv L47/L53 有原型：意味着官方没给托管签名。可以用，但签名必须自己从 C 头文件抄，抄错就是运行期 EntryPointNotFound。本仓库默认不绑。⚠ 本条曾误列 9 个符号（把 `dmc_cam_add_tappet` / `dmc_cam_in` / `dmc_cam_read_tappet_status` / `dmc_cam_read_tappet_value` / `dmc_cam_write_tappet_value` / `dmc_cam_read_points_packet` / `dmc_cam_write_points_packet` 也算进来），2026-10-20 逐条对 official_api/leisai.csv 核对后订正 —— 那 7 个**都在官方 C# 绑定里**。",
+      "limits": "凸轮表最大点数、凸轮表号数量、SrcMode 取值 —— 官方 C# 绑定只给了签名，**上限与枚举取值必须查函数手册**。"
+    },
+    "正运动": {
+      "native_cam_table": true,
+      "mechanism": "原生凸轮：控制器内已建好的凸轮表，按「起止点区间」在指定轴上执行；另有凸轮框（带链接轴）",
+      "table_upload_from_host": false,
+      "table_upload_api": null,
+      "table_upload_note": "**注意**：ZAux_Direct_Cam 的参数是 (轴号, 起始点, 结束点, 表倍率, 距离)，它只引用凸轮表的**一段区间**，并不携带表内容。凸轮表本身要在控制器侧建立（CAM 指令 / BASIC 脚本）。所以「从上位机动态换整张凸轮表」这条路正运动走不通 —— 换表要改控制器里的程序，不是改上位机。",
+      "functions": [
+        {"fn": "ZAux_Direct_Cam", "dll": "zauxdll.dll", "proto": "ZAux_Direct_Cam(IntPtr handle, int iaxis, int istartpoint, int iendpoint, float ftablemulti, float fDistance)", "source": "官方 C# 绑定 Zmcaux.cs + C 头文件 zauxdll2.h（两侧原型一致）"},
+        {"fn": "ZAux_Direct_Cambox", "dll": "zauxdll.dll", "proto": "ZAux_Direct_Cambox(IntPtr handle, int iaxis, int istartpoint, int iendpoint, float ftablemulti, float fDistance, int ilinkaxis, int ioption, float flinkstartpos)", "source": "官方 C# 绑定 Zmcaux.cs + C 头文件 zauxdll2.h（两侧原型一致）"}
+      ],
+      "dll_exported_not_in_csharp_binding": [],
+      "dll_exported_not_in_csharp_binding_note": "凸轮相关导出与官方 C# 绑定完全一致，无多余符号。",
+      "limits": "凸轮表点数上限、ftablemulti 的含义与取值范围、ioption 位定义 —— **必须查手册**（官方绑定只给签名，不给语义）。"
+    },
+    "固高": {
+      "native_cam_table": false,
+      "mechanism": "**GTS SDK 里没有凸轮表 API**（gts.h 535 条声明、gts.cs 473 条绑定、5 个 gts.dll 的导出表里 'cam' 一个都没有）。主从同步走「跟随段 + 事件交叉」：分段下发跟随指令，主轴到达指定位置/事件时切换从轴曲线。",
+      "table_upload_from_host": false,
+      "table_upload_api": null,
+      "table_upload_note": "要用非线性主从曲线，固高的路子是 GT_BufFollowStart/GT_BufFollowNext/GT_BufFollowReturn 分段跟随 + GT_BufFollowEventCross 事件交叉；电子齿轮用 GT_SetGearRatio + GT_GearStart。**不是查表插值的凸轮**，语义与雷赛/正运动不同，跨品牌换卡时这一项不能直接平移。",
+      "functions": [
+        {"fn": "GT_BufFollowStart", "dll": "gts.dll", "proto": "GT_BufFollowStart(short crd, int masterSegment, int slaveSegment, int masterFrameWidth, short fifo=0)", "source": "官方 C# 绑定 gts.cs"},
+        {"fn": "GT_BufFollowNext", "dll": "gts.dll", "proto": "GT_BufFollowNext(short crd, int width, short fifo=0)", "source": "官方 C# 绑定 gts.cs"},
+        {"fn": "GT_BufFollowReturn", "dll": "gts.dll", "proto": "GT_BufFollowReturn(short crd, double vel, double acc, short smoothPercent, short fifo=0)", "source": "官方 C# 绑定 gts.cs"},
+        {"fn": "GT_BufFollowEventCross", "dll": "gts.dll", "proto": "GT_BufFollowEventCross(short crd, ref TBufFollowEventCross pEventCross, short fifo=0)", "source": "官方 C# 绑定 gts.cs"},
+        {"fn": "GT_SetFollowMaster", "dll": "gts.dll", "proto": "GT_SetFollowMaster(short profile, short masterIndex, short masterType, short masterItem)", "source": "官方 C# 绑定 gts.cs"},
+        {"fn": "GT_SetGearRatio", "dll": "gts.dll", "proto": "GT_SetGearRatio(short profile, int masterEven, int slaveEven, int masterSlope)", "source": "官方 C# 绑定 gts.cs"},
+        {"fn": "GT_GearStart", "dll": "gts.dll", "proto": "GT_GearStart(int mask)", "source": "官方 C# 绑定 gts.cs"}
+      ],
+      "dll_exported_not_in_csharp_binding": [],
+      "dll_exported_not_in_csharp_binding_note": "gts.dll 导出表里 'cam' 相关符号 0 个 —— 不是「没找到」，是**确实没有**。",
+      "limits": "TBufFollowEventCross 的结构体字段语义、跟随段数量上限、GEN 产品线（GTN_）是否有凸轮 —— GEN 不在本 SDK 包内，需另行索取。"
+    }
+  },
+  "cross_brand_note": "电子凸轮是三家里**实现方式最不一样**的一项：雷赛=凸轮表（可从上位机整表下发）、正运动=凸轮表（表在控制器侧，上位机只能引用区间）、固高=跟随段+事件交叉（无表）。业务层想要「换卡不改代码」，这一项必须写成能力声明而不是直接调用。"
+}

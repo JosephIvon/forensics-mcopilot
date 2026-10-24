@@ -1,0 +1,820 @@
+{
+  "schema_version": "capability_matrix/1",
+  "generated": "2026-10-21",
+  "deliverable_for": "docs/开发计划_v2_协议层.md P3：品牌 × 协议 × 特性能力矩阵（读写/批量/事件/断线重连）",
+  "companion_doc": "knowledge/protocols/capability_matrix.md",
+  "data_discipline": "只依据仓库内已入库知识；每格带 provenance 指向知识库文件与条目；知识库未覆盖的格子留空（not_ingested），不编造。",
+  "status_vocabulary": {
+    "ingested": "已入库：知识库有规范级条目（mechanical + spec_ref）支撑",
+    "partial": "提取中/部分：骨架或 judgment 项待核对，或工程侧模拟器/真机缺口",
+    "planned_in_progress": "规划/进行中：计划文档点名，知识库尚未入库",
+    "deferred": "延期：计划文档明示延后并写明原因",
+    "absent": "该协议模型中不存在此特性（有知识依据）",
+    "not_ingested": "未入库：无知识条目，留白"
+  },
+  "feature_keys": [
+    "read",
+    "write",
+    "batch_rw",
+    "bit_ops",
+    "exception_mapping",
+    "reconnect",
+    "broadcast",
+    "simulator_testable"
+  ],
+  "protocol_coverage": [
+    {
+      "protocol": "Modbus TCP",
+      "transport": "TCP/IP 端口 502，MBAP 头 7 字节",
+      "status": "ingested",
+      "knowledge_files": [
+        "knowledge/protocols/modbus.json",
+        "knowledge/templates/protocol/ModbusTcpClient.cs"
+      ],
+      "spec_version": [
+        {
+          "doc": "MODBUS Application Protocol Specification",
+          "version": "V1.1b3",
+          "doc_date": "2012-04-26",
+          "pdf_pages": 50,
+          "sha256": "f80d0d7132fd035104c3f21b01026470e3310ca3d8d493d9a9737d0d32ad2eb1"
+        },
+        {
+          "doc": "MODBUS Messaging on TCP/IP Implementation Guide",
+          "version": "V1.0b",
+          "doc_date": "2006-10-24",
+          "pdf_pages": 46,
+          "sha256": "065d71170475642e82f370c648bf5135263cb20f61ce92c921add975fab6f669"
+        }
+      ],
+      "provenance_summary": {
+        "entries": 32,
+        "mechanical": 29,
+        "judgment": 3,
+        "manual_check_marks": 7
+      },
+      "note": "modbus.json spec_version.documents[0]/[2]"
+    },
+    {
+      "protocol": "Modbus RTU",
+      "transport": "串行线 RS232/485，CRC-16 低字节在前，t3.5 帧间隔",
+      "status": "ingested",
+      "knowledge_files": [
+        "knowledge/protocols/modbus.json",
+        "knowledge/templates/protocol/ModbusRtuClient.cs"
+      ],
+      "spec_version": [
+        {
+          "doc": "MODBUS over Serial Line Specification and Implementation Guide",
+          "version": "V1.02",
+          "doc_date": "2006-12-20",
+          "pdf_pages": 44,
+          "sha256": "85a91e278b26d68c94a2f61a5300cd39c9e4c855034833f391abc6541fbdf7e5"
+        }
+      ],
+      "provenance_summary": {
+        "entries": 32,
+        "mechanical": 29,
+        "judgment": 3,
+        "manual_check_marks": 7
+      },
+      "note": "与 Modbus TCP 共用 modbus.json（function_codes 协议层一致，framing.rtu 为串行域专有条目）"
+    },
+    {
+      "protocol": "S7",
+      "transport": "ISO TCP (RFC1006)，端口 102，TSAP 16 位（RemoteTSAP=(ConnectionType<<8)+(Rack*0x20)+Slot）",
+      "status": "ingested",
+      "knowledge_files": [
+        "knowledge/protocols/s7.json"
+      ],
+      "spec_version": [
+        {
+          "doc": "Snap7 Reference Manual",
+          "version": "Rev.8 (Snap7 1.4.2)",
+          "doc_date": "2016-12-03",
+          "pdf_pages": 289,
+          "sha256": "52D870F8ED767E73C20E00E1B0C312764D089B26E327CA7CB48AE0B135117279",
+          "nature": "第三方逆向工程文档，非西门子官方规范（西门子未公开 S7 内部协议规范）"
+        }
+      ],
+      "provenance_summary": {
+        "entries": 181,
+        "mechanical": 161,
+        "mechanical_evidence": 20,
+        "judgment": 0,
+        "manual_check_marks": 0,
+        "sections": {
+          "connection": 30,
+          "pdu": 21,
+          "functions": 24,
+          "addressing": 13,
+          "limits_and_timeouts": 12,
+          "error_codes": {
+            "iso_tcp": 15,
+            "client": 38,
+            "server": 8,
+            "partner": 18,
+            "composition_and_full_32bit": 2
+          }
+        },
+        "note": "2026-10-21 对库更正：原记 166 条 / mechanical 160 / judgment 6 / manual_check 7 与 s7.json 现状不符。实际 181 条 = mechanical 161 + mechanical-evidence 20；原 7 条 judgment 已全部经 Snap7 1.4.3 源码取证证实，升级为 provenance:\"mechanical-evidence\"（src_ref 文件/行号/逐字引文在档）并移除 needs:manual_check，judgment=0、manual_check_marks=0。"
+      }
+    },
+    {
+      "protocol": "SLMP / MC（三菱）",
+      "transport": "以太网 3E 帧（QnA 兼容 3E frame of MC protocol，二进制/ASCII 由模块参数决定）",
+      "status": "partial",
+      "status_label": "提取中（骨架已入库；任务下发口径为「规划中」，仓库实际进度超前，如实登记）",
+      "knowledge_files": [
+        "knowledge/protocols/slmp.json",
+        "knowledge/templates/protocol/SlmpTcpClient.cs",
+        "knowledge/templates/protocol/SlmpContracts.cs"
+      ],
+      "spec_version": [
+        {
+          "doc": "MELSEC iQ-F FX5 User's Manual (SLMP)",
+          "manual_number": "JY997D54401",
+          "pdf_pages": 114,
+          "sha256": "6e273720b435e18e5ccf422929cfbc2d1aa1e1ef0317bbde2ff92b14589a65a5",
+          "note": "官方下载页 JS 动态无法直链，经镜像分发，手册编号+sha256 验证"
+        }
+      ],
+      "provenance_summary": {
+        "entries": 11,
+        "mechanical": 10,
+        "judgment": 1,
+        "manual_check_marks": 2
+      }
+    },
+    {
+      "protocol": "Focas（发那科 CNC）",
+      "transport": "以太网/HSSB 库 API（fwlib32.dll / libfwlib32.so），非公开标准协议",
+      "status": "partial",
+      "status_label": "知识已入库（173 条，2026-10-21）；特性格 8 格尚未评估登记，工程侧 fwlib32 对接未做",
+      "knowledge_files": [
+        "knowledge/protocols/focas.json"
+      ],
+      "spec_version": [
+        {
+          "doc": "Inventcom FOCAS Library Reference (online)",
+          "doc_date": "2026-10-21 抓取",
+          "nature": "第三方（inventcom，CNCnetPDM 厂商）以 HTML 复刻的 FANUC FOCAS1/2 库手册内容；非 FANUC 官方渠道，官方 PDF（B-63xx 系列）未获得"
+        },
+        {
+          "doc": "FOCAS2/Ethernet for Linux Operator's Manual (Ed.2) + FOCAS function list + Fwlib32.h (30i)",
+          "nature": "GitHub 第三方仓库分发的 FANUC 手册翻印/SDK 头文件（sha256 在档，见 focas.json spec_version.documents[1..3]）"
+        }
+      ],
+      "provenance_summary": {
+        "entries": 173,
+        "mechanical": 170,
+        "judgment": 3,
+        "manual_check_marks": 3
+      },
+      "note": "2026-10-21 更正：原「仓库内暂无 focas.json」不实——focas.json 173 条（mechanical 170 / judgment 3）已于 2026-10-21 入库，来源为第三方复刻手册（已在 spec_version.nature 如实标注，官方 PDF 未获得）；judgment 3 条（默认端口 8193/线缆级布局/超时默认值）带 needs:manual_check。特性格 8 格待评估后按同一词表补格，本矩阵不预填。"
+    },
+    {
+      "protocol": "SECS-GEM",
+      "transport": null,
+      "status": "deferred",
+      "knowledge_files": [],
+      "spec_version": [],
+      "provenance_summary": null,
+      "note": "延期原因：SEMI 标准收费——只到公开手册摘录为止，边界诚实标注（docs/开发计划_v2_协议层.md P3）。"
+    }
+  ],
+  "feature_coverage": [
+    {
+      "protocol": "Modbus TCP",
+      "overall": "ingested",
+      "features": {
+        "read": {
+          "status": "ingested",
+          "evidence": "FC1/FC2/FC3/FC4",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.function_codes[0..3] (AP V1.1b3 §6.1-6.4 p11-16)"
+          ]
+        },
+        "write": {
+          "status": "ingested",
+          "evidence": "FC5 写单线圈(0xFF00=ON)/FC6 写单寄存器",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.function_codes[4..5] (§6.5-6.6 p17-19)"
+          ]
+        },
+        "batch_rw": {
+          "status": "ingested",
+          "evidence": "FC15(1..1968)/FC16(1..123)/FC23 单事务读写；上限汇总条目引文为概括已标 manual_check；事件/诊断类 FC7/8/11/12 亦入库",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.function_codes[10..11] (§6.11-6.12 p29-30)",
+            "knowledge/protocols/modbus.json $.function_codes[16] FC23 (§6.17 p38)",
+            "knowledge/protocols/modbus.json $.limits_and_timeouts.fc_quantity_limits_summary"
+          ]
+        },
+        "bit_ops": {
+          "status": "ingested",
+          "evidence": "FC1/2/5/15 位访问（LSB 打包）+ FC22 AND/OR 掩码写",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.function_codes[15] FC22 (§6.16 p36)",
+            "knowledge/protocols/modbus.json $.function_codes[0,1,4,10]"
+          ]
+        },
+        "exception_mapping": {
+          "status": "ingested",
+          "evidence": "异常码 01-0B（07/09 在 V1.1b3 表中不存在，judgment）；异常功能码=请求码+0x80；模板 ModbusSlaveException 名称表已与知识库对账",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.exception_codes[0..10] (§7 p48-49)",
+            "knowledge/protocols/modbus.json $.limits_and_timeouts.exception_response_format (§4.5 p9)",
+            "knowledge/templates/protocol/ModbusTcpClient.cs",
+            "knowledge/templates/protocol/README.md spec_ref 对账表"
+          ]
+        },
+        "reconnect": {
+          "status": "partial",
+          "evidence": "规范仅给超时/重试语义（串行 Response Time-out §2.4.1；TCP 故意不规定响应时间、客户端重试阈值应大于最大合理响应时间 §4.4.1.4）；重连策略为实现层（Connect/三超时可配）；契约 C11 断线重连待真机 T2",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.limits_and_timeouts.serial_response_timeout",
+            "knowledge/protocols/modbus.json $.limits_and_timeouts.tcp_response_timeout",
+            "knowledge/templates/protocol/ModbusTcpClient.cs",
+            "docs/TODO需实测_协议域.md T2"
+          ]
+        },
+        "broadcast": {
+          "status": "partial",
+          "evidence": "TCP 直连服务器 Unit Identifier 无意义须用 0xFF（§4.3.2 p23）；unit=0 经网关路由到串行广播；「发送即返回」实现待加；TCP 桩不可模拟（T3）",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.framing.tcp.unit_identifier_tcp",
+            "knowledge/protocols/modbus.json $.limits_and_timeouts.broadcast_semantics (SL §2.1 p7)",
+            "knowledge/templates/protocol/README.md 待办",
+            "docs/TODO需实测_协议域.md T3"
+          ]
+        },
+        "simulator_testable": {
+          "status": "partial",
+          "evidence": "自建契约桩 15/15（原 11 条 + 2026-10-21 新增 FC1 1969/2000 大批量往返、劣化从站短读、坏帧毒化重连 4 条）+ 帧黄金测试 26/26（新增位响应 250 字节上限/1969 位/RTU 大批量收帧长度 4 条）；第三方 diagslave 对跑待接（T1）",
+          "provenance": [
+            "knowledge/coverage_ledger.json meta.plan_v2.phases.P2",
+            "knowledge/templates/protocol/ModbusContractTests.cs",
+            "knowledge/templates/protocol/ModbusFrameTests.cs",
+            "knowledge/templates/protocol/run_contract.ps1",
+            "knowledge/templates/protocol/run_frame_tests.ps1",
+            "docs/TODO需实测_协议域.md T1"
+          ]
+        }
+      }
+    },
+    {
+      "protocol": "Modbus RTU",
+      "overall": "ingested",
+      "features": {
+        "read": {
+          "status": "ingested",
+          "evidence": "FC1-04 同 TCP（协议层共用）",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.function_codes[0..3]"
+          ]
+        },
+        "write": {
+          "status": "ingested",
+          "evidence": "FC5/FC6 同 TCP",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.function_codes[4..5]"
+          ]
+        },
+        "batch_rw": {
+          "status": "ingested",
+          "evidence": "FC15/FC16/FC23 同 TCP",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.function_codes[10..11,16]"
+          ]
+        },
+        "bit_ops": {
+          "status": "ingested",
+          "evidence": "位访问 + FC22 掩码写，同 TCP",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.function_codes[15]"
+          ]
+        },
+        "exception_mapping": {
+          "status": "ingested",
+          "evidence": "异常码 01-0B；RTU 异常帧解析为 ModbusSlaveException（模板）",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.exception_codes",
+            "knowledge/templates/protocol/ModbusRtuClient.cs"
+          ]
+        },
+        "reconnect": {
+          "status": "partial",
+          "evidence": "串行 Response Time-out/Turnaround delay 语义入库（SL §2.4.1 p9-10）；重连策略为实现层（SerialPort 参数+超时）",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.limits_and_timeouts.serial_response_timeout",
+            "knowledge/protocols/modbus.json $.limits_and_timeouts.serial_turnaround_delay_after_broadcast"
+          ]
+        },
+        "broadcast": {
+          "status": "ingested",
+          "evidence": "地址 0=广播、仅写命令、无响应（SL §2.1 p7）；广播后等 Turnaround delay 100-200ms；真机行为 T3 待销",
+          "provenance": [
+            "knowledge/protocols/modbus.json $.limits_and_timeouts.broadcast_semantics",
+            "docs/TODO需实测_协议域.md T3"
+          ]
+        },
+        "simulator_testable": {
+          "status": "partial",
+          "evidence": "帧级黄金测试含 RTU 帧+CRC（FC3/5/6/15/16 请求、FC1/FC3 响应、CRC 损坏/短帧拒绝）；t3.5 定时入库（>19200bps 固定 1.75ms）；第三方 diagslave 对跑待接（T1）",
+          "provenance": [
+            "knowledge/templates/protocol/ModbusFrameTests.cs",
+            "knowledge/protocols/modbus.json $.framing.rtu",
+            "docs/TODO需实测_协议域.md T1"
+          ]
+        }
+      }
+    },
+    {
+      "protocol": "S7",
+      "overall": "ingested",
+      "features": {
+        "read": {
+          "status": "ingested",
+          "evidence": "Cli_ReadArea 主读（DB/I/Q/M/T/C）+ 12 个区域便捷读函数",
+          "provenance": [
+            "knowledge/protocols/s7.json $.functions[id=fn_read_area] (p104)",
+            "knowledge/protocols/s7.json $.functions[id=fn_area_wrappers] (p107-118)"
+          ]
+        },
+        "write": {
+          "status": "ingested",
+          "evidence": "Cli_WriteArea 主写 + 便捷写函数",
+          "provenance": [
+            "knowledge/protocols/s7.json $.functions[id=fn_write_area] (p106)",
+            "knowledge/protocols/s7.json $.functions[id=fn_area_wrappers]"
+          ]
+        },
+        "batch_rw": {
+          "status": "ingested",
+          "evidence": "Cli_ReadMultiVars/Cli_WriteMultiVars（单次 ≤20 项，超出 errCliTooManyItems）；超 PDU 自动分包，MultiVars 例外不自动分包",
+          "provenance": [
+            "knowledge/protocols/s7.json $.functions[id=fn_read_multivars] (p119)",
+            "knowledge/protocols/s7.json $.functions[id=fn_write_multivars] (p121)",
+            "knowledge/protocols/s7.json $.limits_and_timeouts[id=lim_max_items_20]",
+            "knowledge/protocols/s7.json $.pdu[id=pdu_auto_split] (p26)",
+            "knowledge/protocols/s7.json $.pdu[id=pdu_multivars_nosplit] (p119)"
+          ]
+        },
+        "bit_ops": {
+          "status": "ingested",
+          "evidence": "WordLen=S7WLBit 位寻址：Start(bit)=byte_offset*8+bit（DB4.DBX10.3→83）；WordLen 表含 Bit/Byte/Word/DWord/Real/Counter/Timer",
+          "provenance": [
+            "knowledge/protocols/s7.json $.addressing[id=addr_byte_bit] (p105)",
+            "knowledge/protocols/s7.json $.addressing[id=addr_wordlen_table] (p104)"
+          ]
+        },
+        "exception_mapping": {
+          "status": "ingested",
+          "evidence": "32 位错误码三层组合（TCP/IP 低 16 位 / ISO TCP 第 5 半字节 / S7 协议高 3 半字节）；iso_tcp 15 + client 38 + server 8 + partner 18 条；完整 32 位常量为推导值（judgment）",
+          "provenance": [
+            "knowledge/protocols/s7.json $.error_codes.composition (p252)",
+            "knowledge/protocols/s7.json $.error_codes.iso_tcp_errors",
+            "knowledge/protocols/s7.json $.error_codes.client_errors",
+            "knowledge/protocols/s7.json $.error_codes.server_errors",
+            "knowledge/protocols/s7.json $.error_codes.partner_errors",
+            "knowledge/protocols/s7.json $.error_codes.full_32bit_judgment"
+          ]
+        },
+        "reconnect": {
+          "status": "partial",
+          "evidence": "机制入库：断线重连可用无参 Cli_Connect()；SmartConnect 先 ping 后 TCP 规避断电超时；Partner RecoveryTime/KeepAliveTime 参数；自动重连策略为实现层",
+          "provenance": [
+            "knowledge/protocols/s7.json $.connection[id=conn_connectto] (p96)",
+            "knowledge/protocols/s7.json $.connection[id=conn_smart_connect] (p26)",
+            "knowledge/protocols/s7.json $.limits_and_timeouts[id=to_tcp_connect_timeout]",
+            "knowledge/protocols/s7.json $.limits_and_timeouts[id=to_partner_timeouts] (p89)"
+          ]
+        },
+        "broadcast": {
+          "status": "absent",
+          "evidence": "Client/Server/Partner 问答模型：客户端只发起、服务器只应答（p19）；知识库全文无广播概念",
+          "provenance": [
+            "knowledge/protocols/s7.json $.connection[id=conn_roles] (p19)"
+          ]
+        },
+        "simulator_testable": {
+          "status": "partial",
+          "evidence": "Snap7Server 规范已入库（并发连接默认 1024 可调、注册 DB ≤2048、虚拟 CPU 状态 Srv_SetCpuStatus）；工程侧 Snap7 demo server 对接待做（计划 P2 点名，账本 P2 余量未销）",
+          "provenance": [
+            "knowledge/protocols/s7.json $.limits_and_timeouts[id=lim_server_max_clients] (p43)",
+            "knowledge/protocols/s7.json $.limits_and_timeouts[id=lim_server_db_2048] (p254)",
+            "knowledge/protocols/s7.json $.functions[id=fn_get_plc_status]",
+            "docs/开发计划_v2_协议层.md P2",
+            "knowledge/coverage_ledger.json meta.plan_v2.phases.P2"
+          ]
+        }
+      }
+    },
+    {
+      "protocol": "SLMP / MC（三菱）",
+      "overall": "partial",
+      "features": {
+        "read": {
+          "status": "partial",
+          "evidence": "Device Read (Batch) 0401H/0001H（§4.1 p41，mechanical）",
+          "provenance": [
+            "knowledge/protocols/slmp.json $.entries[id=SLMP-CMD-0401]"
+          ]
+        },
+        "write": {
+          "status": "partial",
+          "evidence": "Device Write (Batch) 1401H/0001H；Device Read Random 0403H 条目在库",
+          "provenance": [
+            "knowledge/protocols/slmp.json $.entries[id=SLMP-CMD-1401]",
+            "knowledge/protocols/slmp.json $.entries[id=SLMP-CMD-0403]"
+          ]
+        },
+        "batch_rw": {
+          "status": "partial",
+          "evidence": "Batch 读/写即批量（BIN 960 words / 15360 points 上限见引文）；随机读仅条目名入库",
+          "provenance": [
+            "knowledge/protocols/slmp.json $.entries[id=SLMP-CMD-0401]",
+            "knowledge/protocols/slmp.json $.entries[id=SLMP-CMD-1401]"
+          ]
+        },
+        "bit_ops": {
+          "status": "partial",
+          "evidence": "位软元件码 6 类入库（Input X* 9CH/9C00H 等，§4.2 p46-47）；位单位子指令 0001H 见模板常量",
+          "provenance": [
+            "knowledge/protocols/slmp.json $.entries[id=SLMP-DEV-Input-9C]",
+            "knowledge/templates/protocol/SlmpTcpClient.cs SlmpCommand.SubBitUnits"
+          ]
+        },
+        "exception_mapping": {
+          "status": "partial",
+          "evidence": "副头部错误值 0xD4/0xD5 为 judgment（消息图解区 pypdf 打散，needs:manual_check）；End code 值表不在手册文字层，客户端只透传原始码不编造翻译表（TODO[需实测]）",
+          "provenance": [
+            "knowledge/protocols/slmp.json $.entries[id=SLMP-SUBHEADER]",
+            "knowledge/templates/protocol/SlmpTcpClient.cs 文件头注释"
+          ]
+        },
+        "reconnect": {
+          "status": "not_ingested",
+          "evidence": "知识库无对应条目",
+          "provenance": []
+        },
+        "broadcast": {
+          "status": "not_ingested",
+          "evidence": "知识库无对应条目",
+          "provenance": []
+        },
+        "simulator_testable": {
+          "status": "partial",
+          "evidence": "自建契约桩已建并全绿：C1-C9（scripts/smoke_slmp.py → out/protocol_smoke/SlmpContracts.exe RESULT: PASS，2026-10-21）；位单位/真机 TODO[需实测] T4",
+          "provenance": [
+            "knowledge/templates/protocol/SlmpContracts.cs",
+            "scripts/smoke_slmp.py"
+          ]
+        }
+      }
+    }
+  ],
+  "brand_mapping": [
+    {
+      "brand": "西门子",
+      "domain": "PLC",
+      "channel": "S7",
+      "status": "ingested",
+      "knowledge_files": [
+        "knowledge/protocols/s7.json"
+      ],
+      "note": "S7-300 固定 Rack0/Slot2；S7-1200/1500 走 base 协议 + HMI 角色，需 PLC 侧仅全局 DB/关优化块访问/允许 GET/PUT（$.addressing[id=addr_s71200_1500_limits] p34）"
+    },
+    {
+      "brand": "三菱",
+      "domain": "PLC",
+      "channel": "SLMP/MC（主）+ Modbus（备选）",
+      "status": "partial",
+      "knowledge_files": [
+        "knowledge/protocols/slmp.json",
+        "knowledge/protocols/modbus.json"
+      ],
+      "note": "SLMP 3E 帧与 MC 协议 QnA 兼容 3E 帧相同（$.entries[id=SLMP-FRAME-3E] §2.1 p13）——即 MC 协议入口"
+    },
+    {
+      "brand": "发那科",
+      "domain": "CNC",
+      "channel": "Focas",
+      "status": "partial",
+      "knowledge_files": [
+        "knowledge/protocols/focas.json"
+      ],
+      "note": "2026-10-21 更正：focas.json 173 条已入库（mechanical 170 / judgment 3；第三方复刻手册来源，官方 PDF 未获得）；特性格评估与工程侧 fwlib32.dll 对接未做，无可登记特性"
+    },
+    {
+      "brand": "雷赛",
+      "domain": "运动卡",
+      "channel": "卡 SDK",
+      "status": "ingested",
+      "knowledge_files": [
+        "knowledge/sdks/dmc.json",
+        "knowledge/cards.json"
+      ],
+      "verified": "official-manual",
+      "note": "DMC3000/DMC5000 脉冲卡 + DMC-E 总线卡，LTDMC.dll；知识文件 40 条 P/Invoke（官方绑定 1466 条声明口径见 README §1）；板卡型 DMC 不提供 Modbus 主站能力（cards.json 雷赛 edge_cases）"
+    },
+    {
+      "brand": "固高",
+      "domain": "运动卡",
+      "channel": "卡 SDK",
+      "status": "ingested",
+      "knowledge_files": [
+        "knowledge/sdks/gts.json",
+        "knowledge/cards.json"
+      ],
+      "verified": "official-binding",
+      "note": "GTS-400/800 PCIe 插卡，gts.dll（StdCall）；知识文件 35 条 P/Invoke；GEN（GTN_）独立产品线、不在 GTS SDK 包内（README §10）"
+    },
+    {
+      "brand": "正运动",
+      "domain": "运动卡",
+      "channel": "卡 SDK",
+      "status": "ingested",
+      "knowledge_files": [
+        "knowledge/sdks/zmotion.json",
+        "knowledge/cards.json"
+      ],
+      "verified": "official-binding",
+      "note": "ZMC 系列 EtherCAT 总线控制器，zauxdll.dll；知识文件 41 条 P/Invoke"
+    },
+    {
+      "brand": "软赢",
+      "domain": "运动卡",
+      "channel": "待录入",
+      "status": "not_ingested",
+      "knowledge_files": [
+        "knowledge/cards.json"
+      ],
+      "note": "公开一手件不足，不猜（cards.json needs-manual-check 口径；README §10）"
+    },
+    {
+      "brand": "高川",
+      "domain": "运动卡",
+      "channel": "待录入",
+      "status": "not_ingested",
+      "knowledge_files": [
+        "knowledge/cards.json"
+      ],
+      "note": "公开一手件不足，不猜（README §10）"
+    },
+    {
+      "brand": "ACS",
+      "domain": "运动卡",
+      "channel": "待录入",
+      "status": "not_ingested",
+      "knowledge_files": [
+        "knowledge/cards.json"
+      ],
+      "note": "SA/SA-LT 独立整机、无卡驱动可 P/Invoke，须先定通信库分支架构路线（README §10）"
+    },
+    {
+      "brand": "通用（无品牌约束从站）",
+      "domain": "外设",
+      "channel": "Modbus TCP/RTU",
+      "status": "ingested",
+      "knowledge_files": [
+        "knowledge/protocols/modbus.json",
+        "knowledge/templates/protocol/ModbusTcpClient.cs",
+        "knowledge/templates/protocol/ModbusRtuClient.cs"
+      ],
+      "note": "温控器/仪表类通用路径；双寄存器字序 ABCD/CDAB 可配（ModbusRegisters）"
+    }
+  ],
+  "backlog": {
+    "simulators_per_protocol": [
+      {
+        "protocol": "Modbus",
+        "simulator": "diagslave",
+        "status": "pending",
+        "ref": "T1：当前对端=自建契约桩（C1-C10 约束）但非第三方实现",
+        "provenance": [
+          "docs/TODO需实测_协议域.md T1",
+          "knowledge/templates/protocol/ModbusContracts.cs"
+        ]
+      },
+      {
+        "protocol": "Modbus",
+        "simulator": "自建契约桩",
+        "status": "done",
+        "ref": "C1-C10 全绿；修出位响应未裁剪填充位（TCP/RTU 四处）真 bug",
+        "provenance": [
+          "knowledge/coverage_ledger.json meta.plan_v2.phases.P2"
+        ]
+      },
+      {
+        "protocol": "S7",
+        "simulator": "Snap7 demo server",
+        "status": "pending",
+        "ref": "开发计划 P2 点名；知识层 Snap7Server 规范已入库（并发 1024 / DB≤2048 / Srv_SetCpuStatus）",
+        "provenance": [
+          "docs/开发计划_v2_协议层.md P2",
+          "knowledge/coverage_ledger.json meta.plan_v2.phases.P2",
+          "knowledge/protocols/s7.json $.limits_and_timeouts[id=lim_server_max_clients, id=lim_server_db_2048]"
+        ]
+      },
+      {
+        "protocol": "SLMP",
+        "simulator": "自建契约桩",
+        "status": "skeleton",
+        "ref": "SlmpContracts.cs 骨架已入库；无第三方模拟器对接",
+        "provenance": [
+          "knowledge/templates/protocol/SlmpContracts.cs"
+        ]
+      },
+      {
+        "protocol": "Focas / SECS-GEM",
+        "simulator": "无",
+        "status": "not_planned",
+        "ref": "Focas 知识已入库（focas.json 173 条，2026-10-21）但模拟器层未规划；SECS-GEM 知识未入库",
+        "provenance": [
+          "knowledge/protocols/focas.json"
+        ]
+      }
+    ],
+    "real_machine_gaps": [
+      {
+        "id": "T1",
+        "gap": "diagslave 第三方对跑同一契约套件",
+        "status": "◐ P2/P4",
+        "provenance": [
+          "docs/TODO需实测_协议域.md"
+        ]
+      },
+      {
+        "id": "T2",
+        "gap": "断线重连语义（网络闪断后半开连接，桩不可模拟）",
+        "status": "◐ P4 真机波",
+        "provenance": [
+          "docs/TODO需实测_协议域.md",
+          "knowledge/templates/protocol/ModbusContracts.cs 契约 C11"
+        ]
+      },
+      {
+        "id": "T3",
+        "gap": "广播（unit=0）行为——串行域语义，TCP 桩不可模拟",
+        "status": "◐ P4 真机波",
+        "provenance": [
+          "docs/TODO需实测_协议域.md",
+          "knowledge/templates/protocol/ModbusContracts.cs 契约 C11"
+        ]
+      },
+      {
+        "id": "T4",
+        "gap": "SLMP 位单位读写（0001H 子指令）+ 真机 CPU 互操作（桩只实现字单位）",
+        "status": "pending_p4",
+        "ref": "SlmpContracts.cs C10",
+        "provenance": [
+          "docs/TODO需实测_协议域.md T4"
+        ]
+      },
+      {
+        "id": "T5",
+        "gap": "SLMP 副头部值（0x5000/0xD000）真机核对（现 judgment）；结束代码语义表（现只透传原始码）",
+        "status": "pending_p4",
+        "ref": "SlmpTcpClient.cs 文件头 + slmp.json SLMP-SUBHEADER",
+        "provenance": [
+          "docs/TODO需实测_协议域.md T5"
+        ]
+      }
+    ],
+    "knowledge_gaps": [
+      {
+        "protocol": "S7",
+        "gap": "TPKT/COTP 建连序列手册未覆盖（仅称 ISO TCP/RFC1006）——已闭合：2026-10-21 Snap7 1.4.3 源码取证升级为 mechanical-evidence（原 judgment 撤销）",
+        "provenance": [
+          "knowledge/protocols/s7.json $.connection[id=conn_judg_tpkt_cotp] (p17)"
+        ]
+      },
+      {
+        "protocol": "S7",
+        "gap": "读/写 PDU 线缆级字节布局手册未定义（API 层语义已有）——已闭合：源码取证给出线缆级布局，升级为 mechanical-evidence",
+        "provenance": [
+          "knowledge/protocols/s7.json $.pdu[id=pdu_judg_wire_layout] (p104)"
+        ]
+      },
+      {
+        "protocol": "S7",
+        "gap": "各超时参数出厂默认值手册未提供——已闭合：源码取证给出默认值，升级为 mechanical-evidence",
+        "provenance": [
+          "knowledge/protocols/s7.json $.limits_and_timeouts[id=to_judg_default_values] (p89)"
+        ]
+      },
+      {
+        "protocol": "S7",
+        "gap": "完整 32 位错误码常量原为推导值——已闭合：五张错误表常量组在 snap7 源码中逐条证实，升级为 mechanical-evidence",
+        "provenance": [
+          "knowledge/protocols/s7.json $.error_codes.full_32bit_judgment (p252)"
+        ]
+      },
+      {
+        "protocol": "SLMP",
+        "gap": "副头部 0x5000/0xD000（含错误 0xD4/0xD5）待人工核对后转 mechanical",
+        "provenance": [
+          "knowledge/protocols/slmp.json $.entries[id=SLMP-SUBHEADER]"
+        ]
+      },
+      {
+        "protocol": "SLMP",
+        "gap": "End code 错误码语义待真机核对（现只透传原始码，不编造翻译表）",
+        "provenance": [
+          "knowledge/templates/protocol/SlmpTcpClient.cs"
+        ]
+      },
+      {
+        "protocol": "Modbus",
+        "gap": "fc_quantity_limits_summary 引文为概括（needs:manual_check）；FC16/FC43 异常功能码 0x90/0xAB 为推导值（全文件 manual_check 7 处）",
+        "provenance": [
+          "knowledge/protocols/modbus.json"
+        ]
+      },
+      {
+        "protocol": "运动卡（品牌域）",
+        "gap": "固高三项待厂商确认（当量变换公式/现场型号与固件/GEN SDK 包）；雷赛总线轴使能序列未公开（Enable 显式失败）",
+        "provenance": [
+          "README.md §10",
+          "knowledge/cards.json"
+        ]
+      }
+    ]
+  },
+  "stats": {
+    "protocol_coverage_rows": 6,
+    "feature_cells": 32,
+    "feature_cell_distribution": {
+      "ingested_check": 16,
+      "partial": 13,
+      "absent": 1,
+      "not_ingested": 2
+    },
+    "protocol_coverage_distribution": {
+      "ingested": 3,
+      "partial": 2,
+      "planned_in_progress": 0,
+      "deferred": 1
+    },
+    "brand_mapping_rows": 10,
+    "backlog_items": {
+      "simulators": 5,
+      "real_machine": 3,
+      "knowledge_gaps": 8
+    },
+    "knowledge_provenance_volume": {
+      "modbus.json": {
+        "fc_and_exception_entries": 32,
+        "mechanical": 29,
+        "judgment": 3,
+        "manual_check_marks": 7
+      },
+      "s7.json": {
+        "entries": 181,
+        "mechanical": 161,
+        "mechanical_evidence": 20,
+        "judgment": 0,
+        "manual_check_marks": 0
+      },
+      "focas.json": {
+        "entries": 173,
+        "mechanical": 170,
+        "judgment": 3,
+        "manual_check_marks": 3
+      },
+      "slmp.json": {
+        "entries": 11,
+        "mechanical": 10,
+        "judgment": 1,
+        "manual_check_marks": 2
+      },
+      "sdks": {
+        "dmc_pinvoke": 40,
+        "gts_pinvoke": 35,
+        "zmotion_pinvoke": 41
+      }
+    },
+    "note": "2026-10-21 更正：Focas 知识已入库（focas.json 173 条），状态由「规划/进行中」改记「提取中/部分」，特性格 8 格仍未评估、不计入 32 格；S7 判定改按 s7.json 现状（181 条，judgment=0）。未入库协议仅剩 SECS-GEM，不占特性格。"
+  },
+  "honest_boundary": [
+    "模拟器 ≠ 真机：T1-T3 销项前，协议域所有「可测」仅指自建桩口径。",
+    "S7 知识源自第三方逆向工程文档（Snap7 Reference Manual）；原 judgment 缺口已于 2026-10-21 经 Snap7 1.4.3 源码取证闭合（mechanical-evidence，src_ref 在档）。",
+    "SLMP 为骨架提取：消息图解区值不冒充机械提取；End code 不编造翻译表。",
+    "Focas 知识源自第三方复刻手册（inventcom HTML + GitHub 翻印 PDF），官方 PDF 未获得；特性格未评估不预填。",
+    "SECS-GEM 因 SEMI 标准收费延期，只到公开手册为止。",
+    "运动卡六品牌中无一手件的软赢/高川/ACS 不猜、不建。",
+    "SLMP 契约桩 C1-C9 已跑通（2026-10-21，scripts/smoke_slmp.py）；位单位与真机核对留 T4/T5。"
+  ],
+  "requirements_basis": {
+    "source": "docs/开发计划_v2_协议层.md",
+    "sample": "行业在招岗位需求面调研（5 城市 × 3 搜索词、64 份有效岗位描述）",
+    "relevant_ratios": {
+      "协议层": "69%",
+      "运动控制卡SDK": "14%",
+      "现场调试": "43%"
+    },
+    "ledger_ref": "knowledge/coverage_ledger.json meta.plan_v2.phases.P3"
+  }
+}

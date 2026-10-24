@@ -1,0 +1,44 @@
+{
+  "provenance": "real_record",
+  "evidence_type": "external",
+  "source": "DaRUS-3252（斯图加特大学数据仓储）Validation/FrequencyDomain/tracking_pos_PRBS/PRBS_PPI_s_0.mat（滚珠丝杠试验台，PRBS 位置参考，位置环闭合）",
+  "dataset_doi": "10.18419/DARUS-3252",
+  "paper_doi": "10.1016/j.conengprac.2023.105607",
+  "license": "CC BY 4.0",
+  "csv_sha256": "cbe11c5e5d4674b80fab01beebedf60238847a3254eed720819cd443b47602f7",
+  "truth_basis": "本文件由当日一次性独立复算（**复算脚本未入库**，2026-10-22 按 git ls-files 复核；见 samples/servo/PROVENANCE.md 的复算说明）（不 import mcopilot 的估计器）：Welch 分段互谱 + 自写 FFT；并与数据集自己公开的机械模型 ω₀=215.1584 rad/s 对撞；另独立复算「前馈污染判据」（低频平台 |H| 的中位数与其噪声）与灵敏度峰 M_s。**本文件里的数都是独立复算值**；工具的读数会随估计器版本变动，本轮两套独立实现**逐位一致**（口径见 docs/真实伺服数据_DaRUS3252.md 第五节）",
+  "boundary": "位置环闭合（PRBS 位置参考 → P 位置环 → PI 速度环 → 丝杠 → 负载位置反馈），**能验伺服闭环位置带宽模型**（宽带路径已落地，工具读数与本文件独立复算的 11.943 Hz 逐位一致）。**不能验开环相位裕度**：数据集公开参数写明速度/加速度前馈**开着**，实测低频平台 |H| 的中位数 = 1.0201（超出 1 的幅度 +2.0%，平台带噪声 ±0.18% → 可分辨）⟹ 1−H 不是灵敏度函数，由闭环频响反解 L=H/(1−H) 得到的是前馈残差主导的假象（工具据此登记 feedforward_contaminated 并拒绝给裕度；此时连灵敏度峰 M_s 也不成立，Koka 下界一并失效）。要验裕度需要**前馈关掉**的扫频记录，或前馈增益标定。",
+  "recomputable": {
+    "n_samples": 16000,
+    "fs_hz": 1000.0,
+    "duration_s": 15.999,
+    "plateau_abs_g": 1.02005,
+    "plateau_band_g": [
+      1.00333,
+      1.0133,
+      1.02681,
+      1.0378
+    ],
+    "plateau_t_max": 1.0378,
+    "plateau_t_med": 1.02005,
+    "plateau_noise": 0.00177,
+    "ff_excess": 0.02005,
+    "ff_verdict": "contaminated",
+    "ff_contaminated": true,
+    "bw_hz": 11.943,
+    "coh_median": 0.9683,
+    "valid_bins": 520,
+    "coh_band_hz": [
+      1.221,
+      181.641
+    ],
+    "res_phase180_hz": 36.565,
+    "follow_err_median_um": 8.083,
+    "follow_err_p95_um": 21.063,
+    "follow_err_max_um": 64.806,
+    "screw_defl_median_um": 4.295,
+    "published_omega0_hz": 34.244,
+    "published_pos_kp_hz": 7.958,
+    "sensitivity_peak_ms": 1.3853
+  }
+}

@@ -1,0 +1,227 @@
+// ============================================================================
+//  {{VENDOR}} 运动控制卡适配器
+//  模型：{{MODEL}}
+//  接口：{{INTERFACE}}
+//  DLL ：{{DLL}}
+//
+//  由 mcopilot adapter 生成 —— 手工修改会在下次生成时丢失。
+//  标注 TODO[需核对厂商手册] 的地方必须查厂商函数手册后补齐，不要猜。
+//  补齐后请把 knowledge/sdks/{{SDK_FILE}} 里的 verified 改成 verified，
+//  这样能力矩阵里这一条才会从「待核对」变成「已确认」。
+// ============================================================================
+
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+
+namespace {{NAMESPACE}}
+{
+    public sealed class {{CLASS}} : Motion.IMotionController
+    {
+        // ---------------------------------------------------------------- 配置
+        // 不同品牌用到的私有字段不同（板卡型用不到轴组，总线型用不到卡号），
+        // 未使用的字段会触发 CS0169/CS0414，这里统一静音。
+#pragma warning disable CS0169, CS0414
+        private const ushort CardType = {{CARD_TYPE}};
+        private const int AxisCountValue = {{AXIS_COUNT}};
+
+        private readonly int _card;
+        private readonly string _ip;
+        private readonly int _port;
+        private readonly double[] _pulsePerMm;
+        private IntPtr _handle;
+        // 适配器自用的原生缓冲（固高位置比较点数组等）。控制器取走之前不能释放，
+        // 所以由适配器自己持有，在下一次使用或 Close 时释放。
+        private IntPtr _vendorBuffer;
+        private bool _isOpen;
+        private int _groupId = 0;
+        private int _groupAxisCount;
+#pragma warning restore CS0169, CS0414
+
+        public {{CLASS}}(int card = 0, string ip = "127.0.0.1", int port = 5111, double defaultPulsePerMm = 1000.0)
+        {
+            _card = card;
+            _ip = ip;
+            _port = port;
+            _pulsePerMm = new double[AxisCountValue];
+            for (var i = 0; i < AxisCountValue; i++) _pulsePerMm[i] = defaultPulsePerMm;
+        }
+
+        public string Vendor => "{{VENDOR}}";
+        public int AxisCount => AxisCountValue;
+        public bool IsOpen => _isOpen;
+
+        // ---------------------------------------------------------------- 生命周期
+        public void Open()
+        {
+{{BODY:Open}}
+        }
+
+        public void Close()
+        {
+{{BODY:Close}}
+        }
+
+        public void Dispose()
+        {
+            Close();
+            GC.SuppressFinalize(this);
+        }
+
+        // ---------------------------------------------------------------- 使能
+        public void Enable(int axis, bool on)
+        {
+            CheckAxis(axis);
+{{BODY:Enable}}
+        }
+
+        public bool IsEnabled(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:IsEnabled}}
+        }
+
+        // ---------------------------------------------------------------- 运动
+        public void MoveAbs(int axis, double posMm, Motion.MotionProfile profile)
+        {
+            CheckAxis(axis);
+{{BODY:MoveAbs}}
+        }
+
+        public void MoveRel(int axis, double distMm, Motion.MotionProfile profile)
+        {
+            CheckAxis(axis);
+{{BODY:MoveRel}}
+        }
+
+        public void MoveLinear(IReadOnlyList<double> targetsMm, Motion.MotionProfile profile)
+        {
+{{BODY:MoveLinear}}
+        }
+
+        public void MoveArc(double centerXMm, double centerYMm, double endXMm, double endYMm,
+                            bool counterClockwise, Motion.MotionProfile profile)
+        {
+{{BODY:MoveArc}}
+        }
+
+        public void Jog(int axis, double speedMmS)
+        {
+            CheckAxis(axis);
+{{BODY:Jog}}
+        }
+
+        public void Stop(int axis, Motion.StopMode mode = Motion.StopMode.Decelerate)
+        {
+            CheckAxis(axis);
+{{BODY:Stop}}
+        }
+
+        public void Home(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:Home}}
+        }
+
+        // ---------------------------------------------------------------- 状态
+        public double GetPositionMm(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:GetPositionMm}}
+        }
+
+        public double GetFeedbackMm(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:GetFeedbackMm}}
+        }
+
+        public bool HasRealFeedback(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:HasRealFeedback}}
+        }
+
+        public bool IsMoving(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:IsMoving}}
+        }
+
+        public bool IsMotionDone(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:IsMotionDone}}
+        }
+
+        public int GetStopReason(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:GetStopReason}}
+        }
+
+        public string GetStopReasonText(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:GetStopReasonText}}
+        }
+
+        public Motion.AxisState GetState(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:GetState}}
+        }
+
+        // ---------------------------------------------------------------- IO
+        public bool ReadInput(int port)
+        {
+{{BODY:ReadInput}}
+        }
+
+        public void WriteOutput(int port, bool on)
+        {
+{{BODY:WriteOutput}}
+        }
+
+        // ---------------------------------------------------------------- 硬件级功能
+        public void SetCompareOutput(int axis, double posMm, int outPort)
+        {
+            CheckAxis(axis);
+{{BODY:SetCompareOutput}}
+        }
+
+        public void SetLatch(int axis, int inPort)
+        {
+            CheckAxis(axis);
+{{BODY:SetLatch}}
+        }
+
+        // ---------------------------------------------------------------- 单位换算
+        public void SetPulsePerMm(int axis, double pulsePerMm)
+        {
+            CheckAxis(axis);
+{{BODY:SetPulsePerMm}}
+        }
+
+        public double GetPulsePerMm(int axis)
+        {
+            CheckAxis(axis);
+{{BODY:GetPulsePerMm}}
+        }
+
+        // ---------------------------------------------------------------- 内部工具
+        private void CheckAxis(int axis)
+        {
+            if (axis < 0 || axis >= AxisCountValue)
+                throw new ArgumentOutOfRangeException(nameof(axis), $"轴号 {axis} 超出范围 0..{AxisCountValue - 1}");
+        }
+
+{{HELPERS}}
+
+        // ---------------------------------------------------------------- 原生接口
+        internal static class Native
+        {
+{{PINVOKE}}
+        }
+    }
+}

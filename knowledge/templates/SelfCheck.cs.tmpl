@@ -1,0 +1,307 @@
+// ============================================================================
+//  适配层自检程序（无第三方依赖，编译后直接运行）
+//  —— 在没有硬件、也没装 xUnit 的机器上，验证「仿真器 + 契约断言」是否自洽。
+//
+//  跑法：
+//    dotnet build → 或 csc /target:exe 编译后运行；退出码 0 = 全通过。
+//
+//  它证明的是**自洽性**：仿真器真的模拟出了跟随误差、指令与反馈同口径、
+//  异常路径真的会抛。**它不能证明真机通过** —— 真机一致性由 MotionContractTests
+//  在插上卡之后验证（那套需要 xUnit）。两者的分工见 docs/落地路线.md。
+//
+//  为什么要有这个文件：契约测试写在 C# 里，如果只能编译不能运行，
+//  那「跟随误差非零」这种物理断言就永远没人证明过 —— 它会一直是个说法。
+// ============================================================================
+
+using System;
+using Motion;
+
+namespace Motion.SelfCheck
+{
+    public static class Program
+    {
+        private static int _failed;
+
+        public static int Main()
+        {
+            // 接缝 3（共享行为评测集）：每条用例带 BEH 编号，与 mcopilot
+            // knowledge/shared_eval.json 一一对应。编号不是装饰——scripts/joint_eval.py
+            // 按编号把本侧的实测结果与工厂侧逐条对齐，改了编号就对不上了。
+            Check("BEH-01 跟随误差必须非零（抓假反馈）", 跟随误差必须非零);
+            Check("BEH-02 开环轴必须报告无真实反馈（假反馈轴）", 开环轴报告无真实反馈);
+            Check("BEH-03 点动方向必须与速度符号一致", 点动方向与速度符号一致);
+            Check("BEH-04 指令位置与反馈位置单位一致", 单位口径一致);
+            Check("BEH-05 到位后停止原因必须为 0", 停止原因为零);
+            Check("BEH-06 停止原因必须能翻译成人话", 停止原因有文本);
+            Check("BEH-07 非法脉冲当量必须抛异常", 非法脉冲当量抛异常);
+            Check("BEH-08 越界轴号必须抛异常", 越界轴号抛异常);
+            Check("BEH-09 停止后不再处于运动中", 停止后不在运动);
+            Check("BEH-10 比较点端口越界必须抛异常", 比较点端口越界抛异常);
+            Check("BEH-11 锁存端口越界必须抛异常", 锁存端口越界抛异常);
+            Check("BEH-12 直线插补必须各轴到达目标", 直线插补到位);
+            Check("BEH-13 圆弧插补不支持时必须显式失败", 圆弧插补显式失败);
+            Check("BEH-14 相对定位必须增量正确", 相对定位增量正确);
+            Check("BEH-15 回零后位置归零", 回零后归零);
+
+            Console.WriteLine(_failed == 0
+                ? "[ok] 自检全部通过"
+                : $"[fail] {_failed} 项未通过");
+            return _failed == 0 ? 0 : 1;
+        }
+
+        // ------------------------------------------------------------ 用例
+
+        private static void 跟随误差必须非零()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.SetPulsePerMm(0, 1000.0);
+            c.Enable(0, true);
+            Assert(c.HasRealFeedback(0), "仿真器默认是闭环轴，必须报告有真实反馈");
+            c.MoveAbs(0, 200.0, new MotionProfile(500.0, 2000.0, 10000.0));
+
+            var maxErr = 0.0;
+            for (var i = 0; i < 100; i++)
+            {
+                c.Advance(0.005);
+                var err = Math.Abs(c.GetPositionMm(0) - c.GetFeedbackMm(0));
+                if (err > maxErr) maxErr = err;
+            }
+
+            Assert(maxErr > 0.001,
+                $"运动中跟随误差最大只有 {maxErr:F6}mm，应 > 0.001mm。" +
+                "反馈位置若与指令位置恒等，伺服整定与飞拍补偿就都没有依据了。");
+        }
+
+        /// <summary>
+        /// 开环轴（正运动 ATYPE=1/7 脉冲轴的 MPOS = DPOS 副本）必须被如实报告成「无真实反馈」。
+        /// 漏报 = 契约测试会在真机脉冲轴上误报「反馈是假数据」。
+        /// </summary>
+        private static void 开环轴报告无真实反馈()
+        {
+            var c = new SimulatedMotionController(realFeedback: false);
+            c.Open();
+            c.SetPulsePerMm(0, 1000.0);
+            c.Enable(0, true);
+            Assert(!c.HasRealFeedback(0), "开环轴必须报告 HasRealFeedback=false");
+
+            c.MoveAbs(0, 200.0, new MotionProfile(500.0, 2000.0, 10000.0));
+            c.Advance(0.05);
+            // 假反馈 = 指令位置的副本，两者必须完全相同
+            Assert(Math.Abs(c.GetPositionMm(0) - c.GetFeedbackMm(0)) < 1e-9,
+                "开环轴的反馈位置必须与指令位置完全相同（MPOS 只是 DPOS 的副本）");
+        }
+
+        private static void 点动方向与速度符号一致()
+        {
+            // 参考模型的语义：**速度符号 = 运动方向**。
+            // 适配器必须与之一致；厂商那边却是 0/1（雷赛）与 -1/1（正运动）两种编码，
+            // 抄反了不会有任何报错，轴会直接往反方向跑 —— 所以这条必须被验证。
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.Enable(0, true);
+
+            var p0 = c.GetPositionMm(0);
+            c.Jog(0, 10.0);
+            c.Advance(0.5);
+            var p1 = c.GetPositionMm(0);
+            Assert(p1 > p0, $"正速度点动后位置必须增加（{p0:F3} → {p1:F3}）");
+
+            c.Stop(0, StopMode.Decelerate);
+            c.Jog(0, -10.0);
+            c.Advance(0.5);
+            var p2 = c.GetPositionMm(0);
+            Assert(p2 < p1, $"负速度点动后位置必须减少（{p1:F3} → {p2:F3}）");
+        }
+
+        private static void 单位口径一致()        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.SetPulsePerMm(0, 1000.0);
+            c.Enable(0, true);
+            c.MoveAbs(0, 10.0, MotionProfile.Default);
+            c.AdvanceUntilDone();
+
+            var cmd = c.GetPositionMm(0);
+            var fb = c.GetFeedbackMm(0);
+            Assert(Math.Abs(cmd - 10.0) < 0.001, $"指令位置应为 10.0mm，实际 {cmd:F6}mm");
+            Assert(Math.Abs(cmd - fb) <= 0.05,
+                $"指令位置 {cmd:F6}mm 与反馈位置 {fb:F6}mm 换算口径不一致");
+        }
+
+        private static void 停止原因为零()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.Enable(0, true);
+            c.MoveAbs(0, 5.0, MotionProfile.Default);
+            c.AdvanceUntilDone();
+
+            Assert(c.IsMotionDone(0), "到位后应报运动结束");
+            Assert(c.GetStopReason(0) == 0, $"停止原因应为 0，实际 {c.GetStopReason(0)}");
+        }
+
+        /// <summary>停止原因码有几十个，必须能翻成人话 —— 现场报警要给操作员看。</summary>
+        private static void 停止原因有文本()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.Enable(0, true);
+            c.MoveAbs(0, 5.0, MotionProfile.Default);
+            c.AdvanceUntilDone();
+            Assert(!string.IsNullOrWhiteSpace(c.GetStopReasonText(0)),
+                "停止原因文本不能为空");
+
+            c.MoveAbs(0, 1000.0, MotionProfile.Default);
+            c.Stop(0, StopMode.Immediate);
+            Assert(c.GetStopReasonText(0).Contains("停止"),
+                $"立即停止的原因文本应说明是停止，实际 {c.GetStopReasonText(0)}");
+        }
+
+        private static void 非法脉冲当量抛异常()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            var threw = false;
+            try { c.SetPulsePerMm(0, 0.0); }
+            catch (ArgumentOutOfRangeException) { threw = true; }
+            Assert(threw, "脉冲当量 0 必须抛 ArgumentOutOfRangeException");
+        }
+
+        private static void 越界轴号抛异常()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            var threw = false;
+            try { c.MoveAbs(99, 1.0, MotionProfile.Default); }
+            catch (ArgumentOutOfRangeException) { threw = true; }
+            Assert(threw, "越界轴号必须抛 ArgumentOutOfRangeException");
+        }
+
+        private static void 停止后不在运动()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.Enable(0, true);
+            c.MoveAbs(0, 1000.0, MotionProfile.Default);
+            c.Stop(0, StopMode.Immediate);
+            Assert(!c.IsMoving(0), "停止后不应仍处于运动中");
+        }
+
+        /// <summary>
+        /// 比较点端口号越界 = 飞拍打到别的端子 = 误拍照。
+        /// 真机上这类错不报错，只在产线上炸；适配器不校验端口，仿真器就必须先把它拦住。
+        /// </summary>
+        private static void 比较点端口越界抛异常()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.Enable(0, true);
+            var threw = false;
+            try { c.SetCompareOutput(0, 10.0, 9999); }
+            catch (ArgumentOutOfRangeException) { threw = true; }
+            Assert(threw, "比较输出端口越界必须抛 ArgumentOutOfRangeException");
+            // 合法端口不能被误伤
+            c.SetCompareOutput(0, 10.0, 3);
+        }
+
+        /// <summary>
+        /// 锁存端口越界在真机上表现为「锁存永远不触发」——
+        /// 现场会误判成传感器坏了，排查半天。必须显式失败。
+        /// </summary>
+        private static void 锁存端口越界抛异常()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.Enable(0, true);
+            var threw = false;
+            try { c.SetLatch(0, -1); }
+            catch (ArgumentOutOfRangeException) { threw = true; }
+            Assert(threw, "锁存输入端口越界必须抛 ArgumentOutOfRangeException");
+            c.SetLatch(0, 4);
+        }
+
+        /// <summary>多轴直线插补：各轴必须同时到达各自目标。</summary>
+        private static void 直线插补到位()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.SetPulsePerMm(0, 1000.0);
+            c.SetPulsePerMm(1, 1000.0);
+            c.Enable(0, true);
+            c.Enable(1, true);
+            c.MoveLinear(new double[] { 10.0, -20.0 }, MotionProfile.Default);
+            c.AdvanceUntilDone();
+
+            Assert(Math.Abs(c.GetPositionMm(0) - 10.0) < 0.001,
+                $"轴0 插补终点应为 10.0mm，实际 {c.GetPositionMm(0):F6}mm");
+            Assert(Math.Abs(c.GetPositionMm(1) + 20.0) < 0.001,
+                $"轴1 插补终点应为 -20.0mm，实际 {c.GetPositionMm(1):F6}mm");
+        }
+
+        /// <summary>
+        /// 圆弧插补不是所有卡都支持，但**不支持时必须显式失败**——
+        /// 悄悄按直线做、或者悄悄跳过，现场会等到工件撞机才发现。
+        /// </summary>
+        private static void 圆弧插补显式失败()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.Enable(0, true);
+            var threw = false;
+            try { c.MoveArc(0, 0, 10, 10, true, MotionProfile.Default); }
+            catch (NotSupportedException) { threw = true; }
+            Assert(threw, "不支持的圆弧插补必须抛 NotSupportedException，而不是悄悄做错事");
+        }
+
+        private static void 相对定位增量正确()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.SetPulsePerMm(0, 1000.0);
+            c.Enable(0, true);
+            c.MoveAbs(0, 10.0, MotionProfile.Default);
+            c.AdvanceUntilDone();
+            c.MoveRel(0, 5.0, MotionProfile.Default);
+            c.AdvanceUntilDone();
+            Assert(Math.Abs(c.GetPositionMm(0) - 15.0) < 0.001,
+                $"相对定位后应为 15.0mm，实际 {c.GetPositionMm(0):F6}mm");
+        }
+
+        /// <summary>回零后位置必须归零 —— 回零是工件坐标的基准，归零不准后面全错。</summary>
+        private static void 回零后归零()
+        {
+            var c = new SimulatedMotionController();
+            c.Open();
+            c.SetPulsePerMm(0, 1000.0);
+            c.Enable(0, true);
+            c.MoveAbs(0, 37.5, MotionProfile.Default);
+            c.AdvanceUntilDone();
+            c.Home(0);
+            c.AdvanceUntilDone();
+            Assert(Math.Abs(c.GetPositionMm(0)) < 0.001,
+                $"回零后位置应为 0mm，实际 {c.GetPositionMm(0):F6}mm");
+        }
+
+        // ------------------------------------------------------------ 工具
+
+        private static void Check(string name, Action test)
+        {
+            try
+            {
+                test();
+                Console.WriteLine("[ok]   " + name);
+            }
+            catch (Exception ex)
+            {
+                _failed++;
+                Console.WriteLine("[fail] " + name + "：" + ex.Message);
+            }
+        }
+
+        private static void Assert(bool ok, string message)
+        {
+            if (!ok) throw new Exception(message);
+        }
+    }
+}
