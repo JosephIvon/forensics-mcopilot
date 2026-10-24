@@ -142,6 +142,16 @@
       "size": 1337160,
       "sha256": "6e273720b435e18e5ccf422929cfbc2d1aa1e1ef0317bbde2ff92b14589a65a5",
       "source_url": "http://www.atronika.com/Mitsubishi/PLC/MITSUBISHI_manual_plc_fx5_slmp.pdf"
+    },
+    {
+      "name": "LTDMC.cs",
+      "path": "../mcopilot-external/vendor_docs/EMC系列开发头文件/C#/LTDMC.cs",
+      "role": "vendor_csharp_binding",
+      "sha256": "b6b1b0bc845ab1821d990e92e38afbf27acbef0f349049ca11eec7b020509705",
+      "size": 195694,
+      "spec": "雷赛 LTDMC（EMC 系列开发头文件，C# 托管绑定，GBK 编码）",
+      "storage": "external",
+      "note": "雷赛官方 C# 托管绑定（806 条声明）——README「3025 条绑定返回类型」表与 knowledge/sdks/official_api/binding_returns.csv 的雷赛侧来源。⚠ 仓外另有 2 份**同名不同版本**的 LTDMC.cs：升级包 V2.5.7.23（1466 条声明，dmc_get_position 在 L915）与 2024-12-09 头文件包（1434 条声明，L910）——**行号随版本不同**，故引用必须钉到本条目登记的这一份（README 的 `LTDMC.cs:891` 即此份），由 scripts/verify_doc_refs.py 按本清单解析，不再按文件名乱找。"
     }
   ],
   "url_liveness": [

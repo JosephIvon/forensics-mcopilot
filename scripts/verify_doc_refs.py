@@ -29,7 +29,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import io
+import json
 import os
 import re
 import sys
@@ -76,6 +78,41 @@ EXTERNAL_ROOTS = [
     os.path.join(ROOT, os.pardir, "mcopilot-external", "vendor_docs"),
 ]
 
+
+def _load_external_registry():
+    """读 `knowledge/protocols/anchors.json` 里登记的**仓外原件**（name -> 条目）。
+
+    为什么必须按登记解析，而不是在仓外区里按文件名乱找：
+      雷赛官方绑定 `LTDMC.cs` 在仓外有**三份同名不同版本**（EMC 套件 804 条声明 /
+      升级包 V2.5.7.23 1466 条 / 2024-12-09 头文件包 1434 条），
+      同一条 `dmc_get_position` 分别在 L891 / L915 / L910。
+      按文件名乱找 = **行号随文件系统遍历顺序而变**（换台机器、换个盘序就变），
+      坐标看着准、实际指错行——这是最坏的一种引用：**假绿**。
+      登记 = 把「引用的是哪一份」写死，指纹在档，版本可核。
+    """
+    path = os.path.join(ROOT, "knowledge", "protocols", "anchors.json")
+    if not os.path.isfile(path):
+        return {}
+    try:
+        with io.open(path, encoding="utf-8") as fh:
+            data = json.load(fh)
+    except Exception:
+        return {}
+    out = {}
+    for a in data.get("anchors", []):
+        name = a.get("name")
+        rel = a.get("path", "")
+        if not name or not rel:
+            continue
+        # 只收「仓外原件」与「不入库区」两类；仓内跟踪文件走常规解析
+        if not (rel.startswith("../") or rel.startswith("out/") or rel.startswith("out\\")):
+            continue
+        out.setdefault(name, a)
+    return out
+
+
+EXTERNAL_BY_NAME = _load_external_registry()
+
 # 形如 `src/mcopilot/cli.py:267` / `pyproject.toml:14` / `foo.py:12-18`
 CODE_CITE = re.compile(
     r"(?P<file>[\w./\\-]+\.(?:py|toml|ps1|bat|json|ya?ml|cs|txt|md|cfg|ini))"
@@ -117,6 +154,7 @@ def check_code_refs(verbose=True):
     bad = 0
     skipped = 0
     external_n = 0
+    external_missing = []
     for label, doc in CODE_DOC_GLOBS:
         if not os.path.isfile(doc):
             continue
@@ -146,14 +184,49 @@ def check_code_refs(verbose=True):
                             external = True
                             break
                 if path is None and "/" not in raw and "\\" not in raw:
-                    # 文档里常只写**文件名**（表里已给出完整落点），按文件名在仓外原件区找
-                    for ex in EXTERNAL_ROOTS:
-                        for dp, _dns, fns in os.walk(ex):
-                            if raw in fns:
-                                multi.append(os.path.join(dp, raw))
+                    # 文档里常只写**文件名**（表里已给出完整落点）。
+                    # **先按 anchors.json 的登记解析**（钉住是哪一份原件），
+                    # 没登记的才退回全库按文件名找——且必须**唯一**。
+                    reg = EXTERNAL_BY_NAME.get(raw)
+                    if reg is not None:
+                        cand = os.path.normpath(os.path.join(ROOT, reg["path"]))
+                        if os.path.isfile(cand):
+                            multi.append(cand)
+                            external = True
+                        else:
+                            # 原件不在位：按本仓约定「非入库区缺位记 SKIP，不判 FAIL」
+                            # （与 scripts/gate_anchors.py 同一处置），但必须喊出来。
+                            external_missing.append(
+                                (label, no, raw, reg.get("path", "")))
+                            continue
+                    if not multi:
+                        # 没登记：全库按文件名找。**同名多版本 = 不可判定 = 判失败**，
+                        # 不能挑一个碰巧行号对得上的（那是自欺）。
+                        for ex in EXTERNAL_ROOTS:
+                            for dp, _dns, fns in os.walk(ex):
+                                if raw in fns:
+                                    multi.append(os.path.join(dp, raw))
+                        if len(multi) > 1:
+                            hashes = set()
+                            for t in multi:
+                                try:
+                                    with io.open(t, "rb") as fh:
+                                        hashes.add(hashlib.sha256(fh.read()).hexdigest())
+                                except OSError:
+                                    pass
+                            if len(hashes) > 1:
+                                print("  !! %s L%d 引用 %s —— 仓外有 %d 份**同名不同版本**，"
+                                      "行号不唯一，坐标不可判定"
+                                      % (label, no, raw, len(multi)))
+                                for t in multi:
+                                    print("       - %s" % t)
+                                print("       → 请在 knowledge/protocols/anchors.json 登记"
+                                      "要引的那一份，或把引用改成带路径的完整落点")
+                                bad += 1
+                                continue
                     if multi:
                         external = True
-                if path is None and not multi:
+                if path is None and not multi and not external_missing:
                     print("  !! %s L%d 引用 %s —— 文件不存在" % (label, no, raw))
                     bad += 1
                     continue
@@ -176,11 +249,22 @@ def check_code_refs(verbose=True):
                 total += 1
                 if external:
                     external_n += 1
-                # 符号核对：文档说「LTDMC.cs:891 的 dmc_get_position」，那就该行真有它
+                # 符号核对：文档说「LTDMC.cs:915 的 dmc_get_position」，那就该行真有它。
+                # **这条必须能判失败**：否则坐标指到同一文件里的别的声明上时，
+                # 门禁照样放行——引用看着可信、实际指错行，比断链更坏。
                 claimed = set(re.findall(r"\b([A-Za-z_][A-Za-z0-9_]{2,})\b", text))
                 syms = [s for s in claimed
                         if s.lower().replace("_", "") in hit_line.lower().replace("_", "")
                         and (s.startswith(("dmc_", "ZAux_", "GT")) or s.endswith((".cs", ".dll")))]
+                # 文档里点名了哪个符号（dmc_/ZAux_/GT 开头），该符号必须出现在被引的那一行
+                named = [s for s in claimed
+                         if s.startswith(("dmc_", "ZAux_", "GT")) and len(s) > 4]
+                if named and not syms:
+                    print("  !! %s L%d 引用 %s:%d-%d —— 引用的符号 %s **不在被引的那一行**"
+                          % (label, no, raw, start, end, "、".join(sorted(named)[:3])))
+                    print("     实际第 %d 行：%s" % (start, hit_line.strip()[:70]))
+                    bad += 1
+                    continue
                 if verbose:
                     tag = " [仓外原件]" if external else ""
                     extra = ("  ← %s" % hit_line.strip()[:58]) if syms else ""
@@ -188,6 +272,11 @@ def check_code_refs(verbose=True):
                           % (label, no, raw, start, end, tag, extra))
     if skipped:
         print("  -- 跳过 %d 条「不入库区」引用（out/ 等生成物，公开后读者拿不到，不是断链）" % skipped)
+    if external_missing:
+        print("  -- %d 条指向**已登记的仓外原件**、原件当前不在位"
+              "（指纹在档，本次不可自动复核）：" % len(external_missing))
+        for label, no, raw, rel in external_missing:
+            print("       %s L%d -> %s（登记落点 %s）" % (label, no, raw, rel))
     if external_n:
         print("  -- 其中 %d 条落在「仓外原件区」（厂商手册/头文件，不入本仓，行号已核）" % external_n)
     return total, bad
