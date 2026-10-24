@@ -3,6 +3,7 @@
 """verify_codewiki_numbers2.py —— 按正确口径复核 CodeWiki 数字（2026-10-22）。"""
 import io
 import os
+import tempfile
 import re
 import subprocess
 import time
@@ -35,7 +36,7 @@ print("  samples/ 文件数              =", len(samples))
 for f in sorted(samples):
     print("      ", f)
 
-out = r"<临时目录>\mcopilot_all_probe2"
+out = os.path.join(tempfile.gettempdir(), "mcopilot_all_probe2")
 subprocess.run(["cmd", "/c", "rmdir /s /q", out], capture_output=True)
 env = dict(os.environ, PYTHONPATH=os.path.join(MC, "src"))
 t0 = time.time()

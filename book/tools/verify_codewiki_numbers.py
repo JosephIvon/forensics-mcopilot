@@ -7,6 +7,7 @@
 import io
 import json
 import os
+import tempfile
 import re
 import subprocess
 import time
@@ -84,7 +85,7 @@ if m:
     print(f"  ?         {'pytest 实跑':<38} 文中 385 passed / 2 skipped ｜ 实测 {m.group(2)} passed / {m.group(1)} failed / {m.group(3)} skipped")
 
 # `python -m mcopilot all --out` 跑批
-out = r"<临时目录>\mcopilot_all_probe"
+out = os.path.join(tempfile.gettempdir(), "mcopilot_all_probe")
 subprocess.run(["cmd", "/c", "rmdir /s /q", out], capture_output=True)
 t0 = time.time()
 r2 = subprocess.run([PY, "-m", "mcopilot", "all", "--out", out], cwd=MC, capture_output=True,

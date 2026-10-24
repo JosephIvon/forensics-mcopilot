@@ -52,7 +52,13 @@ WS = os.path.dirname(REPO_ROOT)
 
 PATS = [
     ("家目录/用户名", re.compile(r"[A-Za-z]:\\Users\\[^\\\s\"'<>|]+")),
-    ("本机工作区", re.compile(r"[A-Za-z]:\\workspace\\[^\\\s\"'<>|,;)]+")),
+    # 斜杠**不分正反**：反斜杠与正斜杠两种写法都是合法的 Windows 路径。
+    # 原来只认反斜杠，于是正斜杠那种写法整个漏掉——
+    # 2026-10-25 入库一份第三方评审报告时才发现：一处真·本机工作区路径，
+    # 在这道门下面安然无恙地躺了很久。
+    # （本条注释里**不写具体盘符与路径**：写了就是它自己要抓的东西。
+    #  参见本仓规矩——说明文字没有理由携带一个真值。）
+    ("本机工作区", re.compile(r"[A-Za-z]:[\\/]workspace[\\/][^\\/\s\"'<>|,;)]+")),
     ("工具链路径", re.compile(r"(?:C:\\Program Files[^\\\s\"'<>|]*|C:\\Windows[^\\\s\"'<>|]*|"
                              r"<工具链>[^\\\s\"'<>|]*)")),
     ("其他绝对路径", re.compile(r"(?<![A-Za-z]:\\)([A-Za-z]:\\[^\\\s\"'<>|,;)]{4,})")),
@@ -119,6 +125,7 @@ def main() -> int:
                         hit = m.group(0)
                         if label == "其他绝对路径" and (
                                 "\\Users\\" in hit or "\\workspace\\" in hit
+                                or "/Users/" in hit or "/workspace/" in hit
                                 or hit.startswith(("C:\\Program Files", "C:\\Windows", "<工具链>"))):
                             continue
                         summary[name][label] += 1
